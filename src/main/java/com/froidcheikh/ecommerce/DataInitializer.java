@@ -50,6 +50,28 @@ public class DataInitializer implements CommandLineRunner {
 
         superAdmin = administrateurRepository.save(superAdmin);
 
+
+        Administrateur superAdmin1 = new Administrateur();
+        superAdmin1.setNom("Dione");
+        superAdmin1.setPrenom("Modou  Mamoune");
+        superAdmin1.setEmail("mamoune@admin.com");
+        superAdmin1.setMotDePasse(hashedPassword);
+        superAdmin1.setRole(Administrateur.RoleAdmin.SUPER_ADMIN);
+        superAdmin1.setActif(true);
+
+        superAdmin1 = administrateurRepository.save(superAdmin1);
+
+
+        Administrateur superAdmin2 = new Administrateur();
+        superAdmin2.setNom("Dione");
+        superAdmin2.setPrenom("Nabou Gana");
+        superAdmin2.setEmail("nabou@admin.com");
+        superAdmin2.setMotDePasse(hashedPassword);
+        superAdmin2.setRole(Administrateur.RoleAdmin.SUPER_ADMIN);
+        superAdmin2.setActif(true);
+
+        superAdmin2 = administrateurRepository.save(superAdmin2);
+
         log.info("✅ Super administrateur créé avec ID: {}", superAdmin.getIdAdmin());
         log.info("   📧 Email: admin@admin.com");
         log.info("   🔐 Mot de passe: admin123");
