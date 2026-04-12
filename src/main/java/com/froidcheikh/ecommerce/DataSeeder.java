@@ -16,11 +16,11 @@ import java.util.Optional;
 @Component
 @Slf4j
 public class DataSeeder implements ApplicationRunner {
-    //@Override
-//    public void run(ApplicationArguments args) throws Exception {
-//
-//    }
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
 
+    }
+/*
     private final AdministrateurRepository administrateurRepository;
     private final MarqueRepository marqueRepository;
     private final CategorieRepository categorieRepository;
@@ -407,5 +407,5 @@ public class DataSeeder implements ApplicationRunner {
         adresseRepository.save(bureau);
 
         log.info("Adresses du client {} créées.", clientEmail);
-    }
+    }*/
 }
