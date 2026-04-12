@@ -7,7 +7,7 @@ ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8"
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
 COPY src ./src
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests -e 2>&1
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
