@@ -1,31 +1,15 @@
-FROM maven:3.9-eclipse-temurin-21 AS builder
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
-
-ENV MAVEN_OPTS="-Dfile.encoding=UTF-8"
-ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8"
-
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
 COPY src ./src
-RUN mvn clean package -DskipTests -e 2>&1
+RUN mvn clean package -DskipTests
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=builder /app/target/*.jar app.jar
+COPY --from=build /app/target/*.jar app.jar
+
+# Créer le dossier uploads
+RUN mkdir -p /app/uploads
+
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
-#FROM maven:3.9.6-eclipse-temurin-21 AS build
-#WORKDIR /app
-#COPY pom.xml .
-#COPY src ./src
-#RUN mvn clean package -DskipTests
-#
-#FROM eclipse-temurin:21-jre
-#WORKDIR /app
-#COPY --from=build /app/target/*.jar app.jar
-#
-## Créer le dossier uploads
-#RUN mkdir -p /app/uploads
-#
-#EXPOSE 8080
-#ENTRYPOINT ["java", "-jar", "app.jar"]
