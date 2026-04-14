@@ -43,7 +43,9 @@ public class FileService {
                     file.getBytes(),
                     ObjectUtils.asMap(
                             "folder", folder,
-                            "resource_type", "auto"
+                            "resource_type", "auto",
+                            "type", "upload",        // ← ajouter
+                            "access_mode", "public"  // ← ajouter
                     )
             );
             String url = (String) result.get("secure_url");
