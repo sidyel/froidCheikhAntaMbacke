@@ -39,6 +39,9 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Value("${app.allowed-origins}")
+    private String allowedOrigins;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -46,6 +49,12 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
+                        // Configuration publique du site
+                        .requestMatchers(HttpMethod.GET, "/api/config").permitAll()
+
+                        // Endpoint d'installation initiale
+                        .requestMatchers(HttpMethod.POST, "/api/auth/install").permitAll()
+
                         // Endpoints publics d'authentification
                         .requestMatchers("/api/auth/**").permitAll()
 
@@ -108,8 +117,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Origines autorisées
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        // Origines autorisées — lues depuis ALLOWED_ORIGINS (jamais de wildcard en prod)
+        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        configuration.setAllowedOriginPatterns(origins);
 
         // Méthodes HTTP autorisées
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));

@@ -1,0 +1,139 @@
+package com.froidcheikh.ecommerce.dto;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+public final class ParametresSiteDTO {
+    private ParametresSiteDTO() {}
+
+    @Data
+    @NoArgsConstructor
+    public static class TelephoneSiteDTO {
+        private String numero;
+        private String libelle;
+        private Boolean whatsapp;
+    }
+
+    /**
+     * Projection publique — pas de données sensibles (textes légaux, facturation).
+     * Retournée par GET /api/config.
+     */
+    @Data
+    @NoArgsConstructor
+    public static class PublicDTO {
+        // IDENTITE
+        private String nomSite;
+        private String sloganSite;
+        private String descriptionSite;
+        private String logoUrl;
+        private String faviconUrl;
+
+        // CONTACT
+        private String emailContact;
+        private List<TelephoneSiteDTO> telephones;
+        private String adresseComplete;
+        private String ville;
+        private String pays;
+
+        // RESEAUX SOCIAUX
+        private String facebookUrl;
+        private String instagramUrl;
+        private String twitterUrl;
+        private String linkedinUrl;
+        private String youtubeUrl;
+        private String tiktokUrl;
+
+        // APPARENCE
+        private String couleurPrimaire;
+        private String couleurSecondaire;
+        private String couleurAccent;
+        private String police;
+
+        // LIVRAISON
+        private String devise;
+        private Integer seuilLivraisonGratuite;
+
+        // SEO
+        private String metaTitle;
+        private String metaDescription;
+        private String metaKeywords;
+    }
+
+    /**
+     * DTO admin — tous les champs + validation + metadata.
+     * Utilisé par PUT /api/admin/config.
+     */
+    @Data
+    @NoArgsConstructor
+    public static class AdminDTO {
+        // IDENTITE
+        private String nomSite;
+        private String sloganSite;
+        private String descriptionSite;
+        private String logoUrl;
+        private String faviconUrl;
+
+        // CONTACT
+        @Email(message = "Format d'email invalide")
+        private String emailContact;
+
+        @Email(message = "Format d'email invalide")
+        private String emailSupport;
+
+        private List<TelephoneSiteDTO> telephones;
+        private String adresseComplete;
+        private String ville;
+        private String pays;
+
+        // RESEAUX SOCIAUX
+        private String facebookUrl;
+        private String instagramUrl;
+        private String twitterUrl;
+        private String linkedinUrl;
+        private String youtubeUrl;
+        private String tiktokUrl;
+
+        // APPARENCE
+        @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "Couleur primaire invalide (format #RRGGBB attendu)")
+        private String couleurPrimaire;
+
+        @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "Couleur secondaire invalide (format #RRGGBB attendu)")
+        private String couleurSecondaire;
+
+        @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "Couleur accent invalide (format #RRGGBB attendu)")
+        private String couleurAccent;
+
+        private String police;
+
+        // TEXTES LEGAUX
+        private String mentionsLegales;
+        private String politiqueConfidentialite;
+        private String cgv;
+
+        // ENTREPRISE / FACTURATION
+        private String raisonSociale;
+        private String formeJuridique;
+        private String ninea;
+        private String rccm;
+        private String numeroCfe;
+        private String capitalSocial;
+
+        // LIVRAISON
+        private String devise;
+        private Integer seuilLivraisonGratuite;
+
+        // SEO
+        private String metaTitle;
+        private String metaDescription;
+        private String metaKeywords;
+
+        // METADATA (lecture seule)
+        private LocalDateTime dateModification;
+        private String modifiePar;
+    }
+}
