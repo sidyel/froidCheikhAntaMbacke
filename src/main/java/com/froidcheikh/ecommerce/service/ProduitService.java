@@ -9,6 +9,7 @@ import com.froidcheikh.ecommerce.repository.MarqueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -161,6 +162,7 @@ public class ProduitService {
         return convertToDTO(produit);
     }
 
+    @CacheEvict(value = "promotionsActives", allEntries = true)
     public ProduitDTO updateProduit(Long id, ProduitDTO produitDTO) {
         Produit produit = produitRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit non trouvé avec l'ID : " + id));

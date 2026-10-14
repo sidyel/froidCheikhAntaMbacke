@@ -7,6 +7,7 @@ import com.froidcheikh.ecommerce.repository.CategorieRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +50,7 @@ public class CategorieService {
                 .collect(Collectors.toList());
     }
 
+    @CacheEvict(value = "promotionsActives", allEntries = true)
     public CategorieDTO createCategorie(CategorieDTO categorieDTO) {
         Categorie categorie = convertToEntity(categorieDTO);
         categorie = categorieRepository.save(categorie);
@@ -56,6 +58,7 @@ public class CategorieService {
         return convertToDTO(categorie);
     }
 
+    @CacheEvict(value = "promotionsActives", allEntries = true)
     public CategorieDTO updateCategorie(Long id, CategorieDTO categorieDTO) {
         Categorie categorie = categorieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Catégorie non trouvée avec l'ID : " + id));
@@ -75,6 +78,7 @@ public class CategorieService {
         return convertToDTO(categorie);
     }
 
+    @CacheEvict(value = "promotionsActives", allEntries = true)
     public void deleteCategorie(Long id) {
         if (!categorieRepository.existsById(id)) {
             throw new ResourceNotFoundException("Catégorie non trouvée avec l'ID : " + id);
