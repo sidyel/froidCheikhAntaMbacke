@@ -149,6 +149,11 @@ Ces deux propriétés sont actuellement à `true` (utile en dev, verbeux et non 
 
 `spring.jpa.hibernate.ddl-auto=update` convient pour le premier démarrage. Après stabilisation du schéma, passer à `validate` (ou migrer vers Flyway — voir feuille de route #6) pour éviter toute modification accidentelle de la base.
 
+### 6 — Railway (si déploiement via Railway)
+
+- Vérifier la configuration du déploiement automatique (branche suivie, triggers).
+- **Régénérer les identifiants Railway exposés dans l'historique git** : le mot de passe PostgreSQL Railway (`svYhBmqtXnJkAaFEbairZjCtElvTESMe`) et l'URL interne (`postgres.railway.internal:5432/railway`) étaient committés en clair dans `application.properties` sur `origin/main`. Ces identifiants sont compromis — les réinitialiser depuis le dashboard Railway avant tout déploiement.
+
 ---
 
 ## Points connus à corriger
