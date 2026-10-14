@@ -102,5 +102,6 @@ public class ProduitDTO {
         private Long idAttribut;
         private String nomAttribut;
         private String valeurAttribut;
+        private Long modeleAttributId;
     }
 }

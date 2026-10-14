@@ -349,6 +349,19 @@ public class ProduitService {
 
         dto.setScoreCompletude(calculerScore(produit));
 
+        if (produit.getAttributs() != null) {
+            dto.setAttributs(produit.getAttributs().stream().map(attr -> {
+                ProduitDTO.AttributProduitDTO a = new ProduitDTO.AttributProduitDTO();
+                a.setIdAttribut(attr.getIdAttribut());
+                a.setNomAttribut(attr.getNomAttribut());
+                a.setValeurAttribut(attr.getValeurAttribut());
+                if (attr.getModeleAttribut() != null) {
+                    a.setModeleAttributId(attr.getModeleAttribut().getIdModele());
+                }
+                return a;
+            }).collect(Collectors.toList()));
+        }
+
         return dto;
     }
 

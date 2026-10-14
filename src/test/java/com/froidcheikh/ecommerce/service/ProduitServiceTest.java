@@ -64,7 +64,7 @@ class ProduitServiceTest {
     }
 
     private ProduitDTO.AttributProduitDTO attrDTO(String nom, String valeur) {
-        return new ProduitDTO.AttributProduitDTO(null, nom, valeur);
+        return new ProduitDTO.AttributProduitDTO(null, nom, valeur, null);
     }
 
     private void mockSave(Produit produit) {
