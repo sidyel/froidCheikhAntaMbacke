@@ -10,6 +10,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,6 +35,7 @@ public class MigrationImagesRunner implements CommandLineRunner {
     private final ImageProduitRepository imageProduitRepository;
 
     @Override
+    @Transactional
     public void run(String... args) {
         log.info("══════════════════════════════════════════");
         log.info("  Migration produit_images → image_produit");
