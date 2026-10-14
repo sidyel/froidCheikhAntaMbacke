@@ -100,6 +100,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 | Site configurable (ParametresSite, API config, hardcodes) | ✅ Mergé dans `develop` + `main` | — |
 | Entités de contenu gérable (ImageHero, Partenaire, Prestation, MembreEquipe, Realisation) | ✅ Mergé dans `develop` + `main` | — |
 | Zones de livraison (ZoneLivraison) | ✅ Mergé dans `develop` + `main` | — |
+| Promotions produits (PrixService, PromotionService, CRUD, fiche, catalogue, panier) | ✅ Mergé dans `develop` + `main` | — |
 | Enrichissement fiches produits (EAN, ModeleFabricant, CRUD AttributProduit) | ⏳ Planifié | — |
 | Module facturation (PDF) | ⏳ Planifié | — |
 | Migrations Flyway | ⏳ Planifié | — |
@@ -181,6 +182,9 @@ DELETE FROM commandes;
 
 ### #1 — Incohérence des frais de livraison ✅ Résolu
 Module `ZoneLivraison` mergé dans `develop` + `main` : `CalculCommandeService` délègue au repository, `checkout.component.ts` appelle `/api/livraison/estimation`, les constantes hardcodées sont supprimées.
+
+### #6 — Checkout : afficher le prix barré par ligne (amélioration future)
+Le récapitulatif du checkout affiche `item.sousTotal` (déjà correct, calculé avec `prixPromo`) mais n'affiche pas le détail visuel prix barré / prix promo par ligne comme le panier. À améliorer : ajouter le même traitement que `cart.component.ts` (badge `-N%`, prix catalogue barré, prix promo en vert) dans la section "Cart Items" du checkout.
 
 ### #2 — Secrets historiquement exposés
 Les clés Cloudinary, le mot de passe Neon et le secret JWT étaient en clair dans `application.properties` commité. **Régénérer toutes ces clés** avant tout déploiement.
