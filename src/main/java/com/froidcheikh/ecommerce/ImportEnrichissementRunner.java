@@ -23,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Importe un lot d'enrichissement de fiches produits depuis un fichier JSON.
@@ -42,6 +44,32 @@ import java.util.Optional;
 public class ImportEnrichissementRunner implements CommandLineRunner {
 
     private static final String VALIDE = "valide";
+
+    /**
+     * Noms normalisés des colonnes de Produit qui ne doivent JAMAIS être créées
+     * comme AttributProduit. Toute correspondance redirige vers la colonne.
+     */
+    private static final Map<String, String> ALIAS_VERS_COLONNE = Map.ofEntries(
+        Map.entry("garantie",              "garantie"),
+        Map.entry("dureegarantie",         "garantie"),
+        Map.entry("delaigarantie",         "garantie"),
+        Map.entry("labelenergie",          "labelEnergie"),
+        Map.entry("labeleenergie",         "labelEnergie"),
+        Map.entry("classeenergetique",     "labelEnergie"),
+        Map.entry("classeenergie",         "labelEnergie"),
+        Map.entry("etiquetteenergie",      "labelEnergie"),
+        Map.entry("consommationwatt",      "consommationWatt"),
+        Map.entry("consommationw",         "consommationWatt"),
+        Map.entry("consommationenw",       "consommationWatt"),
+        Map.entry("puissancenominale",     "consommationWatt"),
+        Map.entry("dimensions",            "dimensions"),
+        Map.entry("poids",                 "poids"),
+        Map.entry("poidsnet",              "poids"),
+        Map.entry("poidsnominal",          "poids"),
+        Map.entry("puissancebtu",          "puissanceBTU"),
+        Map.entry("btu",                   "puissanceBTU"),
+        Map.entry("capacitebtu",           "puissanceBTU")
+    );
 
     @Value("${import.fichier:enrichissement_lot_1.json}")
     private String fichier;
@@ -86,7 +114,7 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
             int champsProduit = 0;
             int champsIgnores = 0;
 
-            // ── Champs scalaires ──────────────────────────────────────────────────
+            // ── Description ───────────────────────────────────────────────────────
             if (ep.getDescription() != null) {
                 String actuel = p.getDescriptionProduit();
                 if (estVide(actuel) || ep.isEcraser()) {
@@ -98,43 +126,65 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
                 }
             }
 
+            // ── modeleFabricant ───────────────────────────────────────────────────
             if (ep.getModeleFabricant() != null) {
-                String actuel = p.getModeleFabricant();
-                if (estVide(actuel) || ep.isEcraser()) {
-                    log(actuel, ep.getModeleFabricant(), "modeleFabricant");
-                    if (confirmer) p.setModeleFabricant(ep.getModeleFabricant());
-                    champsProduit++;
+                EnrichissementValeur v = ep.getModeleFabricant();
+                if (!VALIDE.equalsIgnoreCase(v.getConfiance())) {
+                    log.info("    IGNORE modeleFabricant (confiance={})", v.getConfiance());
+                    champsIgnores++;
                 } else {
-                    log.info("    SKIP modeleFabricant (déjà rempli, ecraser=false)");
+                    String actuel = p.getModeleFabricant();
+                    if (estVide(actuel) || ep.isEcraser()) {
+                        log(actuel, v.getValeur(), "modeleFabricant");
+                        if (confirmer) p.setModeleFabricant(v.getValeur());
+                        champsProduit++;
+                    } else {
+                        log.info("    SKIP modeleFabricant (déjà rempli, ecraser=false)");
+                    }
                 }
             }
 
+            // ── EAN ───────────────────────────────────────────────────────────────
             if (ep.getEan() != null) {
-                String actuel = p.getEan();
-                if (estVide(actuel) || ep.isEcraser()) {
-                    log(actuel, ep.getEan(), "ean");
-                    if (confirmer) p.setEan(ep.getEan());
-                    champsProduit++;
+                EnrichissementValeur v = ep.getEan();
+                if (!VALIDE.equalsIgnoreCase(v.getConfiance())) {
+                    log.info("    IGNORE ean (confiance={})", v.getConfiance());
+                    champsIgnores++;
                 } else {
-                    log.info("    SKIP ean (déjà rempli, ecraser=false)");
+                    String actuel = p.getEan();
+                    if (estVide(actuel) || ep.isEcraser()) {
+                        log(actuel, v.getValeur(), "ean");
+                        if (confirmer) p.setEan(v.getValeur());
+                        champsProduit++;
+                    } else {
+                        log.info("    SKIP ean (déjà rempli, ecraser=false)");
+                    }
                 }
             }
 
             // ── Colonnes techniques ───────────────────────────────────────────────
             if (ep.getColonnesTechniques() != null) {
-                EnrichissementColonnesTechniques ct = ep.getColonnesTechniques();
-                int[] res = appliquerColonnes(p, ct);
+                int[] res = appliquerColonnes(p, ep.getColonnesTechniques());
                 champsProduit += res[0];
                 champsIgnores += res[1];
             }
 
-            // ── Attributs dynamiques ──────────────────────────────────────────────
+            // ── Attributs dynamiques (avec garde colonne/attribut) ────────────────
             if (ep.getAttributs() != null) {
                 List<AttributProduit> existants = attributProduitRepository.findByProduitIdProduit(p.getIdProduit());
                 for (EnrichissementAttribut ea : ep.getAttributs()) {
                     if (!VALIDE.equalsIgnoreCase(ea.getConfiance())) {
                         log.info("    IGNORE attribut '{}' (confiance={})", ea.getNom(), ea.getConfiance());
                         champsIgnores++;
+                        continue;
+                    }
+                    // Garde doublon colonne/attribut
+                    String colonne = ALIAS_VERS_COLONNE.get(normaliserNom(ea.getNom()));
+                    if (colonne != null) {
+                        log.info("    REDIRECT attribut '{}' → colonne Produit '{}' (utiliser colonnesTechniques)", ea.getNom(), colonne);
+                        int[] res = routerVersColonne(p, ea, colonne, ep.isEcraser());
+                        champsProduit += res[0];
+                        champsIgnores += res[1];
                         continue;
                     }
                     boolean dejaPresent = existants.stream()
@@ -190,9 +240,12 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
         if (ct.getConsommationWatt() != null) {
             EnrichissementValeur v = ct.getConsommationWatt();
             if (!VALIDE.equalsIgnoreCase(v.getConfiance())) { skip++; }
-            else if (estVide(p.getConsommationWatt() != null ? p.getConsommationWatt().toString() : null) || p.getConsommationWatt() == null) {
-                log(p.getConsommationWatt() != null ? p.getConsommationWatt().toString() : null, v.getValeur(), "consommationWatt");
-                if (confirmer) { try { p.setConsommationWatt(Integer.valueOf(v.getValeur().replaceAll("[^0-9]", ""))); } catch (NumberFormatException e) { log.warn("    consommationWatt invalide : {}", v.getValeur()); } }
+            else if (p.getConsommationWatt() == null) {
+                log(null, v.getValeur(), "consommationWatt");
+                if (confirmer) {
+                    try { p.setConsommationWatt(Integer.valueOf(v.getValeur().replaceAll("[^0-9]", ""))); }
+                    catch (NumberFormatException e) { log.warn("    consommationWatt invalide : {}", v.getValeur()); }
+                }
                 ok++;
             } else { log.info("    SKIP consommationWatt (déjà rempli)"); }
         }
@@ -210,39 +263,25 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
             if (!VALIDE.equalsIgnoreCase(v.getConfiance())) { skip++; }
             else if (p.getPoids() == null) {
                 log(null, v.getValeur(), "poids");
-                if (confirmer) { try { p.setPoids(Double.parseDouble(v.getValeur().replaceAll("[^0-9.,]", "").replace(",", "."))); } catch (NumberFormatException e) { log.warn("    poids invalide : {}", v.getValeur()); } }
+                if (confirmer) {
+                    try { p.setPoids(Double.parseDouble(v.getValeur().replaceAll("[^0-9.,]", "").replace(",", "."))); }
+                    catch (NumberFormatException e) { log.warn("    poids invalide : {}", v.getValeur()); }
+                }
                 ok++;
             } else { log.info("    SKIP poids (déjà rempli)"); }
         }
-        if (ct.getGarantie() != null) {
-            EnrichissementValeur v = ct.getGarantie();
-            if (!VALIDE.equalsIgnoreCase(v.getConfiance())) { skip++; }
-            else if (estVide(p.getGarantie())) {
-                log(p.getGarantie(), v.getValeur(), "garantie");
-                if (confirmer) p.setGarantie(v.getValeur());
-                ok++;
-            } else { log.info("    SKIP garantie (déjà rempli)"); }
-        }
         if (ct.getPuissanceBTU() != null) {
+            // puissanceBTU est une colonne de Produit (Integer), pas un AttributProduit
             EnrichissementValeur v = ct.getPuissanceBTU();
             if (!VALIDE.equalsIgnoreCase(v.getConfiance())) { skip++; }
-            else {
-                List<AttributProduit> existants = attributProduitRepository.findByProduitIdProduit(p.getIdProduit());
-                boolean dejaPresent = existants.stream().anyMatch(a -> "Puissance BTU".equalsIgnoreCase(a.getNomAttribut()));
-                if (!dejaPresent) {
-                    log.info("    + attribut 'Puissance BTU' = '{}' [src: {}]", v.getValeur(), v.getSource());
-                    if (confirmer) {
-                        AttributProduit attr = new AttributProduit();
-                        attr.setNomAttribut("Puissance BTU");
-                        attr.setValeurAttribut(v.getValeur());
-                        attr.setProduit(p);
-                        modeleAttributRepository.findByNomAttributIgnoreCase("Puissance BTU")
-                                .ifPresent(attr::setModeleAttribut);
-                        attributProduitRepository.save(attr);
-                    }
-                    ok++;
-                } else { log.info("    SKIP Puissance BTU (déjà présent)"); }
-            }
+            else if (p.getPuissanceBTU() == null) {
+                log(null, v.getValeur(), "puissanceBTU");
+                if (confirmer) {
+                    try { p.setPuissanceBTU(Integer.valueOf(v.getValeur().replaceAll("[^0-9]", ""))); }
+                    catch (NumberFormatException e) { log.warn("    puissanceBTU invalide : {}", v.getValeur()); }
+                }
+                ok++;
+            } else { log.info("    SKIP puissanceBTU (déjà rempli)"); }
         }
         return new int[]{ok, skip};
     }
@@ -261,6 +300,80 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
         log(null, label.name(), "labelEnergie");
         if (confirmer) p.setLabelEnergie(label);
         return new int[]{1, 0};
+    }
+
+    /**
+     * Redirige un attribut dont le nom correspond à une colonne Produit vers le setter
+     * approprié, évitant la création d'un doublon AttributProduit.
+     */
+    private int[] routerVersColonne(Produit p, EnrichissementAttribut ea, String colonne, boolean ecraser) {
+        return switch (colonne) {
+            case "garantie" -> {
+                if (estVide(p.getGarantie()) || ecraser) {
+                    log(p.getGarantie(), ea.getValeur(), "garantie (via attribut)");
+                    if (confirmer) p.setGarantie(ea.getValeur());
+                    yield new int[]{1, 0};
+                } else {
+                    log.info("    SKIP garantie (déjà rempli, via attribut)");
+                    yield new int[]{0, 0};
+                }
+            }
+            case "labelEnergie" -> appliquerLabelEnergie(p,
+                    new EnrichissementValeur(ea.getValeur(), ea.getSource(), ea.getUrl(), VALIDE));
+            case "consommationWatt" -> {
+                if (p.getConsommationWatt() == null || ecraser) {
+                    log(null, ea.getValeur(), "consommationWatt (via attribut)");
+                    if (confirmer) {
+                        try { p.setConsommationWatt(Integer.valueOf(ea.getValeur().replaceAll("[^0-9]", ""))); }
+                        catch (NumberFormatException e) { log.warn("    consommationWatt invalide : {}", ea.getValeur()); }
+                    }
+                    yield new int[]{1, 0};
+                } else {
+                    log.info("    SKIP consommationWatt (déjà rempli, via attribut)");
+                    yield new int[]{0, 0};
+                }
+            }
+            case "dimensions" -> {
+                if (estVide(p.getDimensions()) || ecraser) {
+                    log(p.getDimensions(), ea.getValeur(), "dimensions (via attribut)");
+                    if (confirmer) p.setDimensions(ea.getValeur());
+                    yield new int[]{1, 0};
+                } else {
+                    log.info("    SKIP dimensions (déjà rempli, via attribut)");
+                    yield new int[]{0, 0};
+                }
+            }
+            case "poids" -> {
+                if (p.getPoids() == null || ecraser) {
+                    log(null, ea.getValeur(), "poids (via attribut)");
+                    if (confirmer) {
+                        try { p.setPoids(Double.parseDouble(ea.getValeur().replaceAll("[^0-9.,]", "").replace(",", "."))); }
+                        catch (NumberFormatException e) { log.warn("    poids invalide : {}", ea.getValeur()); }
+                    }
+                    yield new int[]{1, 0};
+                } else {
+                    log.info("    SKIP poids (déjà rempli, via attribut)");
+                    yield new int[]{0, 0};
+                }
+            }
+            case "puissanceBTU" -> {
+                if (p.getPuissanceBTU() == null || ecraser) {
+                    log(null, ea.getValeur(), "puissanceBTU (via attribut)");
+                    if (confirmer) {
+                        try { p.setPuissanceBTU(Integer.valueOf(ea.getValeur().replaceAll("[^0-9]", ""))); }
+                        catch (NumberFormatException e) { log.warn("    puissanceBTU invalide : {}", ea.getValeur()); }
+                    }
+                    yield new int[]{1, 0};
+                } else {
+                    log.info("    SKIP puissanceBTU (déjà rempli, via attribut)");
+                    yield new int[]{0, 0};
+                }
+            }
+            default -> {
+                log.warn("    SKIP attribut '{}' (colonne '{}' non gérée par le routeur)", ea.getNom(), colonne);
+                yield new int[]{0, 1};
+            }
+        };
     }
 
     private Produit.LabelEnergie parseLabelEnergie(String valeur) {
@@ -292,5 +405,25 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
         String a = avant != null ? (avant.length() > 60 ? avant.substring(0, 60) + "…" : avant) : "(vide)";
         String b = apres != null ? (apres.length() > 60 ? apres.substring(0, 60) + "…" : apres) : "(vide)";
         log.info("    {} : [{}] → [{}]", champ, a, b);
+    }
+
+    // ── Méthodes package-private pour les tests unitaires ─────────────────────
+
+    /** Retourne true si le nom d'attribut correspond à une colonne de Produit. */
+    static boolean estColonneProduit(String nom) {
+        return ALIAS_VERS_COLONNE.containsKey(normaliserNom(nom));
+    }
+
+    /** Normalise un nom d'attribut : minuscules, sans accents, sans espaces ni ponctuation. */
+    static String normaliserNom(String s) {
+        if (s == null) return "";
+        return s.toLowerCase()
+                .replace("é", "e").replace("è", "e").replace("ê", "e").replace("ë", "e")
+                .replace("à", "a").replace("â", "a").replace("ä", "a")
+                .replace("ù", "u").replace("û", "u").replace("ü", "u")
+                .replace("ô", "o").replace("ö", "o")
+                .replace("î", "i").replace("ï", "i")
+                .replace("ç", "c")
+                .replaceAll("[^a-z0-9]", "");
     }
 }

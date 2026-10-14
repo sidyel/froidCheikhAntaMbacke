@@ -7,8 +7,9 @@ import java.util.List;
 @Data
 public class EnrichissementProduit {
     private Long idProduit;
-    private String modeleFabricant;
-    private String ean;
+    /** Utiliser {"valeur":"...","source":"...","url":"...","confiance":"valide|a_verifier"} */
+    private EnrichissementValeur modeleFabricant;
+    private EnrichissementValeur ean;
     private String description;
     /** true = écraser les champs déjà remplis (défaut false). */
     private boolean ecraser;
