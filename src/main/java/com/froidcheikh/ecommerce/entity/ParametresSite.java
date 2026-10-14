@@ -156,6 +156,22 @@ public class ParametresSite {
     @Column(name = "meta_keywords")
     private String metaKeywords;
 
+    // ---- SECTIONS VISIBILITE ----
+    @Column(name = "afficher_hero_slider")
+    private Boolean afficherHeroSlider = true;
+
+    @Column(name = "afficher_partenaires")
+    private Boolean afficherPartenaires = true;
+
+    @Column(name = "afficher_prestations")
+    private Boolean afficherPrestations = true;
+
+    @Column(name = "afficher_equipe")
+    private Boolean afficherEquipe = true;
+
+    @Column(name = "afficher_realisations")
+    private Boolean afficherRealisations = true;
+
     // ---- METADATA ----
     @CreationTimestamp
     @Column(name = "date_creation", updatable = false)

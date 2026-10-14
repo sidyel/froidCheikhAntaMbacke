@@ -79,6 +79,13 @@ public final class ParametresSiteDTO {
         private String metaTitle;
         private String metaDescription;
         private String metaKeywords;
+
+        // SECTIONS VISIBILITE
+        private Boolean afficherHeroSlider;
+        private Boolean afficherPartenaires;
+        private Boolean afficherPrestations;
+        private Boolean afficherEquipe;
+        private Boolean afficherRealisations;
     }
 
     /**
@@ -156,6 +163,13 @@ public final class ParametresSiteDTO {
         private String metaTitle;
         private String metaDescription;
         private String metaKeywords;
+
+        // SECTIONS VISIBILITE
+        private Boolean afficherHeroSlider;
+        private Boolean afficherPartenaires;
+        private Boolean afficherPrestations;
+        private Boolean afficherEquipe;
+        private Boolean afficherRealisations;
 
         // METADATA (lecture seule)
         private LocalDateTime dateModification;

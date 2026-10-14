@@ -52,6 +52,9 @@ public class SecurityConfig {
                         // Configuration publique du site
                         .requestMatchers(HttpMethod.GET, "/api/config").permitAll()
 
+                        // Endpoints publics de contenu gérable
+                        .requestMatchers(HttpMethod.GET, "/api/contenu/**").permitAll()
+
                         // Endpoint d'installation initiale
                         .requestMatchers(HttpMethod.POST, "/api/auth/install").permitAll()
 

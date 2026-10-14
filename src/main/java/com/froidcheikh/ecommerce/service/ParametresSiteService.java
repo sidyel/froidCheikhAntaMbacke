@@ -100,6 +100,11 @@ public class ParametresSiteService {
         dto.setDescriptionLivraison(p.getDescriptionLivraison());
         dto.setAdresseCourte(p.getAdresseCourte());
         dto.setHorairesOuverture(mapHoraires(p.getHorairesOuverture()));
+        dto.setAfficherHeroSlider(p.getAfficherHeroSlider());
+        dto.setAfficherPartenaires(p.getAfficherPartenaires());
+        dto.setAfficherPrestations(p.getAfficherPrestations());
+        dto.setAfficherEquipe(p.getAfficherEquipe());
+        dto.setAfficherRealisations(p.getAfficherRealisations());
         return dto;
     }
 
@@ -148,6 +153,11 @@ public class ParametresSiteService {
         dto.setDescriptionLivraison(p.getDescriptionLivraison());
         dto.setAdresseCourte(p.getAdresseCourte());
         dto.setHorairesOuverture(mapHoraires(p.getHorairesOuverture()));
+        dto.setAfficherHeroSlider(p.getAfficherHeroSlider());
+        dto.setAfficherPartenaires(p.getAfficherPartenaires());
+        dto.setAfficherPrestations(p.getAfficherPrestations());
+        dto.setAfficherEquipe(p.getAfficherEquipe());
+        dto.setAfficherRealisations(p.getAfficherRealisations());
         return dto;
     }
 
@@ -201,6 +211,11 @@ public class ParametresSiteService {
         if (dto.getAnneesExperience() != null) p.setAnneesExperience(dto.getAnneesExperience());
         if (dto.getDescriptionLivraison() != null) p.setDescriptionLivraison(dto.getDescriptionLivraison());
         if (dto.getAdresseCourte() != null) p.setAdresseCourte(dto.getAdresseCourte());
+        if (dto.getAfficherHeroSlider() != null) p.setAfficherHeroSlider(dto.getAfficherHeroSlider());
+        if (dto.getAfficherPartenaires() != null) p.setAfficherPartenaires(dto.getAfficherPartenaires());
+        if (dto.getAfficherPrestations() != null) p.setAfficherPrestations(dto.getAfficherPrestations());
+        if (dto.getAfficherEquipe() != null) p.setAfficherEquipe(dto.getAfficherEquipe());
+        if (dto.getAfficherRealisations() != null) p.setAfficherRealisations(dto.getAfficherRealisations());
         if (dto.getHorairesOuverture() != null) {
             p.getHorairesOuverture().clear();
             dto.getHorairesOuverture().forEach(h -> {
