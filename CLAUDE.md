@@ -97,12 +97,57 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 
 | Module | Statut | Branche |
 |---|---|---|
-| Site configurable (ParametresSite, API config, hardcodes) | ✅ Mergé dans `develop` | — |
-| Entités de contenu gérable (Partenaire, Prestation, MembreEquipe, Realisation, ImageHero) | 🔄 En cours | `feature/contenu-gerable` |
+| Site configurable (ParametresSite, API config, hardcodes) | ✅ Mergé dans `develop` + `main` | — |
+| Entités de contenu gérable (ImageHero, Partenaire, Prestation, MembreEquipe, Realisation) | ✅ Mergé dans `develop` + `main` | — |
 | Zones de livraison (ZoneLivraison) | ⏳ Planifié | — |
 | Enrichissement fiches produits (EAN, ModeleFabricant, CRUD AttributProduit) | ⏳ Planifié | — |
 | Module facturation (PDF) | ⏳ Planifié | — |
 | Migrations Flyway | ⏳ Planifié | — |
+
+---
+
+## Checklist de mise en production
+
+À effectuer **avant le premier démarrage en production**. Ne jamais sauter ces étapes.
+
+### 1 — Variables d'environnement à configurer chez l'hébergeur
+
+| Variable | Valeur attendue |
+|---|---|
+| `DATABASE_URL` | URL Neon production avec `sslmode=require&connectTimeout=30&socketTimeout=60` |
+| `DATABASE_USERNAME` | Utilisateur Neon production |
+| `DATABASE_PASSWORD` | Mot de passe Neon production (**régénéré**, voir ci-dessous) |
+| `JWT_SECRET` | Clé aléatoire ≥ 64 caractères (**régénérée**, voir ci-dessous) |
+| `CLOUDINARY_CLOUD_NAME` | Cloud name Cloudinary production |
+| `CLOUDINARY_API_KEY` | Clé API Cloudinary production (**régénérée**) |
+| `CLOUDINARY_API_SECRET` | Secret API Cloudinary production (**régénéré**) |
+| `ALLOWED_ORIGINS` | Vrai domaine de production, ex. `https://www.froidcheikhantambacke.sn` |
+| `INSTALL_TOKEN` | Jeton fort à usage unique pour la première installation |
+| `PORT` | Port exposé par l'hébergeur (optionnel, défaut 8080) |
+
+### 2 — Régénérer toutes les clés (secrets historiquement exposés)
+
+- **Neon** : réinitialiser le mot de passe depuis le dashboard Neon → copier le nouveau `DATABASE_URL`.
+- **Cloudinary** : régénérer l'API Key + API Secret depuis la console Cloudinary.
+- **JWT** : générer une nouvelle clé aléatoire (ex. `openssl rand -hex 64`).
+- Supprimer ou archiver l'ancien `.env` de développement.
+
+### 3 — Sauvegarde Neon avant le premier démarrage
+
+Depuis le dashboard Neon, créer une **branche de sauvegarde** du projet (ex. `backup-avant-prod-YYYYMMDD`) avant le premier `ddl-auto=update` en production. En cas de migration incorrecte, cette branche permet de restaurer l'état exact.
+
+### 4 — Désactiver les logs SQL
+
+Dans `application.properties` (ou via variable d'environnement) :
+```properties
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.format_sql=false
+```
+Ces deux propriétés sont actuellement à `true` (utile en dev, verbeux et non sécurisé en prod).
+
+### 5 — Vérifier `ddl-auto`
+
+`spring.jpa.hibernate.ddl-auto=update` convient pour le premier démarrage. Après stabilisation du schéma, passer à `validate` (ou migrer vers Flyway — voir feuille de route #6) pour éviter toute modification accidentelle de la base.
 
 ---
 
