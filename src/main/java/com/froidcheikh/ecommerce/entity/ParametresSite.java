@@ -143,8 +143,17 @@ public class ParametresSite {
     @Column(name = "devise", length = 10)
     private String devise = "XOF";
 
+    /** Montant minimum du panier pour bénéficier de la livraison gratuite (null = désactivé). */
     @Column(name = "seuil_livraison_gratuite")
     private Integer seuilLivraisonGratuite;
+
+    /** Supplément facturé en plus du prix standard lors d'une LIVRAISON_EXPRESS, sauf si prixExpress est explicitement fixé sur la zone. */
+    @Column(name = "supplement_express", precision = 10, scale = 2)
+    private java.math.BigDecimal supplementExpress = java.math.BigDecimal.valueOf(1500);
+
+    /** Supplément unique par commande si au moins un produit d'une catégorie à gabarit lourd est dans le panier. 0 = désactivé. */
+    @Column(name = "supplement_gabarit_lourd", precision = 10, scale = 2)
+    private java.math.BigDecimal supplementGabaritLourd = java.math.BigDecimal.ZERO;
 
     // ---- SEO ----
     @Column(name = "meta_title")
