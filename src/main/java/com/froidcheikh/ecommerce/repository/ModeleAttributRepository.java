@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ModeleAttributRepository extends JpaRepository<ModeleAttribut, Long> {
@@ -12,4 +13,6 @@ public interface ModeleAttributRepository extends JpaRepository<ModeleAttribut, 
     List<ModeleAttribut> findByCategoriesIdCategorieOrderByOrdreAsc(Long categorieId);
 
     boolean existsByNomAttribut(String nomAttribut);
+
+    Optional<ModeleAttribut> findByNomAttributIgnoreCase(String nomAttribut);
 }

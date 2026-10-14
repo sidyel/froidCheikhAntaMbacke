@@ -29,6 +29,7 @@ Thumbs.db
 # Spring Boot local overrides
 application-local.properties
 
-# Exports d'enrichissement produits (données sensibles, générés à la demande)
+# Exports et lots d'enrichissement produits (données sensibles, générés à la demande)
 produits_a_enrichir.json
+enrichissement_lot_*.json
 application-local.yml
