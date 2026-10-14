@@ -180,6 +180,8 @@ public class ProduitService {
         produit.setDimensions(produitDTO.getDimensions());
         produit.setPoids(produitDTO.getPoids());
         produit.setDisponibilite(produitDTO.getDisponibilite());
+        produit.setModeleFabricant(produitDTO.getModeleFabricant());
+        produit.setEan(produitDTO.getEan());
 
         // IMPORTANT: Mise à jour des images
         if (produitDTO.getListeImages() != null) {

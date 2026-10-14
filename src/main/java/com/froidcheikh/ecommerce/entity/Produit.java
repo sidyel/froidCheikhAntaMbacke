@@ -69,6 +69,14 @@ public class Produit {
     @Column(name = "fiche_technique_pdf")
     private String ficheTechniquePDF;
 
+    @Column(name = "modele_fabricant", length = 255)
+    private String modeleFabricant;
+
+    @Pattern(regexp = "^\\d{8}$|^\\d{12}$|^\\d{13}$|^\\d{14}$",
+             message = "L'EAN doit contenir 8, 12, 13 ou 14 chiffres")
+    @Column(name = "ean", length = 14, unique = true)
+    private String ean;
+
     @ElementCollection
     @CollectionTable(name = "produit_images", joinColumns = @JoinColumn(name = "produit_id"))
     @Column(name = "image_url", columnDefinition = "text")
