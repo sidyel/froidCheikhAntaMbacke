@@ -183,50 +183,6 @@ public class ProduitController {
         return ResponseEntity.ok().build();
     }
 
-  /*  @PostMapping("/{id}/images")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'GESTIONNAIRE')")
-    public ResponseEntity<List<String>> uploadImages(
-            @PathVariable Long id,
-            @RequestParam("images") MultipartFile[] files) {
-
-        try {
-            List<String> imageUrls = new ArrayList<>();
-
-            for (MultipartFile file : files) {
-                if (!fileService.isValidImageFile(file)) {
-                    throw new RuntimeException("Format d'image non valide : " + file.getOriginalFilename());
-                }
-
-                String imageUrl = fileService.uploadFile(file, "produits/images");
-                imageUrls.add(imageUrl);
-            }
-
-            return ResponseEntity.ok(imageUrls);
-        } catch (Exception e) {
-            log.error("Erreur lors de l'upload des images", e);
-            throw new RuntimeException("Erreur lors de l'upload des images : " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/{id}/fiche-technique")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'GESTIONNAIRE')")
-    public ResponseEntity<String> uploadFicheTechnique(
-            @PathVariable Long id,
-            @RequestParam("ficheTechnique") MultipartFile file) {
-
-        try {
-            if (!fileService.isValidPdfFile(file)) {
-                throw new RuntimeException("Le fichier doit être au format PDF");
-            }
-
-            String pdfUrl = fileService.uploadFile(file, "produits/fiches-techniques");
-            return ResponseEntity.ok(pdfUrl);
-        } catch (Exception e) {
-            log.error("Erreur lors de l'upload de la fiche technique", e);
-            throw new RuntimeException("Erreur lors de l'upload de la fiche technique : " + e.getMessage());
-        }
-    }*/
-
     @PostMapping("/{id}/images")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'GESTIONNAIRE')")
     public ResponseEntity<List<String>> uploadImages(
