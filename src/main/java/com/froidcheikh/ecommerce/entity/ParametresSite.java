@@ -139,6 +139,10 @@ public class ParametresSite {
     @Column(name = "capital_social")
     private String capitalSocial;
 
+    // ---- LOCALISATION ----
+    @Column(name = "fuseau_horaire", length = 50)
+    private String fuseauHoraire = "Africa/Dakar";
+
     // ---- LIVRAISON ----
     @Column(name = "devise", length = 10)
     private String devise = "XOF";
