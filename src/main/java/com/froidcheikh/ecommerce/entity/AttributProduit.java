@@ -29,4 +29,8 @@ public class AttributProduit {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "produit_id")
     private Produit produit;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "modele_attribut_id")
+    private ModeleAttribut modeleAttribut;
 }
