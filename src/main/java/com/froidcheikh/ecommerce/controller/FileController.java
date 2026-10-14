@@ -25,48 +25,8 @@ public class FileController {
 
     private final FileService fileService;
 
-    /**
-     * Sert les fichiers uploadés (images, PDF, etc.)
-     */
-    /*@GetMapping("/uploads/**")
-    public ResponseEntity<Resource> serveFile(@RequestParam String filePath) {
-        try {
-            // Obtenir le chemin complet du fichier
-            Path file = fileService.getFilePath(filePath);
 
-            // Vérifier que le fichier existe
-            if (!fileService.fileExists(filePath)) {
-                log.warn("Fichier non trouvé: {}", filePath);
-                return ResponseEntity.notFound().build();
-            }
-
-            // Créer la ressource
-            Resource resource = new UrlResource(file.toUri());
-
-            if (!resource.exists() || !resource.isReadable()) {
-                log.warn("Fichier non lisible: {}", filePath);
-                return ResponseEntity.notFound().build();
-            }
-
-            // Déterminer le type de contenu
-            String contentType = determineContentType(file);
-
-            // Construire la réponse avec les headers appropriés
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CACHE_CONTROL, "max-age=3600") // Cache 1 heure
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFileName().toString() + "\"")
-                    .body(resource);
-
-        } catch (MalformedURLException e) {
-            log.error("URL malformée pour le fichier: {}", filePath, e);
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            log.error("Erreur lors du service du fichier: {}", filePath, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-     */
+   /*
     @GetMapping("/uploads")
     public ResponseEntity<Resource> serveFile(@RequestParam String path) {
         String[] parts = path.split("/", 2);
@@ -76,9 +36,7 @@ public class FileController {
         return ResponseEntity.badRequest().build();
     }
 
-    /**
-     * Alternative avec path variable (plus propre pour les URLs)
-     */
+
     @GetMapping("/uploads/{category}/{filename:.+}")
     public ResponseEntity<Resource> serveFileByPath(
             @PathVariable String category,
@@ -121,12 +79,7 @@ public class FileController {
         }
     }
 
-    /**
-     * Endpoint pour vérifier l'existence d'un fichier
-     */
-    /**
-     * Endpoint pour vérifier l'existence d'un fichier
-     */
+
     @GetMapping("/exists")
     public ResponseEntity<Boolean> fileExists(@RequestParam String filePath) {
         boolean exists = fileService.fileExists(filePath);
@@ -134,9 +87,6 @@ public class FileController {
         return ResponseEntity.ok(exists);
     }
 
-    /**
-     * Détermine le type de contenu basé sur l'extension du fichier
-     */
     private String determineContentType(Path file) {
         try {
             String contentType = Files.probeContentType(file);
@@ -162,5 +112,5 @@ public class FileController {
         }
 
         return "application/octet-stream";
-    }
+    }*/
 }

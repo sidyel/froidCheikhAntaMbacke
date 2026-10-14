@@ -1,9 +1,12 @@
 package com.froidcheikh.ecommerce.config;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.froidcheikh.ecommerce.security.JwtAuthenticationFilter;
 import com.froidcheikh.ecommerce.security.CustomUserDetailsService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -36,6 +39,9 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Value("${app.allowed-origins}")
+    private String allowedOrigins;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -43,6 +49,15 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
+                        // Configuration publique du site
+                        .requestMatchers(HttpMethod.GET, "/api/config").permitAll()
+
+                        // Endpoints publics de contenu gérable
+                        .requestMatchers(HttpMethod.GET, "/api/contenu/**").permitAll()
+
+                        // Endpoint d'installation initiale
+                        .requestMatchers(HttpMethod.POST, "/api/auth/install").permitAll()
+
                         // Endpoints publics d'authentification
                         .requestMatchers("/api/auth/**").permitAll()
 
@@ -105,8 +120,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Origines autorisées
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        // Origines autorisées — lues depuis ALLOWED_ORIGINS (jamais de wildcard en prod)
+        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        configuration.setAllowedOriginPatterns(origins);
 
         // Méthodes HTTP autorisées
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
@@ -141,5 +157,28 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Configuration
+    public class CloudinaryConfig {
+
+        @Value("${cloudinary.cloud-name}")
+        private String cloudName;
+
+        @Value("${cloudinary.api-key}")
+        private String apiKey;
+
+        @Value("${cloudinary.api-secret}")
+        private String apiSecret;
+
+        @Bean
+        public Cloudinary cloudinary() {
+            return new Cloudinary(ObjectUtils.asMap(
+                    "cloud_name", cloudName,
+                    "api_key", apiKey,
+                    "api_secret", apiSecret,
+                    "secure", true
+            ));
+        }
     }
 }
