@@ -179,6 +179,26 @@ DELETE FROM commandes;
 - Vérifier la configuration du déploiement automatique (branche suivie, triggers).
 - **Régénérer les identifiants Railway exposés dans l'historique git** : le mot de passe PostgreSQL Railway (`svYhBmqtXnJkAaFEbairZjCtElvTESMe`) et l'URL interne (`postgres.railway.internal:5432/railway`) étaient committés en clair dans `application.properties` sur `origin/main`. Ces identifiants sont compromis — les réinitialiser depuis le dashboard Railway avant tout déploiement.
 
+### 9 — Migration des images produit (profil `migration`)
+
+> ⚠️ **Critique** — sans cette étape, les produits n'auront plus d'images en production.
+
+1. **Identifier la vraie base de production** avant toute chose : Neon ou Railway ? Les deux `DATABASE_URL` doivent pointer sur la même base. Configurer la variable d'environnement sur l'hébergeur cible.
+2. **Créer une branche de sauvegarde Neon** (ou dump Railway) avant l'opération (voir étape 3).
+3. **Lancer le profil `migration` AVANT ou immédiatement au premier démarrage** de la version incluant `feature/modele-produit` :
+   ```bash
+   mvn spring-boot:run -Dspring-boot.run.profiles=migration
+   ```
+   Rapport attendu : `X migrées, 0 produits ignorés, 0 URLs sans publicId`.
+   Si le rapport indique `0 migrées, N produits ignorés` → migration déjà faite, OK.
+4. **Ne jamais supprimer la table `produit_images`** avant d'avoir :
+   - Vérifié que toutes les lignes de `image_produit` sont présentes en base production.
+   - Confirmé que le frontend affiche bien les images sur toutes les fiches produit.
+5. Une fois vérifié, la table `produit_images` peut être supprimée manuellement via SQL :
+   ```sql
+   DROP TABLE produit_images;
+   ```
+
 ---
 
 ## Points connus à corriger
