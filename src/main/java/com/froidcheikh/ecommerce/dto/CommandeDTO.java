@@ -36,6 +36,17 @@ public class CommandeDTO {
     @NotNull(message = "Le mode de livraison est obligatoire")
     private Commande.ModeLivraison modeLivraison;
 
+    /** ID de la zone choisie. Null pour RETRAIT_MAGASIN. */
+    private Long zoneId;
+
+    // Champs figés (lecture seule — remplis par le backend)
+    private String zoneNom;
+    private BigDecimal zonePrixApplique;
+    private String zoneModeApplique;
+    private BigDecimal supplementExpressApplique;
+    private BigDecimal supplementGabaritApplique;
+    private Boolean livraisonGratuiteAppliquee;
+
     private LocalDateTime dateModification;
 
     // ✅ CLIENT : Défini automatiquement côté backend pour les clients authentifiés

@@ -8,6 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Component
@@ -22,6 +25,7 @@ public class DataInitializer implements CommandLineRunner {
     private final PrestationRepository prestationRepository;
     private final MembreEquipeRepository membreEquipeRepository;
     private final RealisationRepository realisationRepository;
+    private final ZoneLivraisonRepository zoneLivraisonRepository;
 
     @Override
     public void run(String... args) {
@@ -62,6 +66,10 @@ public class DataInitializer implements CommandLineRunner {
         if (realisationRepository.count() == 0) {
             log.info("Seed Realisations...");
             seedRealisations();
+        }
+        if (zoneLivraisonRepository.count() == 0) {
+            log.info("Seed ZonesLivraison...");
+            seedZonesLivraison();
         }
     }
 
@@ -248,5 +256,130 @@ public class DataInitializer implements CommandLineRunner {
         r.setOrdre(ordre);
         r.setActif(true);
         realisationRepository.save(r);
+    }
+
+    // ── Zones de livraison ──────────────────────────────────────────────────
+
+    private void seedZonesLivraison() {
+        // Fidèle à l'ancien adressesData du frontend (commit 207ef2c) — 40 entrées exactes + 8 "Autres quartiers"
+        // format : ville, villeLabel, quartier, quartierLabel, prixStandard, eligibleGratuit, ordre
+        List<Object[]> zones = new ArrayList<>();
+
+        // DAKAR — 13 quartiers (0–3 000 FCFA, éligible livraison gratuite)
+        zones.add(new Object[]{"dakar","Dakar","plateau","Plateau",0,true,0});
+        zones.add(new Object[]{"dakar","Dakar","medina","Medina",0,true,1});
+        zones.add(new Object[]{"dakar","Dakar","fann","Fann",1000,true,2});
+        zones.add(new Object[]{"dakar","Dakar","liberte","Liberte",1000,true,3});
+        zones.add(new Object[]{"dakar","Dakar","point-e","Point-e",1000,true,4});
+        zones.add(new Object[]{"dakar","Dakar","mermoz","Mermoz",1500,true,5});
+        zones.add(new Object[]{"dakar","Dakar","sacre-coeur","Sacre-coeur",1500,true,6});
+        zones.add(new Object[]{"dakar","Dakar","almadies","Almadies",2500,true,7});
+        zones.add(new Object[]{"dakar","Dakar","ngor","Ngor",3000,true,8});
+        zones.add(new Object[]{"dakar","Dakar","ouakam","Ouakam",2500,true,9});
+        zones.add(new Object[]{"dakar","Dakar","yoff","Yoff / Ouest Foire / Nord Foire",3000,true,10});
+        zones.add(new Object[]{"dakar","Dakar","hann-bel-air","Hann Bel-Air",2000,true,11});
+        zones.add(new Object[]{"dakar","Dakar","parcelles-assainies","Parcelles Assainies",2000,true,12});
+
+        // PIKINE — 6 quartiers (2 000–4 000 FCFA, éligible gratuit)
+        zones.add(new Object[]{"pikine","Pikine","pikine-nord","Pikine Nord",2000,true,0});
+        zones.add(new Object[]{"pikine","Pikine","pikine-sud","Pikine Sud",2500,true,1});
+        zones.add(new Object[]{"pikine","Pikine","pikine-est","Pikine Est",3000,true,2});
+        zones.add(new Object[]{"pikine","Pikine","pikine-ouest","Pikine Ouest",2500,true,3});
+        zones.add(new Object[]{"pikine","Pikine","thiaroye","Thiaroye",3500,true,4});
+        zones.add(new Object[]{"pikine","Pikine","yeumbeul","Yeumbeul",4000,true,5});
+
+        // GUÉDIAWAYE — 4 quartiers (2 500–3 500 FCFA, éligible gratuit)
+        zones.add(new Object[]{"guediawaye","Guédiawaye","golf-sud","Golf Sud",2500,true,0});
+        zones.add(new Object[]{"guediawaye","Guédiawaye","medina-gounass","Médina Gounass",3000,true,1});
+        zones.add(new Object[]{"guediawaye","Guédiawaye","sam-notaire","Sam Notaire",3000,true,2});
+        zones.add(new Object[]{"guediawaye","Guédiawaye","wakhinane-nimzatt","Wakhinane Nimzatt",3500,true,3});
+
+        // RUFISQUE — 4 quartiers (3 000–4 000 FCFA, éligible gratuit)
+        zones.add(new Object[]{"rufisque","Rufisque","rufisque-centre","Rufisque Centre",3000,true,0});
+        zones.add(new Object[]{"rufisque","Rufisque","rufisque-est","Rufisque Est",3500,true,1});
+        zones.add(new Object[]{"rufisque","Rufisque","rufisque-ouest","Rufisque Ouest",3500,true,2});
+        zones.add(new Object[]{"rufisque","Rufisque","rufisque-nord","Rufisque Nord",4000,true,3});
+
+        // THIÈS — 4 quartiers (5 000–6 000 FCFA, NON éligible)
+        zones.add(new Object[]{"thies","Thiès","thies-centre","Thiès Centre",5000,false,0});
+        zones.add(new Object[]{"thies","Thiès","thies-nord","Thiès Nord",5500,false,1});
+        zones.add(new Object[]{"thies","Thiès","thies-est","Thiès Est",5500,false,2});
+        zones.add(new Object[]{"thies","Thiès","thies-ouest","Thiès Ouest",6000,false,3});
+
+        // KAOLACK — 3 quartiers (7 000–7 500 FCFA, NON éligible)
+        zones.add(new Object[]{"kaolack","Kaolack","kaolack-centre","Kaolack Centre",7000,false,0});
+        zones.add(new Object[]{"kaolack","Kaolack","kaolack-nord","Kaolack Nord",7500,false,1});
+        zones.add(new Object[]{"kaolack","Kaolack","kaolack-sud","Kaolack Sud",7500,false,2});
+
+        // SAINT-LOUIS — 3 quartiers (8 000–9 000 FCFA, NON éligible)
+        zones.add(new Object[]{"saint-louis","Saint-Louis","saint-louis-centre","Saint-Louis Centre",8000,false,0});
+        zones.add(new Object[]{"saint-louis","Saint-Louis","sor","Sor",8500,false,1});
+        zones.add(new Object[]{"saint-louis","Saint-Louis","guet-ndar","Guet Ndar",9000,false,2});
+
+        // ZIGUINCHOR — 3 quartiers (10 000–11 000 FCFA, NON éligible)
+        zones.add(new Object[]{"ziguinchor","Ziguinchor","ziguinchor-centre","Ziguinchor Centre",10000,false,0});
+        zones.add(new Object[]{"ziguinchor","Ziguinchor","ziguinchor-nord","Ziguinchor Nord",10500,false,1});
+        zones.add(new Object[]{"ziguinchor","Ziguinchor","ziguinchor-sud","Ziguinchor Sud",11000,false,2});
+
+        for (Object[] z : zones) {
+            createZone((String)z[0],(String)z[1],(String)z[2],(String)z[3],
+                    (int)z[4],(boolean)z[5],(int)z[6]);
+        }
+
+        // Zones "Autres quartiers" par ville — prix = max des quartiers de la ville
+        creerAutresQuartiersParVille();
+
+        log.info("✅ {} zones de livraison créées", zoneLivraisonRepository.count());
+    }
+
+    private void createZone(String ville, String villeLabel, String quartier, String quartierLabel,
+                             int prixStandard, boolean eligibleGratuit, int ordre) {
+        ZoneLivraison z = new ZoneLivraison();
+        z.setVille(ville);
+        z.setVilleLabel(villeLabel);
+        z.setQuartier(quartier);
+        z.setQuartierLabel(quartierLabel);
+        z.setPrixStandard(BigDecimal.valueOf(prixStandard));
+        z.setExpressDisponible(true);
+        z.setDelaiEstime(delaiParVille(ville));
+        z.setActif(true);
+        z.setEligibleLivraisonGratuite(eligibleGratuit);
+        z.setOrdre(ordre);
+        zoneLivraisonRepository.save(z);
+    }
+
+    private void creerAutresQuartiersParVille() {
+        List<String> villes = List.of("dakar","pikine","guediawaye","rufisque","thies","kaolack","saint-louis","ziguinchor");
+        for (String ville : villes) {
+            List<ZoneLivraison> zonesVille = zoneLivraisonRepository.findByVilleIgnoreCaseOrderByOrdreAsc(ville);
+            if (zonesVille.isEmpty()) continue;
+            BigDecimal prixMax = zonesVille.stream()
+                    .map(ZoneLivraison::getPrixStandard)
+                    .max(Comparator.naturalOrder())
+                    .orElse(BigDecimal.ZERO);
+            String villeLabel = zonesVille.get(0).getVilleLabel();
+            boolean eligibleGratuit = zonesVille.get(0).getEligibleLivraisonGratuite();
+            ZoneLivraison autres = new ZoneLivraison();
+            autres.setVille(ville);
+            autres.setVilleLabel(villeLabel);
+            autres.setQuartier("autres");
+            autres.setQuartierLabel("Autres quartiers");
+            autres.setPrixStandard(prixMax);
+            autres.setExpressDisponible(true);
+            autres.setDelaiEstime(delaiParVille(ville));
+            autres.setActif(true);
+            autres.setEligibleLivraisonGratuite(eligibleGratuit);
+            autres.setOrdre(99);
+            zoneLivraisonRepository.save(autres);
+        }
+    }
+
+    private String delaiParVille(String ville) {
+        return switch (ville) {
+            case "dakar" -> "24h";
+            case "pikine", "guediawaye", "rufisque" -> "24-48h";
+            case "thies" -> "2-3 jours";
+            default -> "3-5 jours";
+        };
     }
 }

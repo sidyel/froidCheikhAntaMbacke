@@ -1,6 +1,7 @@
 package com.froidcheikh.ecommerce.service;
 
 import com.froidcheikh.ecommerce.dto.CommandeDTO;
+import com.froidcheikh.ecommerce.dto.LivraisonDTO;
 import com.froidcheikh.ecommerce.entity.*;
 import com.froidcheikh.ecommerce.exception.ResourceNotFoundException;
 import com.froidcheikh.ecommerce.repository.*;
@@ -30,6 +31,7 @@ public class CommandeService {
     private final ProduitRepository produitRepository;
     private final PaiementRepository paiementRepository;
     private final ProduitService produitService;
+    private final CalculCommandeService calculCommandeService;
     private final ModelMapper modelMapper;
 
     public CommandeDTO getCommandeById(Long id) {
@@ -108,29 +110,42 @@ public class CommandeService {
                 log.info("🏠 Adresse de livraison assignée");
             }
 
-            // ✅ ÉTAPE 5 : Calculer les frais de livraison
-            BigDecimal fraisLivraison = calculerFraisLivraison(commandeDTO);
-            commande.setFraisLivraison(fraisLivraison);
-            log.info("🚚 Frais de livraison calculés: {}", fraisLivraison);
+            // ✅ ÉTAPE 5 : Calculer les frais de livraison via CalculCommandeService
+            List<LivraisonDTO.EstimationRequest.LigneEstimation> lignesEstim = commandeDTO.getLignesCommande()
+                    .stream()
+                    .map(l -> {
+                        LivraisonDTO.EstimationRequest.LigneEstimation le = new LivraisonDTO.EstimationRequest.LigneEstimation();
+                        le.setProduitId(l.getProduitId());
+                        le.setQuantite(l.getQuantite());
+                        return le;
+                    }).toList();
 
-            // ✅ ÉTAPE 6 : CALCULER LE MONTANT TOTAL AVANT LA SAUVEGARDE
+            CalculCommandeService.CalculResultat calcul = calculCommandeService.calculer(
+                    commandeDTO.getZoneId(), commandeDTO.getModeLivraison(), lignesEstim);
+
+            commande.setFraisLivraison(calcul.fraisLivraisonTotal());
+            commande.setZoneId(calcul.zoneId());
+            commande.setZoneNom(calcul.zoneNom());
+            commande.setZonePrixApplique(calcul.zonePrixApplique());
+            commande.setZoneModeApplique(calcul.zoneModeApplique());
+            commande.setSupplementExpressApplique(calcul.supplementExpress());
+            commande.setSupplementGabaritApplique(calcul.supplementGabarit());
+            commande.setLivraisonGratuiteAppliquee(calcul.livraisonGratuite());
+            log.info("🚚 Frais livraison: {} (zone: {}, gratuit: {})",
+                    calcul.fraisLivraisonTotal(), calcul.zoneNom(), calcul.livraisonGratuite());
+
+            // ✅ ÉTAPE 6 : MONTANT TOTAL
             BigDecimal montantTotal = BigDecimal.ZERO;
-
-            // Calculer le montant des lignes de commande
             for (CommandeDTO.LigneCommandeDTO ligneDTO : commandeDTO.getLignesCommande()) {
                 Produit produit = produitRepository.findById(ligneDTO.getProduitId())
                         .orElseThrow(() -> new ResourceNotFoundException("Produit non trouvé avec l'ID : " + ligneDTO.getProduitId()));
-
                 BigDecimal sousTotal = produit.getPrix().multiply(BigDecimal.valueOf(ligneDTO.getQuantite()));
                 montantTotal = montantTotal.add(sousTotal);
                 log.info("📦 Produit ID {} - Prix: {} x Qté: {} = Sous-total: {}",
                         ligneDTO.getProduitId(), produit.getPrix(), ligneDTO.getQuantite(), sousTotal);
             }
+            montantTotal = montantTotal.add(calcul.fraisLivraisonTotal());
 
-            // Ajouter les frais de livraison au montant total
-            montantTotal = montantTotal.add(fraisLivraison);
-
-            // ✅ ASSIGNER LE MONTANT TOTAL AVANT LA SAUVEGARDE
             commande.setMontantTotal(montantTotal);
             log.info("💰 Montant total calculé et assigné: {}", montantTotal);
 
@@ -205,17 +220,6 @@ public class CommandeService {
 
         log.info("Paiement confirmé pour la commande : {}", commandeId);
         return convertToDTO(commande);
-    }
-
-    // Méthodes utilitaires
-    private BigDecimal calculerFraisLivraison(CommandeDTO commandeDTO) {
-        if (commandeDTO.getModeLivraison() == Commande.ModeLivraison.RETRAIT_MAGASIN) {
-            return BigDecimal.ZERO;
-        } else if (commandeDTO.getModeLivraison() == Commande.ModeLivraison.LIVRAISON_EXPRESS) {
-            return BigDecimal.valueOf(5000); // 5000 FCFA
-        } else {
-            return BigDecimal.valueOf(2500); // 2500 FCFA livraison normale
-        }
     }
 
     private String genererNumeroCommande() {

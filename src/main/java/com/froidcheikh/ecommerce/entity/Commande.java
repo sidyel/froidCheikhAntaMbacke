@@ -70,6 +70,29 @@ public class Commande {
     @Embedded
     private AdresseLivraison adresseLivraison;
 
+    // --- COPIE FIGÉE DE LA ZONE (nullable — commandes avant zones-livraison) ---
+    /** ID de la zone au moment de la commande, sans contrainte FK (la zone peut être désactivée). */
+    @Column(name = "zone_id")
+    private Long zoneId;
+
+    @Column(name = "zone_nom", length = 200)
+    private String zoneNom;
+
+    @Column(name = "zone_prix_applique", precision = 10, scale = 2)
+    private BigDecimal zonePrixApplique;
+
+    @Column(name = "zone_mode_applique", length = 30)
+    private String zoneModeApplique;
+
+    @Column(name = "supplement_express_applique", precision = 10, scale = 2)
+    private BigDecimal supplementExpressApplique;
+
+    @Column(name = "supplement_gabarit_applique", precision = 10, scale = 2)
+    private BigDecimal supplementGabaritApplique;
+
+    @Column(name = "livraison_gratuite_appliquee")
+    private Boolean livraisonGratuiteAppliquee;
+
     // Commande invité (sans compte client)
     @Column(name = "email_invite")
     private String emailInvite;

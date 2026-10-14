@@ -32,6 +32,10 @@ public class Categorie {
     @Column(name = "image_categorie",columnDefinition = "text")
     private String imageCategorie;
 
+    /** Si true, un supplément gabarit lourd est ajouté aux frais de livraison dès qu'un produit de cette catégorie est dans le panier. */
+    @Column(name = "gabarit_lourd")
+    private Boolean gabaritLourd = Boolean.FALSE;
+
     @OneToMany(mappedBy = "categorie", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Produit> produits;
 
