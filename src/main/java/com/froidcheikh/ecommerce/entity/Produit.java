@@ -109,6 +109,10 @@ public class Produit {
     @OneToMany(mappedBy = "produit", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<AttributProduit> attributs;
 
+    @OneToMany(mappedBy = "produit", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("ordre ASC")
+    private List<ImageProduit> images;
+
     public enum LabelEnergie {
         A_PLUS_PLUS_PLUS, A_PLUS_PLUS, A_PLUS, A, B, C, D, E, F, G
     }

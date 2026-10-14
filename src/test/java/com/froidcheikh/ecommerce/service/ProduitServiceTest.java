@@ -6,9 +6,11 @@ import com.froidcheikh.ecommerce.entity.Produit;
 import com.froidcheikh.ecommerce.repository.CategorieRepository;
 import com.froidcheikh.ecommerce.repository.MarqueRepository;
 import com.froidcheikh.ecommerce.repository.ProduitRepository;
-import org.junit.jupiter.api.BeforeEach;
+import com.froidcheikh.ecommerce.repository.ImageProduitRepository;
+import com.froidcheikh.ecommerce.service.FileService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
@@ -30,14 +32,10 @@ class ProduitServiceTest {
     @Mock private MarqueRepository marqueRepository;
     @Mock private ModelMapper modelMapper;
     @Mock private PrixService prixService;
+    @Mock private ImageProduitRepository imageProduitRepository;
+    @Mock private FileService fileService;
 
-    private ProduitService service;
-
-    @BeforeEach
-    void setUp() {
-        service = new ProduitService(produitRepository, categorieRepository,
-                marqueRepository, modelMapper, prixService);
-    }
+    @InjectMocks private ProduitService service;
 
     // ── helpers ──────────────────────────────────────────────────────────────
 

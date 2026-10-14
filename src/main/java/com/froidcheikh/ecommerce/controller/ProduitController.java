@@ -2,7 +2,6 @@ package com.froidcheikh.ecommerce.controller;
 
 import com.froidcheikh.ecommerce.dto.ProduitDTO;
 import com.froidcheikh.ecommerce.service.ProduitService;
-import com.froidcheikh.ecommerce.service.FileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -16,7 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -27,7 +25,6 @@ import java.util.List;
 public class ProduitController {
 
     private final ProduitService produitService;
-    private final FileService fileService;
 
     @GetMapping
     public ResponseEntity<Page<ProduitDTO>> getAllProduits(
@@ -185,50 +182,12 @@ public class ProduitController {
 
     @PostMapping("/{id}/images")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'GESTIONNAIRE')")
-    public ResponseEntity<List<String>> uploadImages(
+    public ResponseEntity<List<ProduitDTO.ImageProduitDTO>> uploadImages(
             @PathVariable Long id,
             @RequestParam("images") MultipartFile[] files) {
-
-        try {
-            log.info("🔄 Upload d'images pour le produit ID: {}", id);
-
-            // Vérifier que le produit existe
-            ProduitDTO produit = produitService.getProduitById(id);
-            log.info("Produit trouvé: {}", produit.getNomProduit());
-
-            List<String> imagePaths = new ArrayList<>();
-
-            for (MultipartFile file : files) {
-                log.info("Traitement du fichier: {} ({})", file.getOriginalFilename(), file.getSize());
-
-                if (!fileService.isValidImageFile(file)) {
-                    throw new RuntimeException("Format d'image non valide : " + file.getOriginalFilename());
-                }
-
-                // Upload du fichier et récupération du chemin relatif
-                String imagePath = fileService.uploadFile(file, "produits/images");
-                imagePaths.add(imagePath);
-                log.info("✅ Fichier uploadé: {}", imagePath);
-            }
-
-            // CORRECTION: Ajouter les chemins d'images au produit EXISTANT
-            List<String> currentImages = produit.getListeImages() != null
-                    ? new ArrayList<>(produit.getListeImages())
-                    : new ArrayList<>();
-
-            currentImages.addAll(imagePaths);
-            produit.setListeImages(currentImages);
-
-            // IMPORTANT: Mettre à jour le produit avec les nouvelles images
-            produitService.updateProduit(id, produit);
-            log.info("✅ Produit mis à jour avec {} images total", currentImages.size());
-
-            return ResponseEntity.ok(imagePaths);
-
-        } catch (Exception e) {
-            log.error("❌ Erreur lors de l'upload des images pour le produit {}: {}", id, e.getMessage(), e);
-            throw new RuntimeException("Erreur lors de l'upload des images : " + e.getMessage());
-        }
+        log.info("🔄 Upload d'images pour le produit ID: {}", id);
+        List<ProduitDTO.ImageProduitDTO> result = produitService.uploadImages(id, files);
+        return ResponseEntity.ok(result);
     }
 
 
@@ -238,60 +197,24 @@ public class ProduitController {
             @PathVariable Long id,
             @RequestParam("ficheTechnique") MultipartFile file) {
 
-        try {
-            // Vérifier que le produit existe
-            ProduitDTO produit = produitService.getProduitById(id);
-
-            if (!fileService.isValidPdfFile(file)) {
-                throw new RuntimeException("Le fichier doit être au format PDF");
-            }
-
-            // Upload du fichier PDF
-            String pdfPath = fileService.uploadFile(file, "produits/fiches-techniques");
-
-            // Mettre à jour le produit avec la fiche technique
-            produit.setFicheTechniquePDF(pdfPath);
-            produitService.updateProduit(id, produit);
-
-            log.info("Fiche technique uploadée pour le produit {}: {}", id, pdfPath);
-            return ResponseEntity.ok(pdfPath);
-
-        } catch (Exception e) {
-            log.error("Erreur lors de l'upload de la fiche technique pour le produit " + id, e);
-            throw new RuntimeException("Erreur lors de l'upload de la fiche technique : " + e.getMessage());
-        }
+        String pdfPath = produitService.uploadFicheTechnique(id, file);
+        return ResponseEntity.ok(pdfPath);
     }
 
-    @DeleteMapping("/{id}/images/{imageIndex}")
+    @DeleteMapping("/{id}/images/{imageId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'GESTIONNAIRE')")
     public ResponseEntity<Void> deleteImage(
             @PathVariable Long id,
-            @PathVariable int imageIndex) {
+            @PathVariable Long imageId) {
+        produitService.supprimerImage(id, imageId);
+        return ResponseEntity.ok().build();
+    }
 
-        try {
-            ProduitDTO produit = produitService.getProduitById(id);
-
-            if (produit.getListeImages() != null && imageIndex >= 0 && imageIndex < produit.getListeImages().size()) {
-                String imageToDelete = produit.getListeImages().get(imageIndex);
-
-                // Supprimer le fichier physique
-                fileService.deleteFile(imageToDelete);
-
-                // Mettre à jour la liste des images
-                List<String> updatedImages = new ArrayList<>(produit.getListeImages());
-                updatedImages.remove(imageIndex);
-                produit.setListeImages(updatedImages);
-
-                produitService.updateProduit(id, produit);
-
-                log.info("Image supprimée du produit {}: {}", id, imageToDelete);
-            }
-
-            return ResponseEntity.ok().build();
-
-        } catch (Exception e) {
-            log.error("Erreur lors de la suppression de l'image", e);
-            throw new RuntimeException("Erreur lors de la suppression de l'image : " + e.getMessage());
-        }
+    @PatchMapping("/{id}/images/{imageId}/principale")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'GESTIONNAIRE')")
+    public ResponseEntity<ProduitDTO.ImageProduitDTO> definirImagePrincipale(
+            @PathVariable Long id,
+            @PathVariable Long imageId) {
+        return ResponseEntity.ok(produitService.definirImagePrincipale(id, imageId));
     }
 }

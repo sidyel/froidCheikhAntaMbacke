@@ -48,9 +48,12 @@ public class ProduitDTO {
     private String ean;
 
     private List<String> listeImages;
+    private List<ImageProduitDTO> images;
     private List<String> videosOptionnelles;
     private Boolean disponibilite;
     private LocalDateTime dateAjout;
+
+    private Integer scoreCompletude;
 
     // Promotion active (null si aucune promo)
     private BigDecimal prixPromo;
@@ -78,6 +81,18 @@ public class ProduitDTO {
         private Long idMarque;
         private String nomMarque;
         private String logo;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ImageProduitDTO {
+        private Long idImage;
+        private String url;
+        private String publicId;
+        private String texteAlternatif;
+        private int ordre;
+        private boolean principale;
     }
 
     @Data
