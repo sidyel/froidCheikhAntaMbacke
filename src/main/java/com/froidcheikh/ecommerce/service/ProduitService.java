@@ -25,6 +25,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageImpl;
 
 @Service
 @RequiredArgsConstructor
@@ -57,9 +58,25 @@ public class ProduitService {
             Long categorieId,
             Long marqueId,
             String stockFilter,
+            Boolean ficheIncomplete,
             Pageable pageable) {
 
-        // Cette méthode ne filtre PAS par disponibilite = true
+        if (Boolean.TRUE.equals(ficheIncomplete)) {
+            // Calcul du score en Java : on charge tous les produits correspondants,
+            // on filtre ceux dont le score < 80, puis on pagine manuellement.
+            List<ProduitDTO> tous = produitRepository
+                    .findAllWithAdminFilters(search, categorieId, marqueId, stockFilter,
+                            Pageable.unpaged())
+                    .stream()
+                    .map(this::convertToDTO)
+                    .filter(dto -> dto.getScoreCompletude() == null || dto.getScoreCompletude() < 80)
+                    .collect(Collectors.toList());
+            int start = (int) pageable.getOffset();
+            int end = Math.min(start + pageable.getPageSize(), tous.size());
+            List<ProduitDTO> page = (start >= tous.size()) ? List.of() : tous.subList(start, end);
+            return new PageImpl<>(page, pageable, tous.size());
+        }
+
         return produitRepository.findAllWithAdminFilters(
                         search, categorieId, marqueId, stockFilter, pageable)
                 .map(this::convertToDTO);

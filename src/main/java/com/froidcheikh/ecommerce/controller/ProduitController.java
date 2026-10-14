@@ -50,6 +50,7 @@ public class ProduitController {
             @RequestParam(required = false) Long categorieId,
             @RequestParam(required = false) Long marqueId,
             @RequestParam(required = false) String stockFilter,
+            @RequestParam(required = false) Boolean ficheIncomplete,
             @RequestParam(defaultValue = "dateAjout") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
 
@@ -57,9 +58,8 @@ public class ProduitController {
                 Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        // Récupérer TOUS les produits (disponibles ET non disponibles)
         Page<ProduitDTO> produits = produitService.getAllProduitsAdmin(
-                search, categorieId, marqueId, stockFilter, pageable);
+                search, categorieId, marqueId, stockFilter, ficheIncomplete, pageable);
 
         return ResponseEntity.ok(produits);
     }
