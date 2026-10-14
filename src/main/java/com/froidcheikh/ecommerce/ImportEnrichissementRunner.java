@@ -20,6 +20,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -223,7 +225,11 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
         log.info("  RAPPORT : {} produit(s) modifié(s), {} champ(s) rempli(s), {} valeur(s) ignorée(s)",
                 nbModifies, nbChamps, nbIgnores);
         if (!confirmer) {
-            log.info("  ↑ SIMULATION — relancer avec -Dimport.confirmer=true pour écrire");
+            // Rollback explicite : même si un setter était appelé accidentellement,
+            // la transaction est annulée et rien n'est écrit en base.
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            log.info("  ↑ SIMULATION — transaction annulée (rollback), aucune donnée écrite");
+            log.info("  ↑ Relancer avec -Dimport.confirmer=true pour écrire");
         }
         log.info("══════════════════════════════════════════════════════");
     }
