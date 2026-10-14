@@ -99,7 +99,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 |---|---|---|
 | Site configurable (ParametresSite, API config, hardcodes) | ✅ Mergé dans `develop` + `main` | — |
 | Entités de contenu gérable (ImageHero, Partenaire, Prestation, MembreEquipe, Realisation) | ✅ Mergé dans `develop` + `main` | — |
-| Zones de livraison (ZoneLivraison) | ⏳ Planifié | — |
+| Zones de livraison (ZoneLivraison) | ✅ Mergé dans `develop` + `main` | — |
 | Enrichissement fiches produits (EAN, ModeleFabricant, CRUD AttributProduit) | ⏳ Planifié | — |
 | Module facturation (PDF) | ⏳ Planifié | — |
 | Migrations Flyway | ⏳ Planifié | — |
@@ -159,6 +159,17 @@ RUN apk add --no-cache fontconfig ttf-dejavu
 
 Sans cette ligne, toute génération de PDF (iText, JasperReports, Apache PDFBox…) échouera silencieusement en production avec une erreur de police manquante.
 
+### 8 — Nettoyer les commandes de test
+
+Avant la mise en ligne, supprimer toutes les commandes créées pendant le développement et les tests. Ces enregistrements ont des montants, des adresses et des modes de livraison qui ne correspondent pas à de vraies transactions. Depuis la console SQL Neon :
+
+```sql
+-- Vérifier d'abord les commandes existantes
+SELECT id_commande, numero_commande, date_commande, montant_total FROM commandes ORDER BY date_commande;
+-- Supprimer après vérification
+DELETE FROM commandes;
+```
+
 ### 7 — Railway (si déploiement via Railway)
 
 - Vérifier la configuration du déploiement automatique (branche suivie, triggers).
@@ -168,8 +179,8 @@ Sans cette ligne, toute génération de PDF (iText, JasperReports, Apache PDFBox
 
 ## Points connus à corriger
 
-### #1 — Incohérence des frais de livraison ✅ Résolu (feature/zones-livraison)
-Module `ZoneLivraison` implémenté : `CalculCommandeService` délègue au repository, `checkout.component.ts` appelle `/api/livraison/estimation`, les constantes hardcodées sont supprimées. Reste à merger `feature/zones-livraison` dans `develop` + `main`.
+### #1 — Incohérence des frais de livraison ✅ Résolu
+Module `ZoneLivraison` mergé dans `develop` + `main` : `CalculCommandeService` délègue au repository, `checkout.component.ts` appelle `/api/livraison/estimation`, les constantes hardcodées sont supprimées.
 
 ### #2 — Secrets historiquement exposés
 Les clés Cloudinary, le mot de passe Neon et le secret JWT étaient en clair dans `application.properties` commité. **Régénérer toutes ces clés** avant tout déploiement.
