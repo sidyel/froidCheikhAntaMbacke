@@ -168,12 +168,8 @@ Sans cette ligne, toute génération de PDF (iText, JasperReports, Apache PDFBox
 
 ## Points connus à corriger
 
-### #1 — Incohérence des frais de livraison ⚠️
-**Symptôme** : deux systèmes coexistent sans se parler.
-- `CommandeService.calculerFraisLivraison()` : 0 FCFA (retrait), 2 500 FCFA (domicile), 5 000 FCFA (express) — calculé côté backend.
-- `checkout.component.ts` : table de ~30 quartiers avec prix 0–9 000 FCFA par zone — affiché côté frontend mais **ignoré par le backend**.
-**Résultat** : le montant total en base ne correspond pas au prix affiché à l'utilisateur lors du choix de quartier.
-**Solution** : module zones de livraison dédié (voir feuille de route #1).
+### #1 — Incohérence des frais de livraison ✅ Résolu (feature/zones-livraison)
+Module `ZoneLivraison` implémenté : `CalculCommandeService` délègue au repository, `checkout.component.ts` appelle `/api/livraison/estimation`, les constantes hardcodées sont supprimées. Reste à merger `feature/zones-livraison` dans `develop` + `main`.
 
 ### #2 — Secrets historiquement exposés
 Les clés Cloudinary, le mot de passe Neon et le secret JWT étaient en clair dans `application.properties` commité. **Régénérer toutes ces clés** avant tout déploiement.
@@ -183,3 +179,6 @@ Les clés Cloudinary, le mot de passe Neon et le secret JWT étaient en clair da
 
 ### #4 — Endpoint dupliqué dans `ProduitController`
 Le code de `POST /{id}/images` et `POST /{id}/fiche-technique` apparaît deux fois (une version commentée et une active). Supprimer le bloc commenté.
+
+### #5 — `FroidCheikhEcommerceApplicationTests` se connecte à la vraie base Neon
+Le test de contexte `FroidCheikhEcommerceApplicationTests` charge le contexte Spring complet, se connecte à la base Neon configurée dans les variables d'environnement et exécute `DataInitializer` (seed zones si table vide + SUPER_ADMIN existant). Il ne s'exécute pas en isolation : il dépend d'une base accessible et d'un état cohérent. À remplacer par une base de test dédiée (H2 in-memory ou Testcontainers) pour isoler les tests de l'environnement réel.

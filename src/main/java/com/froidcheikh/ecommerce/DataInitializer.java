@@ -271,21 +271,21 @@ public class DataInitializer implements CommandLineRunner {
         zones.add(new Object[]{"dakar","Dakar","grand-dakar","Grand Dakar",500,true,2});
         zones.add(new Object[]{"dakar","Dakar","fann-point-e","Fann / Point E / Liberté",1000,true,3});
         zones.add(new Object[]{"dakar","Dakar","sacre-coeur","Sacré Cœur / Mermoz",1500,true,4});
-        zones.add(new Object[]{"dakar","Dakar","almadies","Almadies / Ngor",2500,true,5});
-        zones.add(new Object[]{"dakar","Dakar","ouakam","Ouakam / Yoff",2500,true,6});
+        zones.add(new Object[]{"dakar","Dakar","almadies","Almadies / Ngor",3000,true,5});
+        zones.add(new Object[]{"dakar","Dakar","ouakam","Ouakam / Yoff",3000,true,6});
         zones.add(new Object[]{"dakar","Dakar","hlm","HLM / Grand Yoff",1500,true,7});
         zones.add(new Object[]{"dakar","Dakar","parcelles-assainies","Parcelles Assainies",2000,true,8});
         zones.add(new Object[]{"dakar","Dakar","golf","Golf Sud / Cité Keur Gorgui",1500,true,9});
         zones.add(new Object[]{"dakar","Dakar","foire","Foire / Diamniadio direction",2500,true,10});
         zones.add(new Object[]{"dakar","Dakar","colobane","Colobane / Dieuppeul",1000,true,11});
-        zones.add(new Object[]{"dakar","Dakar","bel-air","Bel Air / Zone industrielle",1500,true,12});
+        zones.add(new Object[]{"dakar","Dakar","bel-air","Bel Air / Zone industrielle",2000,true,12});
 
         // PIKINE (prix 2000–4000, éligible gratuit)
         zones.add(new Object[]{"pikine","Pikine","pikine-icotaf","Pikine Icotaf",2000,true,0});
         zones.add(new Object[]{"pikine","Pikine","pikine-guediawaye","Pikine / Guinaw Rails",2500,true,1});
-        zones.add(new Object[]{"pikine","Pikine","thiaroye","Thiaroye",2500,true,2});
+        zones.add(new Object[]{"pikine","Pikine","thiaroye","Thiaroye",3500,true,2});
         zones.add(new Object[]{"pikine","Pikine","diamaguene","Diamaguène",3000,true,3});
-        zones.add(new Object[]{"pikine","Pikine","yeumbeul","Yeumbeul",3000,true,4});
+        zones.add(new Object[]{"pikine","Pikine","yeumbeul","Yeumbeul",4000,true,4});
         zones.add(new Object[]{"pikine","Pikine","malika","Malika",4000,true,5});
 
         // GUÉDIAWAYE (prix 2500–3500, éligible gratuit)
@@ -302,13 +302,13 @@ public class DataInitializer implements CommandLineRunner {
 
         // THIÈS (prix 5000–6000, NON éligible gratuit)
         zones.add(new Object[]{"thies","Thiès","thies-centre","Thiès Centre",5000,false,0});
-        zones.add(new Object[]{"thies","Thiès","thies-nord","Thiès Nord",5000,false,1});
+        zones.add(new Object[]{"thies","Thiès","thies-nord","Thiès Nord",5500,false,1});
         zones.add(new Object[]{"thies","Thiès","thies-sud","Thiès Sud",5500,false,2});
         zones.add(new Object[]{"thies","Thiès","mbour","Mbour",6000,false,3});
 
         // KAOLACK (prix 7000–7500, NON éligible)
         zones.add(new Object[]{"kaolack","Kaolack","kaolack-centre","Kaolack Centre",7000,false,0});
-        zones.add(new Object[]{"kaolack","Kaolack","kaolack-nord","Kaolack Nord",7000,false,1});
+        zones.add(new Object[]{"kaolack","Kaolack","kaolack-nord","Kaolack Nord",7500,false,1});
         zones.add(new Object[]{"kaolack","Kaolack","nioro","Nioro du Rip",7500,false,2});
 
         // SAINT-LOUIS (prix 8000–9000, NON éligible)
