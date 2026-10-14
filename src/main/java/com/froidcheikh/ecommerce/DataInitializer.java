@@ -2,10 +2,10 @@ package com.froidcheikh.ecommerce;
 
 import com.froidcheikh.ecommerce.entity.Administrateur;
 import com.froidcheikh.ecommerce.repository.AdministrateurRepository;
+import com.froidcheikh.ecommerce.service.ParametresSiteService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,99 +14,29 @@ import org.springframework.stereotype.Component;
 public class DataInitializer implements CommandLineRunner {
 
     private final AdministrateurRepository administrateurRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final ParametresSiteService parametresSiteService;
 
     @Override
-    public void run(String... args) throws Exception {
-        initializeAdminUser();
-    }
+    public void run(String... args) {
+        boolean superAdminExists = administrateurRepository.findAll().stream()
+                .anyMatch(a -> Administrateur.RoleAdmin.SUPER_ADMIN.equals(a.getRole()));
 
-    private void initializeAdminUser() {
-        // Supprimer tous les admins existants avec des mots de passe non hashés
-        try {
-            log.info("🧹 Nettoyage des admins avec mots de passe invalides...");
-            administrateurRepository.deleteAll();
-        } catch (Exception e) {
-            log.warn("⚠️ Erreur lors du nettoyage: {}", e.getMessage());
+        if (!superAdminExists) {
+            // Mode wizard — aucun SUPER_ADMIN, le frontend affichera l'assistant d'installation
+            log.info("Aucun SUPER_ADMIN trouvé — mode wizard d'installation actif");
+            return;
         }
 
-        // Créer le super administrateur par défaut
-        String rawPassword = "admin123";
-        String hashedPassword = passwordEncoder.encode(rawPassword);
-
-        log.info("🔐 Création du mot de passe:");
-        log.info("   Raw: {}", rawPassword);
-        log.info("   Hashed: {}", hashedPassword);
-        log.info("   Hashed length: {}", hashedPassword.length());
-        log.info("   Starts with $2a: {}", hashedPassword.startsWith("$2a$"));
-
-        Administrateur superAdmin = new Administrateur();
-        superAdmin.setNom("Super");
-        superAdmin.setPrenom("Admin");
-        superAdmin.setEmail("admin@admin.com");
-        superAdmin.setMotDePasse(hashedPassword);
-        superAdmin.setRole(Administrateur.RoleAdmin.SUPER_ADMIN);
-        superAdmin.setActif(true);
-
-        superAdmin = administrateurRepository.save(superAdmin);
-
-
-        Administrateur superAdmin1 = new Administrateur();
-        superAdmin1.setNom("Dione");
-        superAdmin1.setPrenom("Modou  Mamoune");
-        superAdmin1.setEmail("mamoune@admin.com");
-        superAdmin1.setMotDePasse(hashedPassword);
-        superAdmin1.setRole(Administrateur.RoleAdmin.SUPER_ADMIN);
-        superAdmin1.setActif(true);
-
-        superAdmin1 = administrateurRepository.save(superAdmin1);
-
-
-        Administrateur superAdmin2 = new Administrateur();
-        superAdmin2.setNom("Dione");
-        superAdmin2.setPrenom("Nabou Gana");
-        superAdmin2.setEmail("nabou@admin.com");
-        superAdmin2.setMotDePasse(hashedPassword);
-        superAdmin2.setRole(Administrateur.RoleAdmin.SUPER_ADMIN);
-        superAdmin2.setActif(true);
-
-        superAdmin2 = administrateurRepository.save(superAdmin2);
-
-        log.info("✅ Super administrateur créé avec ID: {}", superAdmin.getIdAdmin());
-        log.info("   📧 Email: admin@admin.com");
-        log.info("   🔐 Mot de passe: admin123");
-        log.info("   🔑 Hash stocké: {}", superAdmin.getMotDePasse().substring(0, 20) + "...");
-
-        // Test immédiat du mot de passe
-        boolean matches = passwordEncoder.matches(rawPassword, superAdmin.getMotDePasse());
-        log.info("   ✅ Test de vérification: {}", matches);
-
-        if (!matches) {
-            log.error("❌ ERREUR: Le mot de passe hashé ne correspond pas !");
+        // SUPER_ADMIN présent mais pas encore de config : insérer les valeurs Froid Cheikh
+        // pour assurer la compatibilité avec la base existante
+        if (!parametresSiteService.exists()) {
+            log.info("SUPER_ADMIN présent sans ParametresSite — insertion de la config par défaut");
+            parametresSiteService.initDefault(
+                    "Froid Cheikh Anta Mbacké",
+                    "Spécialiste de la climatisation et du froid au Sénégal",
+                    "froidcheikhantambacke.dione65@gmail.com",
+                    15
+            );
         }
-
-        log.warn("⚠️  CHANGEZ CE MOT DE PASSE EN PRODUCTION !");
-
-        // Créer un gestionnaire par défaut aussi
-        String gestRawPassword = "gestionnaire123";
-        String gestHashedPassword = passwordEncoder.encode(gestRawPassword);
-
-        Administrateur gestionnaire = new Administrateur();
-        gestionnaire.setNom("Gestionnaire");
-        gestionnaire.setPrenom("Test");
-        gestionnaire.setEmail("gestionnaire@admin.com");
-        gestionnaire.setMotDePasse(gestHashedPassword);
-        gestionnaire.setRole(Administrateur.RoleAdmin.GESTIONNAIRE);
-        gestionnaire.setActif(true);
-
-        gestionnaire = administrateurRepository.save(gestionnaire);
-
-        log.info("✅ Gestionnaire créé avec ID: {}", gestionnaire.getIdAdmin());
-        log.info("   📧 Email: gestionnaire@admin.com");
-        log.info("   🔐 Mot de passe: gestionnaire123");
-
-        // Test du gestionnaire aussi
-        boolean gestMatches = passwordEncoder.matches(gestRawPassword, gestionnaire.getMotDePasse());
-        log.info("   ✅ Test de vérification gestionnaire: {}", gestMatches);
     }
 }

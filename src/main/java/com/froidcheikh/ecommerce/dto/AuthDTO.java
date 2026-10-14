@@ -91,4 +91,29 @@ public final class AuthDTO {
         private String message;
         private String email;
     }
+
+    /** Corps de la requête POST /api/auth/install */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class InstallRequest {
+        @NotBlank(message = "Le nom est obligatoire")
+        private String nom;
+
+        @NotBlank(message = "Le prénom est obligatoire")
+        private String prenom;
+
+        @NotBlank(message = "L'email est obligatoire")
+        @Email(message = "Format d'email invalide")
+        private String email;
+
+        @NotBlank(message = "Le mot de passe est obligatoire")
+        @Size(min = 8, message = "Le mot de passe doit contenir au moins 8 caractères")
+        private String motDePasse;
+
+        // Config initiale du site (optionnelle)
+        private String nomSite;
+        private String sloganSite;
+        private String emailContact;
+    }
 }
