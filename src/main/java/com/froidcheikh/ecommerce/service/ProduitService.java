@@ -283,6 +283,24 @@ public class ProduitService {
         log.info("Produit supprimé avec l'ID : {}", id);
     }
 
+    @Transactional
+    public List<ProduitDTO.ImageProduitDTO> reorderImages(Long produitId, List<Long> orderedIds) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit non trouvé : " + produitId));
+        List<ImageProduit> images = imageProduitRepository.findByProduitIdProduitOrderByOrdreAsc(produitId);
+        for (ImageProduit img : images) {
+            int pos = orderedIds.indexOf(img.getIdImage());
+            if (pos >= 0) {
+                img.setOrdre(pos);
+                img.setPrincipale(pos == 0);
+            }
+        }
+        imageProduitRepository.saveAll(images);
+        log.info("🔀 Images réordonnées pour le produit {}", produitId);
+        return imageProduitRepository.findByProduitIdProduitOrderByOrdreAsc(produitId)
+                .stream().map(this::toImageDTO).collect(Collectors.toList());
+    }
+
     public String uploadFicheTechnique(Long produitId, MultipartFile file) {
         Produit produit = produitRepository.findById(produitId)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit non trouvé avec l'ID : " + produitId));
@@ -348,12 +366,17 @@ public class ProduitService {
         }
 
         // Images : list<ImageProduitDTO> pour l'admin + listeImages calculé pour rétrocompat public
+        // Fallback sur produit_images (ancien ElementCollection) tant que la migration n'a pas été lancée.
         if (produit.getImages() != null && !produit.getImages().isEmpty()) {
             List<ImageProduit> sorted = produit.getImages().stream()
                     .sorted(Comparator.comparingInt(ImageProduit::getOrdre))
                     .collect(Collectors.toList());
             dto.setImages(sorted.stream().map(this::toImageDTO).collect(Collectors.toList()));
             dto.setListeImages(sorted.stream().map(ImageProduit::getUrl).collect(Collectors.toList()));
+        } else if (produit.getListeImages() != null && !produit.getListeImages().isEmpty()) {
+            // Avant migration : on retourne les URLs brutes depuis produit_images
+            dto.setListeImages(produit.getListeImages());
+            dto.setImages(List.of()); // admin verra liste vide = migration pas encore lancée
         }
 
         PrixService.PrixResultat prix = prixService.calculerPrix(produit);

@@ -24,7 +24,10 @@ public class ModeleAttributController {
         return ResponseEntity.ok(modeleAttributService.findAll());
     }
 
+    // Endpoint déplacé vers /api/modeles-attributs/categorie/{id} (voir ModeleAttributPublicController)
+    // Conservé ici pour compatibilité temporaire admin
     @GetMapping("/categorie/{categorieId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'GESTIONNAIRE')")
     public ResponseEntity<List<ModeleAttributDTO>> findByCategorie(@PathVariable Long categorieId) {
         return ResponseEntity.ok(modeleAttributService.findByCategorie(categorieId));
     }

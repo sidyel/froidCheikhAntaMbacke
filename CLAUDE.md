@@ -201,5 +201,8 @@ Blocs commentés supprimés (commit `ea3e5c6`).
 ### #7 — Migration frontend listeImages → images[]
 `ProduitDTO.listeImages` (liste d'URLs) est conservé pour la rétrocompatibilité du frontend public. Une fois le frontend migré pour utiliser `images[]` (liste d'`ImageProduitDTO` avec `idImage`, `url`, `publicId`, `principale`), retirer `listeImages` du DTO et du service.
 
+### #8 — Fallback produit_images à retirer après migration en production
+`ProduitService.convertToDTO` se rabat sur l'ancien `@ElementCollection produit_images` lorsqu'un produit n'a encore aucune `ImageProduit` (migration non lancée). **Après avoir lancé `MigrationImagesRunner` en production et vérifié que toutes les images sont dans `image_produit`**, supprimer le bloc `else if` dans `convertToDTO` et supprimer le champ `@ElementCollection listeImages` de `Produit.java`.
+
 ### #5 — `FroidCheikhEcommerceApplicationTests` se connecte à la vraie base Neon
 Le test de contexte `FroidCheikhEcommerceApplicationTests` charge le contexte Spring complet, se connecte à la base Neon configurée dans les variables d'environnement et exécute `DataInitializer` (seed zones si table vide + SUPER_ADMIN existant). Il ne s'exécute pas en isolation : il dépend d'une base accessible et d'un état cohérent. À remplacer par une base de test dédiée (H2 in-memory ou Testcontainers) pour isoler les tests de l'environnement réel.

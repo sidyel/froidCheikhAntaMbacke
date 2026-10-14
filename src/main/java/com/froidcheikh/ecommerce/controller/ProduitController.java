@@ -217,4 +217,12 @@ public class ProduitController {
             @PathVariable Long imageId) {
         return ResponseEntity.ok(produitService.definirImagePrincipale(id, imageId));
     }
+
+    @PutMapping("/{id}/images/reorder")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'GESTIONNAIRE')")
+    public ResponseEntity<List<ProduitDTO.ImageProduitDTO>> reorderImages(
+            @PathVariable Long id,
+            @RequestBody List<Long> orderedIds) {
+        return ResponseEntity.ok(produitService.reorderImages(id, orderedIds));
+    }
 }
