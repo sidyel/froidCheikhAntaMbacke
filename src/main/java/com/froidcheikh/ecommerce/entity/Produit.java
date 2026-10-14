@@ -78,11 +78,6 @@ public class Produit {
     private String ean;
 
     @ElementCollection
-    @CollectionTable(name = "produit_images", joinColumns = @JoinColumn(name = "produit_id"))
-    @Column(name = "image_url", columnDefinition = "text")
-    private List<String> listeImages;
-
-    @ElementCollection
     @CollectionTable(name = "produit_videos", joinColumns = @JoinColumn(name = "produit_id"))
     @Column(name = "video_url")
     private List<String> videosOptionnelles;

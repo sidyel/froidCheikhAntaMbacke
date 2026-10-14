@@ -235,12 +235,6 @@ public class ProduitService {
         produit.setModeleFabricant(produitDTO.getModeleFabricant());
         produit.setEan(produitDTO.getEan());
 
-        // IMPORTANT: Mise à jour des images
-        if (produitDTO.getListeImages() != null) {
-            produit.setListeImages(new ArrayList<>(produitDTO.getListeImages()));
-            log.info("🖼️ Images mises à jour pour le produit {}: {}", id, produitDTO.getListeImages());
-        }
-
         // IMPORTANT: Mise à jour de la fiche technique
         if (produitDTO.getFicheTechniquePDF() != null) {
             produit.setFicheTechniquePDF(produitDTO.getFicheTechniquePDF());
@@ -365,18 +359,12 @@ public class ProduitService {
             ));
         }
 
-        // Images : list<ImageProduitDTO> pour l'admin + listeImages calculé pour rétrocompat public
-        // Fallback sur produit_images (ancien ElementCollection) tant que la migration n'a pas été lancée.
         if (produit.getImages() != null && !produit.getImages().isEmpty()) {
             List<ImageProduit> sorted = produit.getImages().stream()
                     .sorted(Comparator.comparingInt(ImageProduit::getOrdre))
                     .collect(Collectors.toList());
             dto.setImages(sorted.stream().map(this::toImageDTO).collect(Collectors.toList()));
             dto.setListeImages(sorted.stream().map(ImageProduit::getUrl).collect(Collectors.toList()));
-        } else if (produit.getListeImages() != null && !produit.getListeImages().isEmpty()) {
-            // Avant migration : on retourne les URLs brutes depuis produit_images
-            dto.setListeImages(produit.getListeImages());
-            dto.setImages(List.of()); // admin verra liste vide = migration pas encore lancée
         }
 
         PrixService.PrixResultat prix = prixService.calculerPrix(produit);

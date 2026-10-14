@@ -8,8 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -33,6 +33,7 @@ public class MigrationImagesRunner implements CommandLineRunner {
 
     private final ProduitRepository produitRepository;
     private final ImageProduitRepository imageProduitRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional
@@ -55,8 +56,10 @@ public class MigrationImagesRunner implements CommandLineRunner {
                 continue;
             }
 
-            List<String> urls = produit.getListeImages();
-            if (urls == null || urls.isEmpty()) continue;
+            List<String> urls = jdbcTemplate.queryForList(
+                    "SELECT image_url FROM produit_images WHERE produit_id = ? ORDER BY ctid",
+                    String.class, produit.getIdProduit());
+            if (urls.isEmpty()) continue;
 
             for (int i = 0; i < urls.size(); i++) {
                 String url = urls.get(i);
