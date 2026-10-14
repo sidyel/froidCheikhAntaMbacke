@@ -9,6 +9,7 @@ import com.froidcheikh.ecommerce.entity.ZoneLivraison;
 import com.froidcheikh.ecommerce.repository.ParametresSiteRepository;
 import com.froidcheikh.ecommerce.repository.ProduitRepository;
 import com.froidcheikh.ecommerce.repository.ZoneLivraisonRepository;
+import com.froidcheikh.ecommerce.service.PrixService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +30,7 @@ class CalculCommandeServiceTest {
     @Mock private ZoneLivraisonRepository zoneRepo;
     @Mock private ProduitRepository produitRepo;
     @Mock private ParametresSiteRepository configRepo;
+    @Mock private PrixService prixService;
 
     @InjectMocks
     private CalculCommandeService service;
@@ -79,6 +81,12 @@ class CalculCommandeServiceTest {
         zoneDakar.setActif(true);
         zoneDakar.setEligibleLivraisonGratuite(true);
         zoneDakar.setDelaiEstime("24h");
+
+        // Stubs lenients : pas utilisés par tous les tests (ex. zoneInactive lève avant calculerPrix)
+        lenient().when(prixService.calculerPrix(produitNormal)).thenReturn(
+                new PrixService.PrixResultat(produitNormal.getPrix(), produitNormal.getPrix(), null, null, null, null));
+        lenient().when(prixService.calculerPrix(produitLourd)).thenReturn(
+                new PrixService.PrixResultat(produitLourd.getPrix(), produitLourd.getPrix(), null, null, null, null));
     }
 
     // ── 1. RETRAIT_MAGASIN ──────────────────────────────────────────────────

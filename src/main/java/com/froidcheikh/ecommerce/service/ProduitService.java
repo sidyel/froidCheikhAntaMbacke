@@ -30,6 +30,7 @@ public class ProduitService {
     private final CategorieRepository categorieRepository;
     private final MarqueRepository marqueRepository;
     private final ModelMapper modelMapper;
+    private final PrixService prixService;
 
     public Page<ProduitDTO> getAllProduits(Pageable pageable) {
         return produitRepository.findByDisponibiliteTrue(pageable)
@@ -83,8 +84,16 @@ public class ProduitService {
             BigDecimal prixMax,
             Long categorieId,
             Long marqueId,
+            Boolean enPromotion,
             Pageable pageable) {
 
+        if (Boolean.TRUE.equals(enPromotion)) {
+            java.util.Set<Long> promoIds = prixService.getActivePromoProductIds();
+            if (promoIds.isEmpty()) return org.springframework.data.domain.Page.empty(pageable);
+            return produitRepository.findWithFiltersEnPromotion(
+                    promoIds, nomProduit, prixMin, prixMax, categorieId, marqueId, pageable)
+                    .map(this::convertToDTO);
+        }
         return produitRepository.findWithFilters(nomProduit, prixMin, prixMax, categorieId, marqueId, pageable)
                 .map(this::convertToDTO);
     }
@@ -253,6 +262,14 @@ public class ProduitService {
                     produit.getMarque().getNomMarque(),
                     produit.getMarque().getLogo()
             ));
+        }
+
+        PrixService.PrixResultat prix = prixService.calculerPrix(produit);
+        if (prix.hasPromo()) {
+            dto.setPrixPromo(prix.prixEffectif());
+            dto.setPourcentageReduction(prix.pourcentageReduction());
+            dto.setDateFinPromo(prix.dateFinPromo());
+            dto.setNomPromotion(prix.nomPromotion());
         }
 
         return dto;

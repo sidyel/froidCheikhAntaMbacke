@@ -119,6 +119,7 @@ public class ProduitController {
             @RequestParam(required = false) BigDecimal prixMax,
             @RequestParam(required = false) Long categorieId,
             @RequestParam(required = false) Long marqueId,
+            @RequestParam(required = false) Boolean enPromotion,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "prix") String sortBy,
@@ -129,7 +130,7 @@ public class ProduitController {
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<ProduitDTO> produits = produitService.getProduitsWithFilters(
-                nom, prixMin, prixMax, categorieId, marqueId, pageable);
+                nom, prixMin, prixMax, categorieId, marqueId, enPromotion, pageable);
         return ResponseEntity.ok(produits);
     }
 
