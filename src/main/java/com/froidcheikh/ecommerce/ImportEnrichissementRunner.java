@@ -166,7 +166,7 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
 
             // ── Colonnes techniques ───────────────────────────────────────────────
             if (ep.getColonnesTechniques() != null) {
-                int[] res = appliquerColonnes(p, ep.getColonnesTechniques());
+                int[] res = appliquerColonnes(p, ep.getColonnesTechniques(), ep.isEcraser());
                 champsProduit += res[0];
                 champsIgnores += res[1];
             }
@@ -236,66 +236,73 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    private int[] appliquerColonnes(Produit p, EnrichissementColonnesTechniques ct) {
+    private int[] appliquerColonnes(Produit p, EnrichissementColonnesTechniques ct, boolean ecraser) {
         int ok = 0, skip = 0;
 
         if (ct.getLabelEnergie() != null) {
-            int[] r = appliquerLabelEnergie(p, ct.getLabelEnergie());
+            int[] r = appliquerLabelEnergie(p, ct.getLabelEnergie(), ecraser);
             ok += r[0]; skip += r[1];
         }
         if (ct.getConsommationWatt() != null) {
             EnrichissementValeur v = ct.getConsommationWatt();
             if (!VALIDE.equalsIgnoreCase(v.getConfiance())) { skip++; }
-            else if (p.getConsommationWatt() == null) {
-                log(null, v.getValeur(), "consommationWatt");
+            else if (p.getConsommationWatt() == null || ecraser) {
+                log(p.getConsommationWatt() != null ? String.valueOf(p.getConsommationWatt()) : null,
+                        v.getValeur(), "consommationWatt");
                 if (confirmer) {
                     try { p.setConsommationWatt(Integer.valueOf(v.getValeur().replaceAll("[^0-9]", ""))); }
                     catch (NumberFormatException e) { log.warn("    consommationWatt invalide : {}", v.getValeur()); }
                 }
                 ok++;
-            } else { log.info("    SKIP consommationWatt (déjà rempli)"); }
+            } else { log.info("    SKIP consommationWatt (déjà rempli, ecraser=false)"); }
         }
         if (ct.getDimensions() != null) {
             EnrichissementValeur v = ct.getDimensions();
             if (!VALIDE.equalsIgnoreCase(v.getConfiance())) { skip++; }
-            else if (estVide(p.getDimensions())) {
+            else if (Boolean.TRUE.equals(v.getEffacer()) && ecraser) {
+                // Effacement explicite : déplace la valeur erronée et vide la colonne
+                log(p.getDimensions(), "(null — effacé)", "dimensions");
+                if (confirmer) p.setDimensions(null);
+                ok++;
+            } else if (estVide(p.getDimensions()) || ecraser) {
                 log(p.getDimensions(), v.getValeur(), "dimensions");
                 if (confirmer) p.setDimensions(v.getValeur());
                 ok++;
-            } else { log.info("    SKIP dimensions (déjà rempli)"); }
+            } else { log.info("    SKIP dimensions (déjà rempli, ecraser=false)"); }
         }
         if (ct.getPoids() != null) {
             EnrichissementValeur v = ct.getPoids();
             if (!VALIDE.equalsIgnoreCase(v.getConfiance())) { skip++; }
-            else if (p.getPoids() == null) {
-                log(null, v.getValeur(), "poids");
+            else if (p.getPoids() == null || ecraser) {
+                log(p.getPoids() != null ? String.valueOf(p.getPoids()) : null, v.getValeur(), "poids");
                 if (confirmer) {
                     try { p.setPoids(Double.parseDouble(v.getValeur().replaceAll("[^0-9.,]", "").replace(",", "."))); }
                     catch (NumberFormatException e) { log.warn("    poids invalide : {}", v.getValeur()); }
                 }
                 ok++;
-            } else { log.info("    SKIP poids (déjà rempli)"); }
+            } else { log.info("    SKIP poids (déjà rempli, ecraser=false)"); }
         }
         if (ct.getPuissanceBTU() != null) {
             // puissanceBTU est une colonne de Produit (Integer), pas un AttributProduit
             EnrichissementValeur v = ct.getPuissanceBTU();
             if (!VALIDE.equalsIgnoreCase(v.getConfiance())) { skip++; }
-            else if (p.getPuissanceBTU() == null) {
-                log(null, v.getValeur(), "puissanceBTU");
+            else if (p.getPuissanceBTU() == null || ecraser) {
+                log(p.getPuissanceBTU() != null ? String.valueOf(p.getPuissanceBTU()) : null,
+                        v.getValeur(), "puissanceBTU");
                 if (confirmer) {
                     try { p.setPuissanceBTU(Integer.valueOf(v.getValeur().replaceAll("[^0-9]", ""))); }
                     catch (NumberFormatException e) { log.warn("    puissanceBTU invalide : {}", v.getValeur()); }
                 }
                 ok++;
-            } else { log.info("    SKIP puissanceBTU (déjà rempli)"); }
+            } else { log.info("    SKIP puissanceBTU (déjà rempli, ecraser=false)"); }
         }
         return new int[]{ok, skip};
     }
 
-    private int[] appliquerLabelEnergie(Produit p, EnrichissementValeur v) {
+    private int[] appliquerLabelEnergie(Produit p, EnrichissementValeur v, boolean ecraser) {
         if (!VALIDE.equalsIgnoreCase(v.getConfiance())) return new int[]{0, 1};
-        if (p.getLabelEnergie() != null) {
-            log.info("    SKIP labelEnergie (déjà rempli)");
+        if (p.getLabelEnergie() != null && !ecraser) {
+            log.info("    SKIP labelEnergie (déjà rempli, ecraser=false)");
             return new int[]{0, 0};
         }
         Produit.LabelEnergie label = parseLabelEnergie(v.getValeur());
@@ -303,7 +310,7 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
             log.warn("    labelEnergie invalide : '{}' — valeurs acceptées : A+++, A++, A+, A, B, C, D, E, F, G", v.getValeur());
             return new int[]{0, 1};
         }
-        log(null, label.name(), "labelEnergie");
+        log(p.getLabelEnergie() != null ? p.getLabelEnergie().name() : null, label.name(), "labelEnergie");
         if (confirmer) p.setLabelEnergie(label);
         return new int[]{1, 0};
     }
@@ -325,7 +332,8 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
                 }
             }
             case "labelEnergie" -> appliquerLabelEnergie(p,
-                    new EnrichissementValeur(ea.getValeur(), ea.getSource(), ea.getUrl(), VALIDE));
+                    new EnrichissementValeur(ea.getValeur(), ea.getSource(), ea.getUrl(), VALIDE, null),
+                    ecraser);
             case "consommationWatt" -> {
                 if (p.getConsommationWatt() == null || ecraser) {
                     log(null, ea.getValeur(), "consommationWatt (via attribut)");

@@ -32,4 +32,5 @@ application-local.properties
 # Exports et lots d'enrichissement produits (données sensibles, générés à la demande)
 produits_a_enrichir.json
 enrichissement_lot_*.json
+enrichissement_correction_*.json
 application-local.yml

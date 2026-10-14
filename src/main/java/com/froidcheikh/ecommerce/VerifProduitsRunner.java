@@ -2,20 +2,25 @@ package com.froidcheikh.ecommerce;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
- * Lit directement la base (JdbcTemplate) pour les produits ciblés et affiche
- * puissanceBTU, modeleFabricant, garantie et la liste des attributs.
+ * Outil de vérification de la base — profil Spring dédié (jamais au démarrage normal).
  *
- * Exécution :
- *   mvn spring-boot:run -Dspring-boot.run.profiles=verif-produits
+ * Mode par défaut (verif.mode=ids) :
+ *   mvn spring-boot:run -Dspring-boot.run.profiles=verif-produits \
  *       -Dspring-boot.run.jvmArguments="-Dverif.ids=3,8,19,105,29"
+ *
+ * Mode recherche dimensions suspectes (capacités dans la colonne dimensions) :
+ *   mvn spring-boot:run -Dspring-boot.run.profiles=verif-produits \
+ *       -Dspring-boot.run.jvmArguments="-Dverif.mode=search-dimensions"
  */
 @Component
 @Profile("verif-produits")
@@ -25,11 +30,24 @@ public class VerifProduitsRunner implements CommandLineRunner {
 
     private final JdbcTemplate jdbc;
 
+    @Value("${verif.mode:ids}")
+    private String mode;
+
     @Override
     public void run(String... args) {
-        String idsParam = System.getProperty("verif.ids", "3,8,19,105,29");
+        if ("search-dimensions".equals(mode)) {
+            searchDimensions();
+        } else {
+            String idsParam = System.getProperty("verif.ids", "3,8,19,105,29");
+            verifierParIds(idsParam);
+        }
+    }
+
+    // ── Mode : vérification par IDs ────────────────────────────────────────────
+
+    private void verifierParIds(String idsParam) {
         String[] parts = idsParam.split(",");
-        String placeholders = String.join(",", java.util.Collections.nCopies(parts.length, "?"));
+        String placeholders = String.join(",", Collections.nCopies(parts.length, "?"));
         Object[] ids = java.util.Arrays.stream(parts)
                 .map(String::trim).map(Long::parseLong).toArray();
 
@@ -37,14 +55,13 @@ public class VerifProduitsRunner implements CommandLineRunner {
         log.info("  VÉRIFICATION BASE — produits : {}", idsParam);
         log.info("══════════════════════════════════════════════════════");
 
-        // Colonnes techniques
         String sqlProduits = "SELECT id_produit, nom_produit, modele_fabricant, puissance_btu, " +
                 "consommation_watt, label_energie, dimensions, poids, garantie, date_modification " +
                 "FROM produits WHERE id_produit IN (" + placeholders + ") ORDER BY id_produit";
 
         List<String> lignes = jdbc.query(sqlProduits, ids, (rs, rowNum) ->
-                String.format("  ID %d | %-48s | modele=%-14s | puissanceBTU=%-6s | " +
-                                "consomm=%-6s | label=%-5s | dim=%-20s | poids=%-5s | garantie=%-10s | modif=%s",
+                String.format("  ID %-5d | %-48s | modele=%-14s | btu=%-6s | " +
+                                "consomm=%-6s | label=%-20s | dim=%-25s | poids=%-5s | garantie=%-10s | modif=%s",
                         rs.getLong("id_produit"),
                         rs.getString("nom_produit"),
                         rs.getString("modele_fabricant"),
@@ -58,14 +75,13 @@ public class VerifProduitsRunner implements CommandLineRunner {
         );
         lignes.forEach(log::info);
 
-        // Attributs
         String sqlAttributs = "SELECT ap.produit_id, ap.nom_attribut, ap.valeur_attribut " +
                 "FROM attributs_produit ap WHERE ap.produit_id IN (" + placeholders + ") " +
                 "ORDER BY ap.produit_id, ap.nom_attribut";
 
         log.info("─── Attributs ───────────────────────────────────────");
         List<String> attrs = jdbc.query(sqlAttributs, ids, (rs, rowNum) ->
-                String.format("  Produit %d | %s = %s",
+                String.format("  Produit %-5d | %s = %s",
                         rs.getLong("produit_id"),
                         rs.getString("nom_attribut"),
                         rs.getString("valeur_attribut"))
@@ -75,7 +91,48 @@ public class VerifProduitsRunner implements CommandLineRunner {
         } else {
             attrs.forEach(log::info);
         }
+        log.info("══════════════════════════════════════════════════════");
+    }
 
+    // ── Mode : recherche de dimensions suspectes (capacités) ──────────────────
+
+    private void searchDimensions() {
+        log.info("══════════════════════════════════════════════════════");
+        log.info("  RECHERCHE — dimensions suspectes (capacités) dans toute la base");
+        log.info("══════════════════════════════════════════════════════");
+
+        // Détecte : "195 L", "133 litres", "197 L", "42l", "500ml", etc.
+        // Signale aussi tout ce qui n'a pas le pattern "N × N × N" standard.
+        String sql = """
+                SELECT id_produit, nom_produit, dimensions,
+                  CASE
+                    WHEN dimensions ~* '^\\d+([,.]\\d+)?\\s*(L|litres?|liters?|cl|ml)\\s*$'
+                      THEN 'CAPACITE'
+                    WHEN dimensions ILIKE '%litre%' OR dimensions ILIKE '%liter%'
+                      OR dimensions ILIKE '% L'
+                      THEN 'CAPACITE_PROBABLE'
+                    ELSE 'A_VERIFIER'
+                  END AS statut
+                FROM produits
+                WHERE dimensions IS NOT NULL
+                  AND dimensions <> ''
+                ORDER BY statut, id_produit
+                """;
+
+        List<String> lignes = jdbc.query(sql, (rs, rowNum) ->
+                String.format("  [%-20s] ID %-5d | %-48s | dimensions = \"%s\"",
+                        rs.getString("statut"),
+                        rs.getLong("id_produit"),
+                        rs.getString("nom_produit"),
+                        rs.getString("dimensions"))
+        );
+
+        if (lignes.isEmpty()) {
+            log.info("  Aucun produit avec dimensions non nulle trouvé.");
+        } else {
+            log.info("  {} produit(s) trouvé(s) avec colonne dimensions remplie :", lignes.size());
+            lignes.forEach(log::info);
+        }
         log.info("══════════════════════════════════════════════════════");
     }
 }

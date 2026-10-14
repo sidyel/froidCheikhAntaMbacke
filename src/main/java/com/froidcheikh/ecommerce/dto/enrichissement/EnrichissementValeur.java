@@ -14,4 +14,9 @@ public class EnrichissementValeur {
     private String url;
     /** "valide" ou "a_verifier" */
     private String confiance;
+    /**
+     * true + ecraser:true au niveau produit → vide la colonne (la met à null).
+     * Utilisé pour corriger des valeurs incorrectes sans fournir de nouvelle valeur.
+     */
+    private Boolean effacer;
 }

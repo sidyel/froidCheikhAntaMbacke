@@ -36,6 +36,69 @@ Dépôt frontend associé : `../froidCheikhAntaMbackeFront`
 
 ---
 
+## Méthode d'enrichissement des fiches produits (validée oct. 2026)
+
+### Principe général
+
+L'enrichissement se fait **par lots de 5 à 10 produits** en JSON (`enrichissement_lot_N.json` ou `enrichissement_correction_*.json`). Ces fichiers sont dans `.gitignore` et ne doivent jamais être commités.
+
+### Processus obligatoire
+
+1. **Sauvegarde Neon** — créer une branche `backup-avant-enrichissement-YYYYMMDD` depuis le dashboard Neon avant toute écriture réelle.
+2. **Rédiger le JSON** — suivre le format `EnrichissementProduit` (voir DTOs `dto/enrichissement/`). Pour chaque valeur : `confiance: "valide"` si confirmée, `"a_verifier"` sinon (sera ignoré par le runner).
+3. **Lancer en simulation** (aucune écriture, rollback explicite en fin de transaction) :
+   ```bash
+   mvn spring-boot:run -Dspring-boot.run.profiles=import-enrichissement \
+       -Dspring-boot.run.jvmArguments="-Dimport.fichier=enrichissement_lot_N.json"
+   ```
+4. **Vérifier le rapport** — relever les SKIP, IGNORE et REDIRECT. Corriger le JSON si nécessaire.
+5. **Écriture réelle** (seulement après validation du rapport de simulation) :
+   ```bash
+   mvn spring-boot:run -Dspring-boot.run.profiles=import-enrichissement \
+       -Dspring-boot.run.jvmArguments="-Dimport.fichier=enrichissement_lot_N.json -Dimport.confirmer=true"
+   ```
+6. **Vérification post-écriture** — lancer `verif-produits` pour confirmer que les valeurs sont bien en base :
+   ```bash
+   mvn spring-boot:run -Dspring-boot.run.profiles=verif-produits \
+       -Dspring-boot.run.jvmArguments="-Dverif.ids=X,Y,Z"
+   ```
+
+### Règles de sourçage (sécurité éditoriale)
+
+- **Priorité au site fabricant** officiel ; revendeurs utilisés uniquement pour identifier le modèle ou recouper.
+- **Pour les marques locales sans site détaillé (Astech, etc.)** : priorité aux **photos de plaques techniques** (plaquette signalétique ou étiquette énergétique visible sur le produit ou ses photos). Ces plaques font foi pour le modèle, la puissance, la consommation et le label énergie.
+- Consultation **ponctuelle uniquement** — ne jamais copier une description existante d'un revendeur.
+- N'importer que ce qui est **confirmé par les caractéristiques techniques**.
+- Ignorer les valeurs marquées `"a_verifier"` — les laisser dans le JSON pour traçabilité.
+
+### Support `effacer` dans colonnesTechniques
+
+Quand une colonne contient une **valeur incorrecte** (ex. capacité stockée par erreur dans le champ `dimensions`), utiliser `effacer: true` + `ecraser: true` au niveau produit pour vider la colonne :
+
+```json
+{
+  "idProduit": 19,
+  "ecraser": true,
+  "colonnesTechniques": {
+    "dimensions": {"valeur": null, "effacer": true, "source": "...", "confiance": "valide"}
+  },
+  "attributs": [
+    {"nom": "Capacité totale", "valeur": "195 L", "source": "...", "confiance": "valide"}
+  ]
+}
+```
+
+### Runners disponibles (profils Spring dédiés — jamais au démarrage normal)
+
+| Profil | Runner | Usage |
+|---|---|---|
+| `import-enrichissement` | `ImportEnrichissementRunner` | Import lot JSON (simulation par défaut) |
+| `export` | `ExportEnrichissementRunner` | Export fiches produits en JSON pour enrichissement |
+| `verif-produits` | `VerifProduitsRunner` | Vérification base par IDs ou recherche dimensions suspectes |
+| `migration` | `MigrationImagesRunner` | Migration images `produit_images` → `image_produit` (idempotent) |
+
+---
+
 ## Architecture — entité `ParametresSite`
 
 Table `parametres_site` — **une seule ligne** (id = 1 par convention).
