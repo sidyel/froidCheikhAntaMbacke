@@ -32,6 +32,7 @@ public class CommandeService {
     private final PaiementRepository paiementRepository;
     private final ProduitService produitService;
     private final CalculCommandeService calculCommandeService;
+    private final PrixService prixService;
     private final ModelMapper modelMapper;
 
     public CommandeDTO getCommandeById(Long id) {
@@ -134,20 +135,9 @@ public class CommandeService {
             log.info("🚚 Frais livraison: {} (zone: {}, gratuit: {})",
                     calcul.fraisLivraisonTotal(), calcul.zoneNom(), calcul.livraisonGratuite());
 
-            // ✅ ÉTAPE 6 : MONTANT TOTAL
-            BigDecimal montantTotal = BigDecimal.ZERO;
-            for (CommandeDTO.LigneCommandeDTO ligneDTO : commandeDTO.getLignesCommande()) {
-                Produit produit = produitRepository.findById(ligneDTO.getProduitId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Produit non trouvé avec l'ID : " + ligneDTO.getProduitId()));
-                BigDecimal sousTotal = produit.getPrix().multiply(BigDecimal.valueOf(ligneDTO.getQuantite()));
-                montantTotal = montantTotal.add(sousTotal);
-                log.info("📦 Produit ID {} - Prix: {} x Qté: {} = Sous-total: {}",
-                        ligneDTO.getProduitId(), produit.getPrix(), ligneDTO.getQuantite(), sousTotal);
-            }
-            montantTotal = montantTotal.add(calcul.fraisLivraisonTotal());
-
-            commande.setMontantTotal(montantTotal);
-            log.info("💰 Montant total calculé et assigné: {}", montantTotal);
+            // ✅ ÉTAPE 6 : MONTANT TOTAL (déjà calculé par CalculCommandeService avec promos)
+            commande.setMontantTotal(calcul.montantTotal());
+            log.info("💰 Montant total calculé et assigné: {}", calcul.montantTotal());
 
             // ✅ ÉTAPE 7 : SAUVEGARDER LA COMMANDE AVEC LE MONTANT TOTAL
             log.info("💾 Sauvegarde de la commande...");
@@ -162,14 +152,22 @@ public class CommandeService {
                 Produit produit = produitRepository.findById(ligneDTO.getProduitId())
                         .orElseThrow(() -> new ResourceNotFoundException("Produit non trouvé avec l'ID : " + ligneDTO.getProduitId()));
 
+                PrixService.PrixResultat prixResultat = prixService.calculerPrix(produit);
+                BigDecimal prixApplique = prixResultat.prixEffectif();
+
                 LigneCommande ligne = new LigneCommande();
                 ligne.setCommande(commande);
                 ligne.setProduit(produit);
                 ligne.setQuantite(ligneDTO.getQuantite());
-                ligne.setPrixUnitaire(produit.getPrix());
-                ligne.setSousTotal(produit.getPrix().multiply(BigDecimal.valueOf(ligneDTO.getQuantite())));
+                ligne.setPrixUnitaireOrigine(produit.getPrix());
+                ligne.setPrixUnitaire(prixApplique);
+                ligne.setSousTotal(prixApplique.multiply(BigDecimal.valueOf(ligneDTO.getQuantite())));
                 ligne.setNomProduitCommande(produit.getNomProduit());
                 ligne.setRefProduitCommande(produit.getRefProduit());
+                if (prixResultat.hasPromo()) {
+                    ligne.setPromotionId(prixResultat.promotionId());
+                    ligne.setPromotionNom(prixResultat.nomPromotion());
+                }
 
                 lignesCommande.add(ligne);
 
@@ -248,6 +246,9 @@ public class CommandeService {
                         ligneDTO.setSousTotal(ligne.getSousTotal());
                         ligneDTO.setNomProduitCommande(ligne.getNomProduitCommande());
                         ligneDTO.setRefProduitCommande(ligne.getRefProduitCommande());
+                        ligneDTO.setPrixUnitaireOrigine(ligne.getPrixUnitaireOrigine());
+                        ligneDTO.setPromotionId(ligne.getPromotionId());
+                        ligneDTO.setPromotionNom(ligne.getPromotionNom());
                         return ligneDTO;
                     })
                     .collect(Collectors.toList()));

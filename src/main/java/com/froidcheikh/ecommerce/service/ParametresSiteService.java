@@ -11,6 +11,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -63,6 +64,18 @@ public class ParametresSiteService {
 
     public boolean exists() {
         return !repository.findAll().isEmpty();
+    }
+
+    @Cacheable(value = "siteConfig", key = "'zoneId'")
+    public ZoneId getSiteZoneId() {
+        return repository.findAll().stream().findFirst()
+                .map(p -> {
+                    String tz = p.getFuseauHoraire();
+                    if (tz == null || tz.isBlank()) return ZoneId.of("Africa/Dakar");
+                    try { return ZoneId.of(tz); }
+                    catch (Exception e) { return ZoneId.of("Africa/Dakar"); }
+                })
+                .orElse(ZoneId.of("Africa/Dakar"));
     }
 
     // ---- mapping helpers ----

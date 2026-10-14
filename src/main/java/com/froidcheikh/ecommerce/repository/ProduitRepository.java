@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -155,4 +156,30 @@ public interface ProduitRepository extends JpaRepository<Produit, Long> {
             @Param("stockFilter") String stockFilter,
             Pageable pageable
     );
+
+    // Filtre "En promotion" : restreint aux IDs passés + filtres catalogue habituels
+    @Query("SELECT p FROM Produit p WHERE p.disponibilite = true AND p.idProduit IN :promoIds AND " +
+            "(:nomProduit IS NULL OR :nomProduit = '' OR LOWER(CAST(p.nomProduit AS string)) LIKE LOWER(CAST(CONCAT('%', :nomProduit, '%') AS string))) AND " +
+            "(:prixMin IS NULL OR p.prix >= :prixMin) AND " +
+            "(:prixMax IS NULL OR p.prix <= :prixMax) AND " +
+            "(:categorieId IS NULL OR p.categorie.idCategorie = :categorieId) AND " +
+            "(:marqueId IS NULL OR p.marque.idMarque = :marqueId)")
+    Page<Produit> findWithFiltersEnPromotion(
+            @Param("promoIds") Collection<Long> promoIds,
+            @Param("nomProduit") String nomProduit,
+            @Param("prixMin") BigDecimal prixMin,
+            @Param("prixMax") BigDecimal prixMax,
+            @Param("categorieId") Long categorieId,
+            @Param("marqueId") Long marqueId,
+            Pageable pageable
+    );
+
+    @Query("SELECT p.idProduit FROM Produit p WHERE p.disponibilite = true")
+    List<Long> findAllAvailableIds();
+
+    @Query("SELECT p.idProduit FROM Produit p WHERE p.disponibilite = true AND p.categorie.idCategorie IN :categorieIds")
+    List<Long> findIdsByCategorieIds(@Param("categorieIds") Collection<Long> categorieIds);
+
+    @Query("SELECT p.idProduit FROM Produit p WHERE p.disponibilite = true AND p.marque.idMarque IN :marqueIds")
+    List<Long> findIdsByMarqueIds(@Param("marqueIds") Collection<Long> marqueIds);
 }

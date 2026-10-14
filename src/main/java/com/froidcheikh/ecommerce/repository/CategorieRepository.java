@@ -3,6 +3,7 @@ package com.froidcheikh.ecommerce.repository;
 import com.froidcheikh.ecommerce.entity.Categorie;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -26,5 +27,8 @@ public interface CategorieRepository extends JpaRepository<Categorie, Long> {
 
     @Query("SELECT c FROM Categorie c ORDER BY c.nomCategorie") // remplace c.nom par le bon nom de champ
     List<Categorie> findAllOrderByName(); // nom de méthode libre
+
+    @Query("SELECT c.idCategorie FROM Categorie c WHERE c.parent.idCategorie = :parentId")
+    List<Long> findIdsByParentId(@Param("parentId") Long parentId);
 
 }

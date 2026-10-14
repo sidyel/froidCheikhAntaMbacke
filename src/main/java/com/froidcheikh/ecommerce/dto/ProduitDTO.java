@@ -10,6 +10,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// Champs prixPromo, pourcentageReduction, dateFinPromo, nomPromotion sont null si aucune promo active.
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -43,6 +45,12 @@ public class ProduitDTO {
     private List<String> videosOptionnelles;
     private Boolean disponibilite;
     private LocalDateTime dateAjout;
+
+    // Promotion active (null si aucune promo)
+    private BigDecimal prixPromo;
+    private Integer pourcentageReduction;
+    private LocalDateTime dateFinPromo;
+    private String nomPromotion;
 
     // Relations
     private CategorieDTO categorie;

@@ -48,4 +48,15 @@ public class LigneCommande {
 
     @Column(name = "ref_produit_commande")
     private String refProduitCommande;
+
+    // Promotion appliquée — nullable pour les commandes antérieures au module promos
+    @Column(name = "prix_unitaire_origine", precision = 10, scale = 2)
+    private BigDecimal prixUnitaireOrigine;
+
+    // Pas de FK pour survivre à une suppression de promo
+    @Column(name = "promotion_id")
+    private Long promotionId;
+
+    @Column(name = "promotion_nom", length = 150)
+    private String promotionNom;
 }

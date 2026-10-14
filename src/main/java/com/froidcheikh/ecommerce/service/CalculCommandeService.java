@@ -30,6 +30,7 @@ public class CalculCommandeService {
     private final ZoneLivraisonRepository zoneLivraisonRepository;
     private final ProduitRepository produitRepository;
     private final ParametresSiteRepository parametresSiteRepository;
+    private final PrixService prixService;
 
     public record CalculResultat(
             BigDecimal montantArticles,
@@ -67,7 +68,7 @@ public class CalculCommandeService {
                             "Produit introuvable : " + ligne.getProduitId()));
 
             montantArticles = montantArticles.add(
-                    produit.getPrix().multiply(BigDecimal.valueOf(ligne.getQuantite())));
+                    prixService.calculerPrix(produit).prixEffectif().multiply(BigDecimal.valueOf(ligne.getQuantite())));
 
             if (produit.getCategorie() != null
                     && Boolean.TRUE.equals(produit.getCategorie().getGabaritLourd())) {
