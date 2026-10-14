@@ -2,6 +2,7 @@ package com.froidcheikh.ecommerce.service;
 
 import com.froidcheikh.ecommerce.dto.ParametresSiteDTO;
 import com.froidcheikh.ecommerce.entity.ParametresSite;
+import com.froidcheikh.ecommerce.entity.HoraireJour;
 import com.froidcheikh.ecommerce.entity.TelephoneSite;
 import com.froidcheikh.ecommerce.repository.ParametresSiteRepository;
 import lombok.RequiredArgsConstructor;
@@ -49,13 +50,14 @@ public class ParametresSiteService {
 
     @Transactional
     @CacheEvict(value = "siteConfig", allEntries = true)
-    public void initDefault(String nomSite, String sloganSite, String emailContact) {
+    public void initDefault(String nomSite, String sloganSite, String emailContact, Integer anneesExperience) {
         if (!repository.findAll().isEmpty()) return;
 
         ParametresSite p = new ParametresSite();
         p.setNomSite(nomSite);
         p.setSloganSite(sloganSite);
         p.setEmailContact(emailContact);
+        p.setAnneesExperience(anneesExperience);
         repository.save(p);
     }
 
@@ -92,6 +94,12 @@ public class ParametresSiteService {
         dto.setMetaTitle(p.getMetaTitle());
         dto.setMetaDescription(p.getMetaDescription());
         dto.setMetaKeywords(p.getMetaKeywords());
+        dto.setMission(p.getMission());
+        dto.setVision(p.getVision());
+        dto.setAnneesExperience(p.getAnneesExperience());
+        dto.setDescriptionLivraison(p.getDescriptionLivraison());
+        dto.setAdresseCourte(p.getAdresseCourte());
+        dto.setHorairesOuverture(mapHoraires(p.getHorairesOuverture()));
         return dto;
     }
 
@@ -134,6 +142,12 @@ public class ParametresSiteService {
         dto.setMetaKeywords(p.getMetaKeywords());
         dto.setDateModification(p.getDateModification());
         dto.setModifiePar(p.getModifiePar());
+        dto.setMission(p.getMission());
+        dto.setVision(p.getVision());
+        dto.setAnneesExperience(p.getAnneesExperience());
+        dto.setDescriptionLivraison(p.getDescriptionLivraison());
+        dto.setAdresseCourte(p.getAdresseCourte());
+        dto.setHorairesOuverture(mapHoraires(p.getHorairesOuverture()));
         return dto;
     }
 
@@ -182,6 +196,22 @@ public class ParametresSiteService {
         if (dto.getMetaTitle() != null) p.setMetaTitle(dto.getMetaTitle());
         if (dto.getMetaDescription() != null) p.setMetaDescription(dto.getMetaDescription());
         if (dto.getMetaKeywords() != null) p.setMetaKeywords(dto.getMetaKeywords());
+        if (dto.getMission() != null) p.setMission(dto.getMission());
+        if (dto.getVision() != null) p.setVision(dto.getVision());
+        if (dto.getAnneesExperience() != null) p.setAnneesExperience(dto.getAnneesExperience());
+        if (dto.getDescriptionLivraison() != null) p.setDescriptionLivraison(dto.getDescriptionLivraison());
+        if (dto.getAdresseCourte() != null) p.setAdresseCourte(dto.getAdresseCourte());
+        if (dto.getHorairesOuverture() != null) {
+            p.getHorairesOuverture().clear();
+            dto.getHorairesOuverture().forEach(h -> {
+                HoraireJour horaire = new HoraireJour();
+                horaire.setJour(h.getJour());
+                horaire.setHeureDebut(h.getHeureDebut());
+                horaire.setHeureFin(h.getHeureFin());
+                horaire.setFerme(Boolean.TRUE.equals(h.getFerme()));
+                p.getHorairesOuverture().add(horaire);
+            });
+        }
     }
 
     private List<ParametresSiteDTO.TelephoneSiteDTO> mapTelephones(List<TelephoneSite> telephones) {
@@ -191,6 +221,18 @@ public class ParametresSiteService {
             dto.setNumero(t.getNumero());
             dto.setLibelle(t.getLibelle());
             dto.setWhatsapp(t.getWhatsapp());
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    private List<ParametresSiteDTO.HoraireJourDTO> mapHoraires(List<HoraireJour> horaires) {
+        if (horaires == null) return List.of();
+        return horaires.stream().map(h -> {
+            ParametresSiteDTO.HoraireJourDTO dto = new ParametresSiteDTO.HoraireJourDTO();
+            dto.setJour(h.getJour());
+            dto.setHeureDebut(h.getHeureDebut());
+            dto.setHeureFin(h.getHeureFin());
+            dto.setFerme(h.getFerme());
             return dto;
         }).collect(Collectors.toList());
     }

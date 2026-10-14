@@ -13,6 +13,15 @@ public final class ParametresSiteDTO {
 
     @Data
     @NoArgsConstructor
+    public static class HoraireJourDTO {
+        private String jour;
+        private String heureDebut;
+        private String heureFin;
+        private Boolean ferme;
+    }
+
+    @Data
+    @NoArgsConstructor
     public static class TelephoneSiteDTO {
         private String numero;
         private String libelle;
@@ -33,10 +42,18 @@ public final class ParametresSiteDTO {
         private String logoUrl;
         private String faviconUrl;
 
+        // IDENTITE - champs supplémentaires
+        private String mission;
+        private String vision;
+        private Integer anneesExperience;
+        private String descriptionLivraison;
+
         // CONTACT
         private String emailContact;
         private List<TelephoneSiteDTO> telephones;
+        private List<HoraireJourDTO> horairesOuverture;
         private String adresseComplete;
+        private String adresseCourte;
         private String ville;
         private String pays;
 
@@ -78,6 +95,12 @@ public final class ParametresSiteDTO {
         private String logoUrl;
         private String faviconUrl;
 
+        // IDENTITE - champs supplémentaires
+        private String mission;
+        private String vision;
+        private Integer anneesExperience;
+        private String descriptionLivraison;
+
         // CONTACT
         @Email(message = "Format d'email invalide")
         private String emailContact;
@@ -86,7 +109,9 @@ public final class ParametresSiteDTO {
         private String emailSupport;
 
         private List<TelephoneSiteDTO> telephones;
+        private List<HoraireJourDTO> horairesOuverture;
         private String adresseComplete;
+        private String adresseCourte;
         private String ville;
         private String pays;
 

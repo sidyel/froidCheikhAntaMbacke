@@ -113,7 +113,8 @@ public class AuthController {
                 parametresSiteService.initDefault(
                         request.getNomSite(),
                         request.getSloganSite(),
-                        request.getEmailContact());
+                        request.getEmailContact(),
+                        null);
             }
 
             log.info("Installation réussie — SUPER_ADMIN créé : {}", request.getEmail());

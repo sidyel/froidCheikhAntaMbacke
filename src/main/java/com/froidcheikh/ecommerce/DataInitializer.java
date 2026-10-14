@@ -34,7 +34,8 @@ public class DataInitializer implements CommandLineRunner {
             parametresSiteService.initDefault(
                     "Froid Cheikh Anta Mbacké",
                     "Spécialiste de la climatisation et du froid au Sénégal",
-                    "froidcheikhantambacke.dione65@gmail.com"
+                    "froidcheikhantambacke.dione65@gmail.com",
+                    15
             );
         }
     }

@@ -36,6 +36,18 @@ public class ParametresSite {
     @Column(name = "favicon_url")
     private String faviconUrl;
 
+    @Column(name = "mission", columnDefinition = "TEXT")
+    private String mission;
+
+    @Column(name = "vision", columnDefinition = "TEXT")
+    private String vision;
+
+    @Column(name = "annees_experience")
+    private Integer anneesExperience;
+
+    @Column(name = "description_livraison")
+    private String descriptionLivraison;
+
     // ---- CONTACT ----
     @Column(name = "email_contact")
     private String emailContact;
@@ -47,8 +59,15 @@ public class ParametresSite {
     @CollectionTable(name = "site_telephones", joinColumns = @JoinColumn(name = "parametres_site_id"))
     private List<TelephoneSite> telephones = new ArrayList<>();
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "site_horaires", joinColumns = @JoinColumn(name = "parametres_site_id"))
+    private List<HoraireJour> horairesOuverture = new ArrayList<>();
+
     @Column(name = "adresse_complete")
     private String adresseComplete;
+
+    @Column(name = "adresse_courte")
+    private String adresseCourte;
 
     @Column(name = "ville")
     private String ville;
