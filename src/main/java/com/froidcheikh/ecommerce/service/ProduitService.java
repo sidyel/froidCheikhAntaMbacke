@@ -1,6 +1,7 @@
 package com.froidcheikh.ecommerce.service;
 
 import com.froidcheikh.ecommerce.dto.ProduitDTO;
+import com.froidcheikh.ecommerce.entity.AttributProduit;
 import com.froidcheikh.ecommerce.entity.Produit;
 import com.froidcheikh.ecommerce.exception.ResourceNotFoundException;
 import com.froidcheikh.ecommerce.repository.ProduitRepository;
@@ -198,6 +199,19 @@ public class ProduitService {
         }
         if (produitDTO.getMarque() != null) {
             produit.setMarque(marqueRepository.findById(produitDTO.getMarque().getIdMarque()).orElse(null));
+        }
+
+        // Mise à jour des attributs (null = ne pas toucher, liste vide = tout supprimer)
+        if (produitDTO.getAttributs() != null) {
+            final Produit ref = produit;
+            ref.getAttributs().clear();
+            produitDTO.getAttributs().forEach(attrDTO -> {
+                AttributProduit attr = new AttributProduit();
+                attr.setNomAttribut(attrDTO.getNomAttribut());
+                attr.setValeurAttribut(attrDTO.getValeurAttribut());
+                attr.setProduit(ref);
+                ref.getAttributs().add(attr);
+            });
         }
 
         // Sauvegarde

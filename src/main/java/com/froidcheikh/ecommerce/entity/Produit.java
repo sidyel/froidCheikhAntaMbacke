@@ -98,7 +98,7 @@ public class Produit {
     @JoinColumn(name = "marque_id")
     private Marque marque;
 
-    @OneToMany(mappedBy = "produit", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "produit", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<AttributProduit> attributs;
 
     public enum LabelEnergie {
