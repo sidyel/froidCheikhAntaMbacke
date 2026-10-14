@@ -66,6 +66,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/marques/**").permitAll()
 
+                        // Endpoints publics zones de livraison et estimation
+                        .requestMatchers(HttpMethod.GET, "/api/livraison/zones").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/livraison/estimation").permitAll()
+
                         // Endpoints publics pour commandes invités
                         .requestMatchers(HttpMethod.POST, "/api/commandes/invite").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/commandes/invite/**").permitAll()
