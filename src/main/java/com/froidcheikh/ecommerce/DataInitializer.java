@@ -261,65 +261,65 @@ public class DataInitializer implements CommandLineRunner {
     // ── Zones de livraison ──────────────────────────────────────────────────
 
     private void seedZonesLivraison() {
-        // eligibleLivraisonGratuite = true uniquement pour Dakar/banlieue proche
+        // Fidèle à l'ancien adressesData du frontend (commit 207ef2c) — 40 entrées exactes + 8 "Autres quartiers"
         // format : ville, villeLabel, quartier, quartierLabel, prixStandard, eligibleGratuit, ordre
         List<Object[]> zones = new ArrayList<>();
 
-        // DAKAR (prix 0–3000 FCFA, éligible livraison gratuite)
+        // DAKAR — 13 quartiers (0–3 000 FCFA, éligible livraison gratuite)
         zones.add(new Object[]{"dakar","Dakar","plateau","Plateau",0,true,0});
-        zones.add(new Object[]{"dakar","Dakar","medina","Médina",0,true,1});
-        zones.add(new Object[]{"dakar","Dakar","grand-dakar","Grand Dakar",500,true,2});
-        zones.add(new Object[]{"dakar","Dakar","fann-point-e","Fann / Point E / Liberté",1000,true,3});
-        zones.add(new Object[]{"dakar","Dakar","sacre-coeur","Sacré Cœur / Mermoz",1500,true,4});
-        zones.add(new Object[]{"dakar","Dakar","almadies","Almadies / Ngor",3000,true,5});
-        zones.add(new Object[]{"dakar","Dakar","ouakam","Ouakam / Yoff",3000,true,6});
-        zones.add(new Object[]{"dakar","Dakar","hlm","HLM / Grand Yoff",1500,true,7});
-        zones.add(new Object[]{"dakar","Dakar","parcelles-assainies","Parcelles Assainies",2000,true,8});
-        zones.add(new Object[]{"dakar","Dakar","golf","Golf Sud / Cité Keur Gorgui",1500,true,9});
-        zones.add(new Object[]{"dakar","Dakar","foire","Foire / Diamniadio direction",2500,true,10});
-        zones.add(new Object[]{"dakar","Dakar","colobane","Colobane / Dieuppeul",1000,true,11});
-        zones.add(new Object[]{"dakar","Dakar","bel-air","Bel Air / Zone industrielle",2000,true,12});
+        zones.add(new Object[]{"dakar","Dakar","medina","Medina",0,true,1});
+        zones.add(new Object[]{"dakar","Dakar","fann","Fann",1000,true,2});
+        zones.add(new Object[]{"dakar","Dakar","liberte","Liberte",1000,true,3});
+        zones.add(new Object[]{"dakar","Dakar","point-e","Point-e",1000,true,4});
+        zones.add(new Object[]{"dakar","Dakar","mermoz","Mermoz",1500,true,5});
+        zones.add(new Object[]{"dakar","Dakar","sacre-coeur","Sacre-coeur",1500,true,6});
+        zones.add(new Object[]{"dakar","Dakar","almadies","Almadies",2500,true,7});
+        zones.add(new Object[]{"dakar","Dakar","ngor","Ngor",3000,true,8});
+        zones.add(new Object[]{"dakar","Dakar","ouakam","Ouakam",2500,true,9});
+        zones.add(new Object[]{"dakar","Dakar","yoff","Yoff / Ouest Foire / Nord Foire",3000,true,10});
+        zones.add(new Object[]{"dakar","Dakar","hann-bel-air","Hann Bel-Air",2000,true,11});
+        zones.add(new Object[]{"dakar","Dakar","parcelles-assainies","Parcelles Assainies",2000,true,12});
 
-        // PIKINE (prix 2000–4000, éligible gratuit)
-        zones.add(new Object[]{"pikine","Pikine","pikine-icotaf","Pikine Icotaf",2000,true,0});
-        zones.add(new Object[]{"pikine","Pikine","pikine-guediawaye","Pikine / Guinaw Rails",2500,true,1});
-        zones.add(new Object[]{"pikine","Pikine","thiaroye","Thiaroye",3500,true,2});
-        zones.add(new Object[]{"pikine","Pikine","diamaguene","Diamaguène",3000,true,3});
-        zones.add(new Object[]{"pikine","Pikine","yeumbeul","Yeumbeul",4000,true,4});
-        zones.add(new Object[]{"pikine","Pikine","malika","Malika",4000,true,5});
+        // PIKINE — 6 quartiers (2 000–4 000 FCFA, éligible gratuit)
+        zones.add(new Object[]{"pikine","Pikine","pikine-nord","Pikine Nord",2000,true,0});
+        zones.add(new Object[]{"pikine","Pikine","pikine-sud","Pikine Sud",2500,true,1});
+        zones.add(new Object[]{"pikine","Pikine","pikine-est","Pikine Est",3000,true,2});
+        zones.add(new Object[]{"pikine","Pikine","pikine-ouest","Pikine Ouest",2500,true,3});
+        zones.add(new Object[]{"pikine","Pikine","thiaroye","Thiaroye",3500,true,4});
+        zones.add(new Object[]{"pikine","Pikine","yeumbeul","Yeumbeul",4000,true,5});
 
-        // GUÉDIAWAYE (prix 2500–3500, éligible gratuit)
-        zones.add(new Object[]{"guediawaye","Guédiawaye","golf-nord","Golf Nord",2500,true,0});
-        zones.add(new Object[]{"guediawaye","Guédiawaye","sam-notaire","Sam Notaire",3000,true,1});
-        zones.add(new Object[]{"guediawaye","Guédiawaye","ndiarème","Ndiarème Limamoulaye",3000,true,2});
-        zones.add(new Object[]{"guediawaye","Guédiawaye","wakhinane","Wakhinane Nimzatt",3500,true,3});
+        // GUÉDIAWAYE — 4 quartiers (2 500–3 500 FCFA, éligible gratuit)
+        zones.add(new Object[]{"guediawaye","Guédiawaye","golf-sud","Golf Sud",2500,true,0});
+        zones.add(new Object[]{"guediawaye","Guédiawaye","medina-gounass","Médina Gounass",3000,true,1});
+        zones.add(new Object[]{"guediawaye","Guédiawaye","sam-notaire","Sam Notaire",3000,true,2});
+        zones.add(new Object[]{"guediawaye","Guédiawaye","wakhinane-nimzatt","Wakhinane Nimzatt",3500,true,3});
 
-        // RUFISQUE (prix 3000–4000, éligible gratuit)
+        // RUFISQUE — 4 quartiers (3 000–4 000 FCFA, éligible gratuit)
         zones.add(new Object[]{"rufisque","Rufisque","rufisque-centre","Rufisque Centre",3000,true,0});
         zones.add(new Object[]{"rufisque","Rufisque","rufisque-est","Rufisque Est",3500,true,1});
-        zones.add(new Object[]{"rufisque","Rufisque","bargny","Bargny",4000,true,2});
-        zones.add(new Object[]{"rufisque","Rufisque","sangalkam","Sangalkam",4000,true,3});
+        zones.add(new Object[]{"rufisque","Rufisque","rufisque-ouest","Rufisque Ouest",3500,true,2});
+        zones.add(new Object[]{"rufisque","Rufisque","rufisque-nord","Rufisque Nord",4000,true,3});
 
-        // THIÈS (prix 5000–6000, NON éligible gratuit)
+        // THIÈS — 4 quartiers (5 000–6 000 FCFA, NON éligible)
         zones.add(new Object[]{"thies","Thiès","thies-centre","Thiès Centre",5000,false,0});
         zones.add(new Object[]{"thies","Thiès","thies-nord","Thiès Nord",5500,false,1});
-        zones.add(new Object[]{"thies","Thiès","thies-sud","Thiès Sud",5500,false,2});
-        zones.add(new Object[]{"thies","Thiès","mbour","Mbour",6000,false,3});
+        zones.add(new Object[]{"thies","Thiès","thies-est","Thiès Est",5500,false,2});
+        zones.add(new Object[]{"thies","Thiès","thies-ouest","Thiès Ouest",6000,false,3});
 
-        // KAOLACK (prix 7000–7500, NON éligible)
+        // KAOLACK — 3 quartiers (7 000–7 500 FCFA, NON éligible)
         zones.add(new Object[]{"kaolack","Kaolack","kaolack-centre","Kaolack Centre",7000,false,0});
         zones.add(new Object[]{"kaolack","Kaolack","kaolack-nord","Kaolack Nord",7500,false,1});
-        zones.add(new Object[]{"kaolack","Kaolack","nioro","Nioro du Rip",7500,false,2});
+        zones.add(new Object[]{"kaolack","Kaolack","kaolack-sud","Kaolack Sud",7500,false,2});
 
-        // SAINT-LOUIS (prix 8000–9000, NON éligible)
+        // SAINT-LOUIS — 3 quartiers (8 000–9 000 FCFA, NON éligible)
         zones.add(new Object[]{"saint-louis","Saint-Louis","saint-louis-centre","Saint-Louis Centre",8000,false,0});
         zones.add(new Object[]{"saint-louis","Saint-Louis","sor","Sor",8500,false,1});
         zones.add(new Object[]{"saint-louis","Saint-Louis","guet-ndar","Guet Ndar",9000,false,2});
 
-        // ZIGUINCHOR (prix 10000–11000, NON éligible)
+        // ZIGUINCHOR — 3 quartiers (10 000–11 000 FCFA, NON éligible)
         zones.add(new Object[]{"ziguinchor","Ziguinchor","ziguinchor-centre","Ziguinchor Centre",10000,false,0});
-        zones.add(new Object[]{"ziguinchor","Ziguinchor","ziguinchor-sud","Ziguinchor Sud",11000,false,1});
-        zones.add(new Object[]{"ziguinchor","Ziguinchor","bignona","Bignona",11000,false,2});
+        zones.add(new Object[]{"ziguinchor","Ziguinchor","ziguinchor-nord","Ziguinchor Nord",10500,false,1});
+        zones.add(new Object[]{"ziguinchor","Ziguinchor","ziguinchor-sud","Ziguinchor Sud",11000,false,2});
 
         for (Object[] z : zones) {
             createZone((String)z[0],(String)z[1],(String)z[2],(String)z[3],
