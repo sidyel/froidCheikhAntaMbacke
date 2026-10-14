@@ -69,10 +69,13 @@ public class Produit {
     @Column(name = "fiche_technique_pdf")
     private String ficheTechniquePDF;
 
-    @ElementCollection
-    @CollectionTable(name = "produit_images", joinColumns = @JoinColumn(name = "produit_id"))
-    @Column(name = "image_url", columnDefinition = "text")
-    private List<String> listeImages;
+    @Column(name = "modele_fabricant", length = 255)
+    private String modeleFabricant;
+
+    @Pattern(regexp = "^\\d{8}$|^\\d{12}$|^\\d{13}$|^\\d{14}$",
+             message = "L'EAN doit contenir 8, 12, 13 ou 14 chiffres")
+    @Column(name = "ean", length = 14, unique = true)
+    private String ean;
 
     @ElementCollection
     @CollectionTable(name = "produit_videos", joinColumns = @JoinColumn(name = "produit_id"))
@@ -98,8 +101,12 @@ public class Produit {
     @JoinColumn(name = "marque_id")
     private Marque marque;
 
-    @OneToMany(mappedBy = "produit", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "produit", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<AttributProduit> attributs;
+
+    @OneToMany(mappedBy = "produit", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("ordre ASC")
+    private List<ImageProduit> images;
 
     public enum LabelEnergie {
         A_PLUS_PLUS_PLUS, A_PLUS_PLUS, A_PLUS, A, B, C, D, E, F, G

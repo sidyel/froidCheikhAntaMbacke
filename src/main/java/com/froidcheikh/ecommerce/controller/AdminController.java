@@ -72,7 +72,7 @@ public class AdminController {
 
         // Récupérer TOUS les produits (disponibles ET non disponibles)
         Page<ProduitDTO> produits = produitService.getAllProduitsAdmin(
-                search, categorieId, marqueId, stockFilter, pageable);
+                search, categorieId, marqueId, stockFilter, null, pageable);
 
         return ResponseEntity.ok(produits);
     }

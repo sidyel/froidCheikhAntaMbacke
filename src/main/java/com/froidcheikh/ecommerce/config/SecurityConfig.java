@@ -66,6 +66,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/marques/**").permitAll()
 
+                        // Endpoint public modèles d'attributs (formulaire admin + comparateur)
+                        .requestMatchers(HttpMethod.GET, "/api/modeles-attributs/**").permitAll()
+
                         // Endpoints publics zones de livraison et estimation
                         .requestMatchers(HttpMethod.GET, "/api/livraison/zones").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/livraison/estimation").permitAll()

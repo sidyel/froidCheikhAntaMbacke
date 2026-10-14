@@ -33,6 +33,8 @@ public class FileService {
             "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
     );
 
+    public record UploadResult(String url, String publicId) {}
+
     /**
      * Upload un fichier vers Cloudinary
      * Retourne l'URL publique
@@ -51,6 +53,30 @@ public class FileService {
             String url = (String) result.get("secure_url");
             log.info("✅ Fichier uploadé sur Cloudinary: {}", url);
             return url;
+        } catch (IOException e) {
+            log.error("❌ Erreur upload Cloudinary", e);
+            throw new RuntimeException("Impossible d'uploader le fichier : " + e.getMessage());
+        }
+    }
+
+    /**
+     * Upload un fichier et retourne URL + publicId (pour ImageProduit)
+     */
+    public UploadResult uploadFileWithPublicId(MultipartFile file, String folder) {
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", folder,
+                            "resource_type", "auto",
+                            "type", "upload",
+                            "access_mode", "public"
+                    )
+            );
+            String url = (String) result.get("secure_url");
+            String publicId = (String) result.get("public_id");
+            log.info("✅ Fichier uploadé sur Cloudinary: {} (publicId: {})", url, publicId);
+            return new UploadResult(url, publicId);
         } catch (IOException e) {
             log.error("❌ Erreur upload Cloudinary", e);
             throw new RuntimeException("Impossible d'uploader le fichier : " + e.getMessage());

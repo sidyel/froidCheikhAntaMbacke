@@ -1,8 +1,11 @@
 package com.froidcheikh.ecommerce.service;
 
 import com.froidcheikh.ecommerce.dto.ProduitDTO;
+import com.froidcheikh.ecommerce.entity.AttributProduit;
+import com.froidcheikh.ecommerce.entity.ImageProduit;
 import com.froidcheikh.ecommerce.entity.Produit;
 import com.froidcheikh.ecommerce.exception.ResourceNotFoundException;
+import com.froidcheikh.ecommerce.repository.ImageProduitRepository;
 import com.froidcheikh.ecommerce.repository.ProduitRepository;
 import com.froidcheikh.ecommerce.repository.CategorieRepository;
 import com.froidcheikh.ecommerce.repository.MarqueRepository;
@@ -14,12 +17,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageImpl;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +38,8 @@ public class ProduitService {
     private final MarqueRepository marqueRepository;
     private final ModelMapper modelMapper;
     private final PrixService prixService;
+    private final ImageProduitRepository imageProduitRepository;
+    private final FileService fileService;
 
     public Page<ProduitDTO> getAllProduits(Pageable pageable) {
         return produitRepository.findByDisponibiliteTrue(pageable)
@@ -50,9 +58,25 @@ public class ProduitService {
             Long categorieId,
             Long marqueId,
             String stockFilter,
+            Boolean ficheIncomplete,
             Pageable pageable) {
 
-        // Cette méthode ne filtre PAS par disponibilite = true
+        if (Boolean.TRUE.equals(ficheIncomplete)) {
+            // Calcul du score en Java : on charge tous les produits correspondants,
+            // on filtre ceux dont le score < 80, puis on pagine manuellement.
+            List<ProduitDTO> tous = produitRepository
+                    .findAllWithAdminFilters(search, categorieId, marqueId, stockFilter,
+                            Pageable.unpaged())
+                    .stream()
+                    .map(this::convertToDTO)
+                    .filter(dto -> dto.getScoreCompletude() == null || dto.getScoreCompletude() < 80)
+                    .collect(Collectors.toList());
+            int start = (int) pageable.getOffset();
+            int end = Math.min(start + pageable.getPageSize(), tous.size());
+            List<ProduitDTO> page = (start >= tous.size()) ? List.of() : tous.subList(start, end);
+            return new PageImpl<>(page, pageable, tous.size());
+        }
+
         return produitRepository.findAllWithAdminFilters(
                         search, categorieId, marqueId, stockFilter, pageable)
                 .map(this::convertToDTO);
@@ -110,39 +134,68 @@ public class ProduitService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
-    public ProduitDTO ajouterImages(Long produitId, List<String> nouvellesImages) {
+    public List<ProduitDTO.ImageProduitDTO> uploadImages(Long produitId, MultipartFile[] files) {
         Produit produit = produitRepository.findById(produitId)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit non trouvé avec l'ID : " + produitId));
 
-        List<String> imagesExistantes = produit.getListeImages() != null
-                ? new ArrayList<>(produit.getListeImages())
-                : new ArrayList<>();
+        long nextOrdre = produit.getImages() == null ? 0L : produit.getImages().stream()
+                .mapToLong(ImageProduit::getOrdre).max().orElse(-1L) + 1;
+        boolean firstImage = produit.getImages() == null || produit.getImages().isEmpty();
 
-        imagesExistantes.addAll(nouvellesImages);
-        produit.setListeImages(imagesExistantes);
-
-        produit = produitRepository.save(produit);
-        log.info("📷 Images ajoutées au produit {}: {} (Total: {})",
-                produitId, nouvellesImages, imagesExistantes.size());
-
-        return convertToDTO(produit);
+        List<ProduitDTO.ImageProduitDTO> result = new ArrayList<>();
+        for (int i = 0; i < files.length; i++) {
+            MultipartFile file = files[i];
+            if (!fileService.isValidImageFile(file)) {
+                throw new RuntimeException("Format d'image non valide : " + file.getOriginalFilename());
+            }
+            FileService.UploadResult upload = fileService.uploadFileWithPublicId(file, "produits/images");
+            ImageProduit img = new ImageProduit();
+            img.setUrl(upload.url());
+            img.setPublicId(upload.publicId());
+            img.setOrdre((int) (nextOrdre + i));
+            img.setPrincipale(firstImage && i == 0);
+            img.setProduit(produit);
+            imageProduitRepository.save(img);
+            result.add(toImageDTO(img));
+            log.info("📷 Image uploadée produit {}: {}", produitId, upload.url());
+        }
+        return result;
     }
 
-    // Méthode pour supprimer une image spécifique
-    public ProduitDTO supprimerImage(Long produitId, String imagePath) {
-        Produit produit = produitRepository.findById(produitId)
-                .orElseThrow(() -> new ResourceNotFoundException("Produit non trouvé avec l'ID : " + produitId));
-
-        if (produit.getListeImages() != null) {
-            List<String> images = new ArrayList<>(produit.getListeImages());
-            if (images.remove(imagePath)) {
-                produit.setListeImages(images);
-                produit = produitRepository.save(produit);
-                log.info("🗑️ Image supprimée du produit {}: {}", produitId, imagePath);
-            }
+    public void supprimerImage(Long produitId, Long imageId) {
+        ImageProduit img = imageProduitRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Image non trouvée : " + imageId));
+        if (!img.getProduit().getIdProduit().equals(produitId)) {
+            throw new ResourceNotFoundException("Image " + imageId + " n'appartient pas au produit " + produitId);
         }
+        boolean etaitPrincipale = img.isPrincipale();
+        fileService.deleteFile(img.getUrl());
+        imageProduitRepository.delete(img);
+        log.info("🗑️ Image {} supprimée du produit {}", imageId, produitId);
 
-        return convertToDTO(produit);
+        if (etaitPrincipale) {
+            imageProduitRepository.findByProduitIdProduitOrderByOrdreAsc(produitId)
+                    .stream().findFirst().ifPresent(suivante -> {
+                        suivante.setPrincipale(true);
+                        imageProduitRepository.save(suivante);
+                    });
+        }
+    }
+
+    public ProduitDTO.ImageProduitDTO definirImagePrincipale(Long produitId, Long imageId) {
+        ImageProduit cible = imageProduitRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Image non trouvée : " + imageId));
+        if (!cible.getProduit().getIdProduit().equals(produitId)) {
+            throw new ResourceNotFoundException("Image " + imageId + " n'appartient pas au produit " + produitId);
+        }
+        imageProduitRepository.findByProduitIdProduitAndPrincipaleTrue(produitId)
+                .ifPresent(ancienne -> {
+                    ancienne.setPrincipale(false);
+                    imageProduitRepository.save(ancienne);
+                });
+        cible.setPrincipale(true);
+        cible = imageProduitRepository.save(cible);
+        return toImageDTO(cible);
     }
 
     public ProduitDTO createProduit(ProduitDTO produitDTO) {
@@ -179,12 +232,8 @@ public class ProduitService {
         produit.setDimensions(produitDTO.getDimensions());
         produit.setPoids(produitDTO.getPoids());
         produit.setDisponibilite(produitDTO.getDisponibilite());
-
-        // IMPORTANT: Mise à jour des images
-        if (produitDTO.getListeImages() != null) {
-            produit.setListeImages(new ArrayList<>(produitDTO.getListeImages()));
-            log.info("🖼️ Images mises à jour pour le produit {}: {}", id, produitDTO.getListeImages());
-        }
+        produit.setModeleFabricant(produitDTO.getModeleFabricant());
+        produit.setEan(produitDTO.getEan());
 
         // IMPORTANT: Mise à jour de la fiche technique
         if (produitDTO.getFicheTechniquePDF() != null) {
@@ -200,6 +249,19 @@ public class ProduitService {
             produit.setMarque(marqueRepository.findById(produitDTO.getMarque().getIdMarque()).orElse(null));
         }
 
+        // Mise à jour des attributs (null = ne pas toucher, liste vide = tout supprimer)
+        if (produitDTO.getAttributs() != null) {
+            final Produit ref = produit;
+            ref.getAttributs().clear();
+            produitDTO.getAttributs().forEach(attrDTO -> {
+                AttributProduit attr = new AttributProduit();
+                attr.setNomAttribut(attrDTO.getNomAttribut());
+                attr.setValeurAttribut(attrDTO.getValeurAttribut());
+                attr.setProduit(ref);
+                ref.getAttributs().add(attr);
+            });
+        }
+
         // Sauvegarde
         produit = produitRepository.save(produit);
         log.info("✅ Produit mis à jour avec l'ID : {}", produit.getIdProduit());
@@ -213,6 +275,37 @@ public class ProduitService {
         }
         produitRepository.deleteById(id);
         log.info("Produit supprimé avec l'ID : {}", id);
+    }
+
+    @Transactional
+    public List<ProduitDTO.ImageProduitDTO> reorderImages(Long produitId, List<Long> orderedIds) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit non trouvé : " + produitId));
+        List<ImageProduit> images = imageProduitRepository.findByProduitIdProduitOrderByOrdreAsc(produitId);
+        for (ImageProduit img : images) {
+            int pos = orderedIds.indexOf(img.getIdImage());
+            if (pos >= 0) {
+                img.setOrdre(pos);
+                img.setPrincipale(pos == 0);
+            }
+        }
+        imageProduitRepository.saveAll(images);
+        log.info("🔀 Images réordonnées pour le produit {}", produitId);
+        return imageProduitRepository.findByProduitIdProduitOrderByOrdreAsc(produitId)
+                .stream().map(this::toImageDTO).collect(Collectors.toList());
+    }
+
+    public String uploadFicheTechnique(Long produitId, MultipartFile file) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit non trouvé avec l'ID : " + produitId));
+        if (!fileService.isValidPdfFile(file)) {
+            throw new RuntimeException("Le fichier doit être au format PDF");
+        }
+        String pdfPath = fileService.uploadFile(file, "produits/fiches-techniques");
+        produit.setFicheTechniquePDF(pdfPath);
+        produitRepository.save(produit);
+        log.info("📄 Fiche technique uploadée pour le produit {}: {}", produitId, pdfPath);
+        return pdfPath;
     }
 
     public void updateStock(Long produitId, Integer nouvelleQuantite) {
@@ -266,6 +359,14 @@ public class ProduitService {
             ));
         }
 
+        if (produit.getImages() != null && !produit.getImages().isEmpty()) {
+            List<ImageProduit> sorted = produit.getImages().stream()
+                    .sorted(Comparator.comparingInt(ImageProduit::getOrdre))
+                    .collect(Collectors.toList());
+            dto.setImages(sorted.stream().map(this::toImageDTO).collect(Collectors.toList()));
+            dto.setListeImages(sorted.stream().map(ImageProduit::getUrl).collect(Collectors.toList()));
+        }
+
         PrixService.PrixResultat prix = prixService.calculerPrix(produit);
         if (prix.hasPromo()) {
             dto.setPrixPromo(prix.prixEffectif());
@@ -274,7 +375,41 @@ public class ProduitService {
             dto.setNomPromotion(prix.nomPromotion());
         }
 
+        dto.setScoreCompletude(calculerScore(produit));
+
+        if (produit.getAttributs() != null) {
+            dto.setAttributs(produit.getAttributs().stream().map(attr -> {
+                ProduitDTO.AttributProduitDTO a = new ProduitDTO.AttributProduitDTO();
+                a.setIdAttribut(attr.getIdAttribut());
+                a.setNomAttribut(attr.getNomAttribut());
+                a.setValeurAttribut(attr.getValeurAttribut());
+                if (attr.getModeleAttribut() != null) {
+                    a.setModeleAttributId(attr.getModeleAttribut().getIdModele());
+                }
+                return a;
+            }).collect(Collectors.toList()));
+        }
+
         return dto;
+    }
+
+    public int calculerScore(Produit produit) {
+        int score = 0;
+        if (produit.getImages() != null && !produit.getImages().isEmpty()) score += 25;
+        if (produit.getDescriptionProduit() != null
+                && produit.getDescriptionProduit().length() >= 150) score += 25;
+        if (produit.getAttributs() != null && produit.getAttributs().size() >= 3) score += 20;
+        if (produit.getMarque() != null) score += 10;
+        if (produit.getCategorie() != null) score += 10;
+        if ((produit.getEan() != null && !produit.getEan().isBlank())
+                || (produit.getModeleFabricant() != null && !produit.getModeleFabricant().isBlank())) score += 10;
+        return score;
+    }
+
+    private ProduitDTO.ImageProduitDTO toImageDTO(ImageProduit img) {
+        return new ProduitDTO.ImageProduitDTO(
+                img.getIdImage(), img.getUrl(), img.getPublicId(),
+                img.getTexteAlternatif(), img.getOrdre(), img.isPrincipale());
     }
 
     private Produit convertToEntity(ProduitDTO dto) {

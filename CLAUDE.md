@@ -79,16 +79,19 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 | `Categorie` | `categories` | Hiérarchie auto-référencée (`parent_id`). |
 | `Marque` | `marques` | Logo URL Cloudinary. |
 | `Commande` | `commandes` | Frais calculés en dur dans `CommandeService`. Voir point connu #1. |
+| `ImageProduit` | `image_produit` | url, publicId, texteAlternatif, ordre, principale. @OneToMany sur Produit avec orphanRemoval. |
+| `ModeleAttribut` | `modele_attribut` | Template d'attribut par catégorie (TypeAttribut: TEXT/NUMBER/BOOLEAN/SELECT). Table de jointure `modele_attribut_categories`. |
+| `AttributProduit` | `attributs_produit` | Clé/valeur dynamique + référence optionnelle vers `ModeleAttribut` (modele_attribut_id). |
 
 ---
 
 ## Feuille de route des modules restants
 
-1. **Module zones de livraison** — entité `ZoneLivraison` (`ville`, `quartier`, `prixLivraison`) pour remplacer la table en dur dans `checkout.component.ts` ET les constantes dans `CommandeService`. Voir point connu #1.
-2. **Enrichissement automatique des fiches produits** — ajout de champs `ean`, `modeleFabricant` sur `Produit` ; endpoint CRUD dédié pour `AttributProduit` ; script `CommandLineRunner` d'enrichissement par lot.
+1. **Module zones de livraison** ✅ Résolu — mergé.
+2. **Enrichissement automatique des fiches produits** ✅ Résolu — EAN, modeleFabricant, CRUD AttributProduit, ModeleAttribut, score, export, migration images.
 3. **Module facturation** — génération de factures/avoirs/devis/BL en PDF à partir des paramètres du groupe `ENTREPRISE_FACTURATION` de `ParametresSite`.
-4. **Image principale désignée** — champ `imagePrincipale` ou convention `listeImages[0]` documentée.
-5. **Stockage `public_id` Cloudinary** — actuellement recalculé à la volée depuis l'URL. Risque de suppression incorrecte si l'URL change.
+4. **Image principale désignée** ✅ Résolu — ImageProduit.principale garanti par le service (si suppression de la principale, la suivante devient principale). Frontend public doit migrer de `listeImages[]` vers `images[]` puis retirer `listeImages`.
+5. **Stockage `public_id` Cloudinary** ✅ Résolu — ImageProduit.publicId stocké explicitement (FileService.UploadResult + uploadFileWithPublicId).
 6. **Migrations versionnées** — passer de `ddl-auto=update` à Flyway pour les environnements de production.
 
 ---
@@ -101,7 +104,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 | Entités de contenu gérable (ImageHero, Partenaire, Prestation, MembreEquipe, Realisation) | ✅ Mergé dans `develop` + `main` | — |
 | Zones de livraison (ZoneLivraison) | ✅ Mergé dans `develop` + `main` | — |
 | Promotions produits (PrixService, PromotionService, CRUD, fiche, catalogue, panier) | ✅ Mergé dans `develop` + `main` | — |
-| Enrichissement fiches produits (EAN, ModeleFabricant, CRUD AttributProduit) | ⏳ Planifié | — |
+| Enrichissement fiches produits (EAN, ModeleFabricant, ImageProduit, ModeleAttribut, CRUD AttributProduit, score, export) | ✅ Complet — migration images exécutée (oct. 2026) | feature/modele-produit |
 | Module facturation (PDF) | ⏳ Planifié | — |
 | Migrations Flyway | ⏳ Planifié | — |
 
@@ -176,6 +179,26 @@ DELETE FROM commandes;
 - Vérifier la configuration du déploiement automatique (branche suivie, triggers).
 - **Régénérer les identifiants Railway exposés dans l'historique git** : le mot de passe PostgreSQL Railway (`svYhBmqtXnJkAaFEbairZjCtElvTESMe`) et l'URL interne (`postgres.railway.internal:5432/railway`) étaient committés en clair dans `application.properties` sur `origin/main`. Ces identifiants sont compromis — les réinitialiser depuis le dashboard Railway avant tout déploiement.
 
+### 9 — Migration des images produit (profil `migration`)
+
+> ⚠️ **Critique** — sans cette étape, les produits n'auront plus d'images en production.
+
+1. **Identifier la vraie base de production** avant toute chose : Neon ou Railway ? Les deux `DATABASE_URL` doivent pointer sur la même base. Configurer la variable d'environnement sur l'hébergeur cible.
+2. **Créer une branche de sauvegarde Neon** (ou dump Railway) avant l'opération (voir étape 3).
+3. **Lancer le profil `migration` AVANT ou immédiatement au premier démarrage** de la version incluant `feature/modele-produit` :
+   ```bash
+   mvn spring-boot:run -Dspring-boot.run.profiles=migration
+   ```
+   Rapport attendu : `X migrées, 0 produits ignorés, 0 URLs sans publicId`.
+   Si le rapport indique `0 migrées, N produits ignorés` → migration déjà faite, OK.
+4. **Ne jamais supprimer la table `produit_images`** avant d'avoir :
+   - Vérifié que toutes les lignes de `image_produit` sont présentes en base production.
+   - Confirmé que le frontend affiche bien les images sur toutes les fiches produit.
+5. Une fois vérifié, la table `produit_images` peut être supprimée manuellement via SQL :
+   ```sql
+   DROP TABLE produit_images;
+   ```
+
 ---
 
 ## Points connus à corriger
@@ -192,8 +215,14 @@ Les clés Cloudinary, le mot de passe Neon et le secret JWT étaient en clair da
 ### #3 — `DataSeeder` désactivé
 `DataSeeder.java` contient du code commenté de seed initial. Nettoyer ou supprimer ce fichier.
 
-### #4 — Endpoint dupliqué dans `ProduitController`
-Le code de `POST /{id}/images` et `POST /{id}/fiche-technique` apparaît deux fois (une version commentée et une active). Supprimer le bloc commenté.
+### #4 — Endpoint dupliqué dans `ProduitController` ✅ Résolu
+Blocs commentés supprimés (commit `ea3e5c6`).
+
+### #7 — Migration frontend listeImages → images[] (partiellement résolu)
+Migration backend terminée (88 images, 34 produits, oct. 2026). `@ElementCollection listeImages` supprimé de `Produit.java`. `ProduitDTO.listeImages` conservé (calculé depuis `images[]`) pour la rétrocompatibilité du frontend public. Une fois le frontend migré pour utiliser `images[]` (`ImageProduitDTO` avec `idImage`, `url`, `publicId`, `principale`), retirer `listeImages` du DTO et du service.
+
+### #8 — Fallback produit_images ✅ Résolu
+Migration lancée (oct. 2026) et idempotence vérifiée. Bloc `else if` retiré de `ProduitService.convertToDTO`. `@ElementCollection listeImages` supprimé de `Produit.java`. `MigrationImagesRunner` lit désormais `produit_images` via `JdbcTemplate` (ORDER BY ctid).
 
 ### #5 — `FroidCheikhEcommerceApplicationTests` se connecte à la vraie base Neon
 Le test de contexte `FroidCheikhEcommerceApplicationTests` charge le contexte Spring complet, se connecte à la base Neon configurée dans les variables d'environnement et exécute `DataInitializer` (seed zones si table vide + SUPER_ADMIN existant). Il ne s'exécute pas en isolation : il dépend d'une base accessible et d'un état cohérent. À remplacer par une base de test dédiée (H2 in-memory ou Testcontainers) pour isoler les tests de l'environnement réel.

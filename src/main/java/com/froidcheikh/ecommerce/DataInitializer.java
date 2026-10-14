@@ -3,6 +3,7 @@ package com.froidcheikh.ecommerce;
 import com.froidcheikh.ecommerce.entity.*;
 import com.froidcheikh.ecommerce.repository.*;
 import com.froidcheikh.ecommerce.service.ParametresSiteService;
+import com.froidcheikh.ecommerce.entity.TypeAttribut;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -26,6 +27,8 @@ public class DataInitializer implements CommandLineRunner {
     private final MembreEquipeRepository membreEquipeRepository;
     private final RealisationRepository realisationRepository;
     private final ZoneLivraisonRepository zoneLivraisonRepository;
+    private final ModeleAttributRepository modeleAttributRepository;
+    private final CategorieRepository categorieRepository;
 
     @Override
     public void run(String... args) {
@@ -70,6 +73,10 @@ public class DataInitializer implements CommandLineRunner {
         if (zoneLivraisonRepository.count() == 0) {
             log.info("Seed ZonesLivraison...");
             seedZonesLivraison();
+        }
+        if (modeleAttributRepository.count() == 0) {
+            log.info("Seed ModèlesAttributs...");
+            seedModelesAttributs();
         }
     }
 
@@ -381,5 +388,66 @@ public class DataInitializer implements CommandLineRunner {
             case "thies" -> "2-3 jours";
             default -> "3-5 jours";
         };
+    }
+
+    private void seedModelesAttributs() {
+        // Climatiseurs
+        seedModele("Type d'installation", TypeAttribut.SELECT,
+                "[\"split\",\"multi-split\",\"cassette\",\"console\",\"armoire\"]", null, false, 0,
+                "Climatiseurs");
+        seedModele("Gaz réfrigérant", TypeAttribut.SELECT,
+                "[\"R32\",\"R410A\",\"R22\"]", null, false, 1,
+                "Climatiseurs");
+        seedModele("Technologie inverter", TypeAttribut.BOOLEAN,
+                null, null, false, 2,
+                "Climatiseurs");
+        seedModele("Classe énergétique", TypeAttribut.SELECT,
+                "[\"A+++\",\"A++\",\"A+\",\"A\",\"B\"]", null, false, 3,
+                "Climatiseurs");
+
+        // Réfrigérateurs
+        seedModele("Capacité totale", TypeAttribut.NUMBER,
+                null, "L", false, 0,
+                "Réfrigérateurs");
+        seedModele("Nombre de portes", TypeAttribut.NUMBER,
+                null, "portes", false, 1,
+                "Réfrigérateurs");
+        seedModele("No Frost", TypeAttribut.BOOLEAN,
+                null, null, false, 2,
+                "Réfrigérateurs");
+        seedModele("Classe énergétique", TypeAttribut.SELECT,
+                "[\"A+++\",\"A++\",\"A+\",\"A\"]", null, false, 3,
+                "Réfrigérateurs");
+
+        // Chambres froides
+        seedModele("Température min", TypeAttribut.NUMBER,
+                null, "°C", false, 0,
+                "Chambres froides");
+        seedModele("Température max", TypeAttribut.NUMBER,
+                null, "°C", false, 1,
+                "Chambres froides");
+        seedModele("Type", TypeAttribut.SELECT,
+                "[\"positive\",\"négative\",\"mortuaire\"]", null, false, 2,
+                "Chambres froides");
+        seedModele("Capacité", TypeAttribut.NUMBER,
+                null, "m³", false, 3,
+                "Chambres froides");
+    }
+
+    private void seedModele(String nom, TypeAttribut type, String valeursAutorisees,
+                             String unite, boolean obligatoire, int ordre, String... nomCategories) {
+        ModeleAttribut m = new ModeleAttribut();
+        m.setNomAttribut(nom);
+        m.setTypeValeur(type);
+        m.setValeursAutorisees(valeursAutorisees);
+        m.setUnite(unite);
+        m.setObligatoire(obligatoire);
+        m.setOrdre(ordre);
+        java.util.Set<Categorie> cats = new java.util.HashSet<>();
+        for (String nomCat : nomCategories) {
+            categorieRepository.findByNomCategorie(nomCat).ifPresent(cats::add);
+        }
+        m.setCategories(cats);
+        modeleAttributRepository.save(m);
     }
 }
