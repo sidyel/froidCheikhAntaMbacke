@@ -92,6 +92,11 @@ public class CommandeDTO {
 
         private String nomProduitCommande;
         private String refProduitCommande;
+
+        // Promotion appliquée sur cette ligne (null si aucune)
+        private BigDecimal prixUnitaireOrigine;
+        private Long promotionId;
+        private String promotionNom;
     }
 
     @Data
