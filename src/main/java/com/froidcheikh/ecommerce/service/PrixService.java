@@ -101,7 +101,8 @@ public class PrixService {
                 .filter(r -> r.prixEffectif().compareTo(BigDecimal.ZERO) > 0)
                 .filter(r -> r.prixEffectif().compareTo(prixOrigine) < 0)
                 .sorted(Comparator.comparing(CandidatResultat::prixEffectif)
-                        .thenComparing(Comparator.comparing(CandidatResultat::priorite).reversed()))
+                        .thenComparing(Comparator.comparing(CandidatResultat::priorite).reversed())
+                        .thenComparing(CandidatResultat::promotionId))
                 .findFirst();
 
         return best.map(b -> new PrixResultat(
@@ -126,7 +127,8 @@ public class PrixService {
                     .filter(r -> r.prixEffectif().compareTo(BigDecimal.ZERO) > 0)
                     .filter(r -> r.prixEffectif().compareTo(prixOrigine) < 0)
                     .sorted(Comparator.comparing(CandidatResultat::prixEffectif)
-                            .thenComparing(Comparator.comparing(CandidatResultat::priorite).reversed()))
+                            .thenComparing(Comparator.comparing(CandidatResultat::priorite).reversed())
+                            .thenComparing(CandidatResultat::promotionId))
                     .findFirst();
             result.put(produit.getIdProduit(), best
                     .map(b -> new PrixResultat(prixOrigine, b.prixEffectif(),
