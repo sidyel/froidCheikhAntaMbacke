@@ -93,6 +93,19 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 
 ---
 
+## État d'avancement (oct. 2026)
+
+| Module | Statut | Branche |
+|---|---|---|
+| Site configurable (ParametresSite, API config, hardcodes) | ✅ Mergé dans `develop` | — |
+| Entités de contenu gérable (Partenaire, Prestation, MembreEquipe, Realisation, ImageHero) | 🔄 En cours | `feature/contenu-gerable` |
+| Zones de livraison (ZoneLivraison) | ⏳ Planifié | — |
+| Enrichissement fiches produits (EAN, ModeleFabricant, CRUD AttributProduit) | ⏳ Planifié | — |
+| Module facturation (PDF) | ⏳ Planifié | — |
+| Migrations Flyway | ⏳ Planifié | — |
+
+---
+
 ## Points connus à corriger
 
 ### #1 — Incohérence des frais de livraison ⚠️
