@@ -79,7 +79,7 @@ class PdfExempleGenerateur {
         doc.setEntAdresseSiege("Zone Industrielle, Lot 47, Dakar, Sénégal");
         doc.setEntNinea("000123456 2A1");
         doc.setEntRccm("SN DKR 2020 B 12345");
-        doc.setEntCouleurPrimaire("#2563EB");
+        doc.setEntCouleurPrimaire("#000080");
         doc.setEntConditionsPaiement("Paiement à 30 jours. En cas de retard, pénalités de 1,5% par mois.");
         doc.setEntMentionsPied("Froid Cheikh Anta Mbacke SARL — Capital social : 10 000 000 FCFA");
         doc.setEntMentionExonerationTva("TVA non applicable — Article 275 du CGI");
@@ -171,7 +171,7 @@ class PdfExempleGenerateur {
         doc.setEntRaisonSociale("Froid Cheikh Anta Mbacke SARL");
         doc.setEntAdresseSiege("Zone Industrielle, Lot 47, Dakar, Sénégal");
         doc.setEntNinea("000123456 2A1");
-        doc.setEntCouleurPrimaire("#2563EB");
+        doc.setEntCouleurPrimaire("#000080");
         doc.setEntMentionsPied("Froid Cheikh Anta Mbacke SARL — Capital social : 10 000 000 FCFA");
 
         doc.setClientNom("Diallo");

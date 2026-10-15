@@ -472,7 +472,10 @@ public class DocumentFacturationService {
         doc.setEntAdresseSiege(params.getAdresseSiege());
         doc.setEntNinea(params.getNinea());
         doc.setEntRccm(params.getRccm());
-        doc.setEntCouleurPrimaire(params.getCouleurPrimaire());
+        // Préférer couleurDocuments ; repli sur couleurPrimaire si non défini
+        String couleurDoc = params.getCouleurDocuments() != null
+                ? params.getCouleurDocuments() : params.getCouleurPrimaire();
+        doc.setEntCouleurPrimaire(couleurDoc);
         doc.setEntCachetUrl(params.getUrlCachetSignature());
         doc.setEntConditionsPaiement(params.getConditionsPaiementDefaut());
         doc.setEntMentionsPied(params.getMentionsPiedDocument());

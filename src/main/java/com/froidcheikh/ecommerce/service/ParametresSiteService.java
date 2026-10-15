@@ -59,7 +59,22 @@ public class ParametresSiteService {
         p.setSloganSite(sloganSite);
         p.setEmailContact(emailContact);
         p.setAnneesExperience(anneesExperience);
+        p.setCouleurDocuments("#000080");
         repository.save(p);
+    }
+
+    /**
+     * Migration douce : renseigne couleurDocuments si null sur la ligne existante.
+     * Appelé par DataInitializer au démarrage pour les bases déjà initialisées.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void initCouleurDocumentsSiAbsente(String couleur) {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (p.getCouleurDocuments() == null) {
+                p.setCouleurDocuments(couleur);
+                repository.save(p);
+            }
+        });
     }
 
     public boolean exists() {

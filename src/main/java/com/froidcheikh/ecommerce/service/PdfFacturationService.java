@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -39,23 +40,30 @@ public class PdfFacturationService {
 
     // Fonts
     private Font fontTitre(Color couleur) {
-        Font f = FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 18, Font.BOLD, couleur);
-        return f;
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 18, Font.BOLD, couleur);
     }
     private Font fontSousTitre() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 11, Font.BOLD, NOIR);
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 12, Font.BOLD, NOIR);
     }
     private Font fontNormal() {
-        return FontFactory.getFont(FontFactory.HELVETICA, "CP1252", true, 9, Font.NORMAL, NOIR);
+        return FontFactory.getFont(FontFactory.HELVETICA, "CP1252", true, 11, Font.NORMAL, NOIR);
     }
     private Font fontNormalGras() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 9, Font.BOLD, NOIR);
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 11, Font.BOLD, NOIR);
     }
     private Font fontPetit() {
-        return FontFactory.getFont(FontFactory.HELVETICA, "CP1252", true, 8, Font.NORMAL, new Color(0x55, 0x55, 0x55));
+        return FontFactory.getFont(FontFactory.HELVETICA, "CP1252", true, 9, Font.NORMAL, new Color(0x55, 0x55, 0x55));
     }
     private Font fontEntete(Color couleur) {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 8, Font.BOLD, couleur);
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 11, Font.BOLD, couleur);
+    }
+    /** Total intermédiaire (HT, TVA, remise) : 12 pt gras. */
+    private Font fontTotal() {
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 12, Font.BOLD, NOIR);
+    }
+    /** Ligne TOTAL / TOTAL TTC : 13 pt gras. */
+    private Font fontTotalTTC() {
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 13, Font.BOLD, NOIR);
     }
 
     /**
@@ -240,15 +248,15 @@ public class PdfFacturationService {
         PdfPTable table = new PdfPTable(cols);
         table.setWidthPercentage(100);
         if (afficheTva) {
-            table.setWidths(new float[]{3.5f, 0.7f, 1.2f, 0.9f, 1.1f, 1.1f, 1.2f});
+            table.setWidths(new float[]{3.0f, 0.6f, 1.4f, 0.8f, 1.6f, 0.7f, 1.7f});
         } else {
-            table.setWidths(new float[]{4.5f, 0.8f, 1.4f, 1f, 1.4f});
+            table.setWidths(new float[]{4.0f, 0.7f, 1.5f, 0.9f, 1.7f});
         }
 
-        // En-têtes
+        // En-têtes — devise indiquée dans les colonnes montants
         String[] headers = afficheTva
-                ? new String[]{"Désignation", "Qté", "P.U. HT", "Remise", "Montant HT", "TVA", "Montant TTC"}
-                : new String[]{"Désignation", "Qté", "P.U.", "Remise", "Montant"};
+                ? new String[]{"Désignation", "Qté", "P.U. (FCFA)", "Remise", "Montant HT (FCFA)", "TVA", "Montant TTC (FCFA)"}
+                : new String[]{"Désignation", "Qté", "P.U. (FCFA)", "Remise", "Montant (FCFA)"};
 
         for (String h : headers) {
             PdfPCell cell = new PdfPCell(new Phrase(h, fontEntete(BLANC)));
@@ -338,29 +346,30 @@ public class PdfFacturationService {
         pdf.add(table);
     }
 
-    private void ligneTotal(PdfPTable table, String label, BigDecimal valeur, boolean gras) {
-        Font fontLabel = gras ? fontNormalGras() : fontNormal();
-        PdfPCell cLabel = new PdfPCell(new Phrase(label, fontLabel));
+    private void ligneTotal(PdfPTable table, String label, BigDecimal valeur, boolean isTTC) {
+        Font f = isTTC ? fontTotalTTC() : fontTotal();
+        PdfPCell cLabel = new PdfPCell(new Phrase(label, f));
         cLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        cLabel.setPadding(4);
+        cLabel.setPadding(5);
         cLabel.setBorderColor(GRIS_BORDURE);
-        if (gras) cLabel.setBackgroundColor(GRIS_CLAIRE);
+        if (isTTC) cLabel.setBackgroundColor(GRIS_CLAIRE);
         table.addCell(cLabel);
 
         String valStr = valeur != null ? formatMontant(valeur) + " FCFA" : "";
-        PdfPCell cVal = new PdfPCell(new Phrase(valStr, gras ? fontNormalGras() : fontNormal()));
+        PdfPCell cVal = new PdfPCell(new Phrase(valStr, f));
         cVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        cVal.setPadding(4);
+        cVal.setPadding(5);
         cVal.setBorderColor(GRIS_BORDURE);
-        if (gras) cVal.setBackgroundColor(GRIS_CLAIRE);
+        if (isTTC) cVal.setBackgroundColor(GRIS_CLAIRE);
         table.addCell(cVal);
     }
 
     private void ecireMontantEnLettres(Document pdf, String lettres) throws DocumentException {
         PdfPTable table = new PdfPTable(1);
         table.setWidthPercentage(100);
+        // 11 pt = fontNormal() — déjà à la bonne taille
         PdfPCell cell = new PdfPCell(new Phrase(lettres, fontNormal()));
-        cell.setPadding(6);
+        cell.setPadding(7);
         cell.setBorderColor(GRIS_BORDURE);
         table.addCell(cell);
         pdf.add(table);
@@ -474,15 +483,35 @@ public class PdfFacturationService {
         }
     }
 
-    private String formatMontant(BigDecimal val) {
+    /**
+     * Visible pour les tests unitaires.
+     * Formate un montant entier FCFA avec espace insécable U+00A0 comme séparateur des milliers.
+     * Exemple : 185000 → "185 000", 1250000 → "1 250 000", 0 → "0".
+     * Pas de décimales, pas de symbole devise (ajouté à l'appel).
+     * Utilise U+00A0 au lieu de U+202F (espace fine insécable) car CP1252 ne supporte pas U+202F.
+     */
+    String formatMontant(BigDecimal val) {
         if (val == null) return "-";
-        return String.format("%,.0f", val);
+        long v = val.setScale(0, RoundingMode.HALF_UP).longValue();
+        if (v == 0) return "0";
+        boolean neg = v < 0;
+        String s = Long.toString(Math.abs(v));
+        int len = s.length();
+        int first = len % 3;
+        if (first == 0) first = 3;
+        StringBuilder sb = new StringBuilder();
+        sb.append(s, 0, first);
+        for (int i = first; i < len; i += 3) {
+            sb.append(' ');
+            sb.append(s, i, i + 3);
+        }
+        return neg ? "-" + sb : sb.toString();
     }
 
     private String formatQuantite(BigDecimal val) {
         if (val == null) return "-";
         if (val.scale() == 0 || val.stripTrailingZeros().scale() <= 0) {
-            return String.format("%,.0f", val);
+            return formatMontant(val);
         }
         return val.stripTrailingZeros().toPlainString();
     }

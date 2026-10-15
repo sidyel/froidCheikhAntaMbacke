@@ -48,6 +48,9 @@ public class DataInitializer implements CommandLineRunner {
                     "froidcheikhantambacke.dione65@gmail.com",
                     15
             );
+        } else {
+            // Migration douce : couleurDocuments initialisée à bleu marine si absente
+            parametresSiteService.initCouleurDocumentsSiAbsente("#000080");
         }
 
         if (imageHeroRepository.count() == 0) {

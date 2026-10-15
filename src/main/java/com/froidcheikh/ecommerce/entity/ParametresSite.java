@@ -179,6 +179,14 @@ public class ParametresSite {
     @Column(name = "duree_validite_jeton_heures")
     private Integer dureeValiditeJetonHeures = 72;
 
+    /**
+     * Couleur utilisée pour les documents PDF (en-tête tableau, traits, numéro de document).
+     * Si null, la couleurPrimaire du site est utilisée en repli.
+     * Format #RRGGBB.
+     */
+    @Column(name = "couleur_documents", length = 7)
+    private String couleurDocuments;
+
     // ---- LOCALISATION ----
     @Column(name = "fuseau_horaire", length = 50)
     private String fuseauHoraire = "Africa/Dakar";
