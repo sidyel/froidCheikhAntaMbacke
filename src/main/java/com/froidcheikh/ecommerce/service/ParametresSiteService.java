@@ -131,6 +131,20 @@ public class ParametresSiteService {
         });
     }
 
+    /**
+     * Migration ponctuelle idempotente : corrige texteDescriptifActivites seulement si sa valeur
+     * est EXACTEMENT l'ancienne valeur connue. Sans effet si le champ a été modifié depuis l'admin.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void migrerTexteDescriptifActivites(String ancienne, String nouvelle) {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (ancienne.equals(p.getTexteDescriptifActivites())) {
+                p.setTexteDescriptifActivites(nouvelle);
+                repository.save(p);
+            }
+        });
+    }
+
     /** Migration douce : renseigne libelleDevise si null sur la ligne existante. */
     @org.springframework.transaction.annotation.Transactional
     public void initLibelleDeviseSiAbsent(String libelle) {

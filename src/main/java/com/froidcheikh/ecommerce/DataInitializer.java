@@ -59,6 +59,11 @@ public class DataInitializer implements CommandLineRunner {
             parametresSiteService.initInfosFacturationSiAbsentes();
             // Téléphones — seulement si la liste est vide
             parametresSiteService.initTelephonesSiAbsents();
+            // Correction ponctuelle idempotente : n'agit que si la valeur est exactement l'ancienne
+            parametresSiteService.migrerTexteDescriptifActivites(
+                "Vente, installation et maintenance d'équipements de climatisation et de réfrigération",
+                "Réparation et Vente de tous Appareils de Froid : Electricité, Plomberie, Climatisation Centrale, Chambre Froide, Split Système, Climatiseur et Frigos"
+            );
         }
 
         if (imageHeroRepository.count() == 0) {
