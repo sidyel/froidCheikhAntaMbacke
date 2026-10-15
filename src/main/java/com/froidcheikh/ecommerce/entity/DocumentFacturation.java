@@ -103,6 +103,10 @@ public class DocumentFacturation {
     @Column(name = "ent_mention_exoneration_tva", length = 200)
     private String entMentionExonerationTva;
 
+    /** Devise figée à l'émission (depuis ParametresSite.devise, ex. "FCFA"). */
+    @Column(name = "ent_devise", length = 10)
+    private String entDevise = "FCFA";
+
     /** Taux TVA par défaut du document (copié de ParametresSite à l'émission). */
     @Column(name = "taux_tva_defaut", precision = 5, scale = 2)
     private BigDecimal tauxTvaDefaut = BigDecimal.ZERO;

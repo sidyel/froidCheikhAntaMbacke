@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
@@ -21,8 +22,10 @@ import java.util.List;
 
 /**
  * Génère les PDFs de facturation avec OpenPDF.
- * Police Helvetica (base-14) + encodage CP1252 → accents français sans fichier TTF externe.
- * Compatible Alpine sans fontconfig.
+ * Police LiberationSans TTF (src/main/resources/fonts/) chargée en IDENTITY_H + embedded,
+ * ce qui assure un rendu correct de tous les caractères Latin (é è à ç ô ë ñ ŋ…).
+ * Repli sur Helvetica/CP1252 si la ressource est absente.
+ * Compatible Alpine sans fontconfig (police embarquée dans le JAR).
  */
 @Service
 @RequiredArgsConstructor
@@ -38,32 +41,63 @@ public class PdfFacturationService {
     private static final Color NOIR = Color.BLACK;
     private static final Color ROUGE_FILIGRANE = new Color(220, 38, 38, 60);
 
-    // Fonts
+    // ---- Cache police TTF ----
+    private volatile BaseFont baseFontCached;
+
+    /**
+     * Charge LiberationSans-Regular.ttf depuis le classpath avec IDENTITY_H (Unicode complet).
+     * Résultat mis en cache (thread-safe via double-checked locking).
+     * Repli sur Helvetica/CP1252 si la ressource est introuvable.
+     */
+    BaseFont chargerPolice() {
+        if (baseFontCached != null) return baseFontCached;
+        synchronized (this) {
+            if (baseFontCached != null) return baseFontCached;
+            try (InputStream is = getClass().getResourceAsStream("/fonts/LiberationSans-Regular.ttf")) {
+                if (is != null) {
+                    byte[] bytes = is.readAllBytes();
+                    baseFontCached = BaseFont.createFont("LiberationSans-Regular.ttf",
+                            BaseFont.IDENTITY_H, BaseFont.EMBEDDED, true, bytes, null);
+                    return baseFontCached;
+                }
+            } catch (Exception e) {
+                // fall through to Helvetica fallback
+            }
+            try {
+                baseFontCached = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+            } catch (Exception e2) {
+                throw new RuntimeException("Impossible de charger la police de facturation", e2);
+            }
+            return baseFontCached;
+        }
+    }
+
+    // ---- Fonts ----
     private Font fontTitre(Color couleur) {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 18, Font.BOLD, couleur);
+        return new Font(chargerPolice(), 18, Font.BOLD, couleur);
     }
     private Font fontSousTitre() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 12, Font.BOLD, NOIR);
+        return new Font(chargerPolice(), 12, Font.BOLD, NOIR);
     }
     private Font fontNormal() {
-        return FontFactory.getFont(FontFactory.HELVETICA, "CP1252", true, 11, Font.NORMAL, NOIR);
+        return new Font(chargerPolice(), 11, Font.NORMAL, NOIR);
     }
     private Font fontNormalGras() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 11, Font.BOLD, NOIR);
+        return new Font(chargerPolice(), 11, Font.BOLD, NOIR);
     }
     private Font fontPetit() {
-        return FontFactory.getFont(FontFactory.HELVETICA, "CP1252", true, 9, Font.NORMAL, new Color(0x55, 0x55, 0x55));
+        return new Font(chargerPolice(), 9, Font.NORMAL, new Color(0x55, 0x55, 0x55));
     }
     private Font fontEntete(Color couleur) {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 11, Font.BOLD, couleur);
+        return new Font(chargerPolice(), 11, Font.BOLD, couleur);
     }
     /** Total intermédiaire (HT, TVA, remise) : 12 pt gras. */
     private Font fontTotal() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 12, Font.BOLD, NOIR);
+        return new Font(chargerPolice(), 12, Font.BOLD, NOIR);
     }
     /** Ligne TOTAL / TOTAL TTC : 13 pt gras. */
     private Font fontTotalTTC() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, "CP1252", true, 13, Font.BOLD, NOIR);
+        return new Font(chargerPolice(), 13, Font.BOLD, NOIR);
     }
 
     /**
@@ -82,6 +116,9 @@ public class PdfFacturationService {
 
             Color couleurPrimaire = parseCouleur(document.getEntCouleurPrimaire(), new Color(0x25, 0x63, 0xEB));
             String typeLabel = typeLabel(document.getTypeDocument());
+            // Devise depuis le document figé (ex. "FCFA") ; repli sur "FCFA"
+            String devise = document.getEntDevise() != null && !document.getEntDevise().isBlank()
+                    ? document.getEntDevise() : "FCFA";
 
             // ---- EN-TÊTE ----
             ecrireEnTete(pdf, writer, document, couleurPrimaire, typeLabel, brouillon);
@@ -98,16 +135,16 @@ public class PdfFacturationService {
                     && document.getTauxTvaDefaut().compareTo(BigDecimal.ZERO) > 0;
             // Pour BON_LIVRAISON : pas de prix
             if (document.getTypeDocument() != TypeDocument.BON_LIVRAISON) {
-                ecrireTableauLignes(pdf, document.getLignes(), couleurPrimaire, afficheTva);
+                ecrireTableauLignes(pdf, document.getLignes(), couleurPrimaire, afficheTva, devise);
                 pdf.add(new Paragraph(" "));
-                ecireTotaux(pdf, document, afficheTva, couleurPrimaire);
+                ecireTotaux(pdf, document, afficheTva, couleurPrimaire, devise);
                 pdf.add(new Paragraph(" "));
                 if (document.getMontantEnLettres() != null) {
                     ecireMontantEnLettres(pdf, document.getMontantEnLettres());
                     pdf.add(new Paragraph(" "));
                 }
                 if (!document.getReglements().isEmpty()) {
-                    ecrireReglements(pdf, document.getReglements(), couleurPrimaire);
+                    ecrireReglements(pdf, document.getReglements(), couleurPrimaire, devise);
                     pdf.add(new Paragraph(" "));
                 }
             } else {
@@ -243,7 +280,7 @@ public class PdfFacturationService {
     }
 
     private void ecrireTableauLignes(Document pdf, List<LigneDocument> lignes,
-                                      Color couleur, boolean afficheTva) throws DocumentException {
+                                      Color couleur, boolean afficheTva, String devise) throws DocumentException {
         int cols = afficheTva ? 7 : 5;
         PdfPTable table = new PdfPTable(cols);
         table.setWidthPercentage(100);
@@ -255,8 +292,8 @@ public class PdfFacturationService {
 
         // En-têtes — devise indiquée dans les colonnes montants
         String[] headers = afficheTva
-                ? new String[]{"Désignation", "Qté", "P.U. (FCFA)", "Remise", "Montant HT (FCFA)", "TVA", "Montant TTC (FCFA)"}
-                : new String[]{"Désignation", "Qté", "P.U. (FCFA)", "Remise", "Montant (FCFA)"};
+                ? new String[]{"Désignation", "Qté", "P.U. (" + devise + ")", "Remise", "Montant HT (" + devise + ")", "TVA", "Montant TTC (" + devise + ")"}
+                : new String[]{"Désignation", "Qté", "P.U. (" + devise + ")", "Remise", "Montant (" + devise + ")"};
 
         for (String h : headers) {
             PdfPCell cell = new PdfPCell(new Phrase(h, fontEntete(BLANC)));
@@ -321,18 +358,18 @@ public class PdfFacturationService {
     }
 
     private void ecireTotaux(Document pdf, DocumentFacturation doc,
-                              boolean afficheTva, Color couleur) throws DocumentException {
+                              boolean afficheTva, Color couleur, String devise) throws DocumentException {
         PdfPTable table = new PdfPTable(2);
         table.setWidthPercentage(50);
         table.setHorizontalAlignment(Element.ALIGN_RIGHT);
 
         if (afficheTva) {
-            ligneTotal(table, "Total HT", doc.getMontantHT(), false);
-            ligneTotal(table, "TVA (" + doc.getTauxTvaDefaut() + "%)", doc.getMontantTva(), false);
+            ligneTotal(table, "Total HT", doc.getMontantHT(), false, devise);
+            ligneTotal(table, "TVA (" + doc.getTauxTvaDefaut() + "%)", doc.getMontantTva(), false, devise);
             if (doc.getRemiseTotalePourcent() != null && doc.getRemiseTotalePourcent().compareTo(BigDecimal.ZERO) > 0) {
-                ligneTotal(table, "Remise globale (" + formatPourcent(doc.getRemiseTotalePourcent()) + ")", null, false);
+                ligneTotal(table, "Remise globale (" + formatPourcent(doc.getRemiseTotalePourcent()) + ")", null, false, devise);
             }
-            ligneTotal(table, "TOTAL TTC", doc.getMontantTTC(), true);
+            ligneTotal(table, "TOTAL TTC", doc.getMontantTTC(), true, devise);
         } else {
             if (doc.getEntMentionExonerationTva() != null) {
                 PdfPCell mention = new PdfPCell(new Phrase(doc.getEntMentionExonerationTva(), fontPetit()));
@@ -341,12 +378,12 @@ public class PdfFacturationService {
                 mention.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 table.addCell(mention);
             }
-            ligneTotal(table, "TOTAL", doc.getMontantTTC(), true);
+            ligneTotal(table, "TOTAL", doc.getMontantTTC(), true, devise);
         }
         pdf.add(table);
     }
 
-    private void ligneTotal(PdfPTable table, String label, BigDecimal valeur, boolean isTTC) {
+    private void ligneTotal(PdfPTable table, String label, BigDecimal valeur, boolean isTTC, String devise) {
         Font f = isTTC ? fontTotalTTC() : fontTotal();
         PdfPCell cLabel = new PdfPCell(new Phrase(label, f));
         cLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -355,7 +392,7 @@ public class PdfFacturationService {
         if (isTTC) cLabel.setBackgroundColor(GRIS_CLAIRE);
         table.addCell(cLabel);
 
-        String valStr = valeur != null ? formatMontant(valeur) + " FCFA" : "";
+        String valStr = valeur != null ? formatMontant(valeur) + " " + devise : "";
         PdfPCell cVal = new PdfPCell(new Phrase(valStr, f));
         cVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
         cVal.setPadding(5);
@@ -376,7 +413,7 @@ public class PdfFacturationService {
     }
 
     private void ecrireReglements(Document pdf, List<ReglementDocument> reglements,
-                                   Color couleur) throws DocumentException {
+                                   Color couleur, String devise) throws DocumentException {
         pdf.add(new Paragraph("Règlements enregistrés", fontSousTitre()));
         PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(80);
@@ -392,7 +429,7 @@ public class PdfFacturationService {
             addCell(table, r.getDateReglement().format(DATE_FMT), Element.ALIGN_CENTER, BLANC);
             addCell(table, r.getMode().name(), Element.ALIGN_CENTER, BLANC);
             addCell(table, r.getReference() != null ? r.getReference() : "-", Element.ALIGN_LEFT, BLANC);
-            addCell(table, formatMontant(r.getMontant()) + " FCFA", Element.ALIGN_RIGHT, BLANC);
+            addCell(table, formatMontant(r.getMontant()) + " " + devise, Element.ALIGN_RIGHT, BLANC);
         }
         pdf.add(table);
     }

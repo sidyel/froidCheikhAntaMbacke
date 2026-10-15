@@ -487,6 +487,9 @@ public class DocumentFacturationService {
         doc.setEntConditionsPaiement(params.getConditionsPaiementDefaut());
         doc.setEntMentionsPied(params.getMentionsPiedDocument());
         doc.setEntMentionExonerationTva(params.getMentionExonerationTva());
+        // Devise : valeur affichée dans les PDFs (ex. "FCFA") ; repli sur "FCFA" si non défini
+        String d = params.getDevise();
+        doc.setEntDevise(d != null && !d.isBlank() ? d : "FCFA");
     }
 
     private void figerClient(DocumentFacturation doc) {

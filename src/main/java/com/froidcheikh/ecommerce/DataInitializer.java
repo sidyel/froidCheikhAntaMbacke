@@ -49,8 +49,9 @@ public class DataInitializer implements CommandLineRunner {
                     15
             );
         } else {
-            // Migration douce : couleurDocuments initialisée à bleu marine si absente
+            // Migrations douces sur la ligne ParametresSite existante
             parametresSiteService.initCouleurDocumentsSiAbsente("#000080");
+            parametresSiteService.migrerDevise("XOF", "FCFA");
         }
 
         if (imageHeroRepository.count() == 0) {

@@ -64,6 +64,20 @@ public class ParametresSiteService {
     }
 
     /**
+     * Migration douce : met à jour la devise si elle vaut "XOF" (code ISO) → "FCFA" (libellé affiché).
+     * Appelé au démarrage uniquement si le paramètre devise n'a pas encore été ajusté.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void migrerDevise(String ancienne, String nouvelle) {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (ancienne.equals(p.getDevise())) {
+                p.setDevise(nouvelle);
+                repository.save(p);
+            }
+        });
+    }
+
+    /**
      * Migration douce : renseigne couleurDocuments si null sur la ligne existante.
      * Appelé par DataInitializer au démarrage pour les bases déjà initialisées.
      */
