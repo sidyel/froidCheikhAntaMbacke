@@ -343,6 +343,34 @@ public class CommandeService {
     }
 
     /**
+     * Annulation par le client — uniquement SA commande, uniquement en EN_ATTENTE.
+     */
+    public CommandeDTO annulerCommandeClient(Long commandeId, Long clientId, String motif) {
+        log.info("❌ Annulation client - commandeId: {}, clientId: {}", commandeId, clientId);
+
+        Commande commande = commandeRepository.findById(commandeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande non trouvée : " + commandeId));
+
+        if (commande.getClient() == null || !commande.getClient().getIdClient().equals(clientId)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Vous n'avez pas accès à cette commande");
+        }
+
+        if (commande.getStatutCommande() != Commande.StatutCommande.EN_ATTENTE) {
+            throw new IllegalStateException(
+                    "Seules les commandes en attente peuvent être annulées par le client");
+        }
+
+        commande.setStatutCommande(Commande.StatutCommande.ANNULEE);
+        commande.setCommentaire(motif != null && !motif.isBlank() ? motif : commande.getCommentaire());
+        commande.setDateModification(LocalDateTime.now());
+        restaurerStock(commande);
+        commande = commandeRepository.save(commande);
+        log.info("✅ Commande {} annulée par le client {}", commandeId, clientId);
+        return convertToDTO(commande);
+    }
+
+    /**
      * Annuler une commande avec motif
      */
     public CommandeDTO annulerCommande(Long commandeId, String motif) {

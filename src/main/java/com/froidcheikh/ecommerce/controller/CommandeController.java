@@ -104,23 +104,7 @@ public class CommandeController {
         }
     }
 
-    @GetMapping("/invite/{numeroCommande}")
-    public ResponseEntity<?> getCommandeInvite(@PathVariable String numeroCommande) {
-        log.info("🔍 Recherche commande invité - Numéro: {}", numeroCommande);
-
-        try {
-            CommandeDTO commande = commandeService.getCommandeByNumero(numeroCommande);
-            log.info("✅ Commande invité trouvée - ID: {}", commande.getIdCommande());
-            return ResponseEntity.ok(commande);
-
-        } catch (Exception e) {
-            log.error("❌ Erreur lors de la recherche de commande invité: ", e);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
-                    "error", "Commande non trouvée",
-                    "message", "Aucune commande trouvée avec ce numéro: " + numeroCommande
-            ));
-        }
-    }
+    // GET /invite/{numero} supprimé — remplacé par GET /suivi?numero=X&telephone=Y (sécurisé)
 
     // Endpoints clients authentifiés
     @PostMapping("/client")
@@ -227,26 +211,37 @@ public class CommandeController {
         }
     }
 
-    // Endpoint de recherche par numéro (AVANT les endpoints génériques)
-    @GetMapping("/numero/{numeroCommande}")
-    public ResponseEntity<?> getCommandeByNumero(@PathVariable String numeroCommande) {
-        log.info("🔍 Recherche commande par numéro: {}", numeroCommande);
+    // Annulation par le client — uniquement sa propre commande et uniquement en EN_ATTENTE
+    @PostMapping("/client/{commandeId}/annuler")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<?> annulerCommandeClient(
+            @PathVariable Long commandeId,
+            @RequestBody(required = false) Map<String, String> body,
+            Authentication authentication) {
 
         try {
-            CommandeDTO commande = commandeService.getCommandeByNumero(numeroCommande);
+            String email = authentication.getName();
+            Long clientId = clientService.getClientByEmail(email).getIdClient();
+            String motif = (body != null) ? body.getOrDefault("motif", "") : "";
+            CommandeDTO commande = commandeService.annulerCommandeClient(commandeId, clientId, motif);
+            log.info("✅ Commande {} annulée par le client {}", commandeId, clientId);
             return ResponseEntity.ok(commande);
-
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "error", "Annulation impossible", "message", e.getMessage()));
+        } catch (org.springframework.security.access.AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "error", "Accès interdit", "message", e.getMessage()));
         } catch (Exception e) {
-            log.error("❌ Erreur lors de la recherche de commande par numéro: ", e);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
-                    "error", "Commande non trouvée",
-                    "message", "Aucune commande trouvée avec ce numéro"
-            ));
+            log.error("❌ Erreur annulation client commande {}: ", commandeId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "error", "Erreur interne", "message", e.getMessage()));
         }
     }
 
-    // Endpoints de paiement
+    // Confirmation de paiement — admin uniquement
     @PostMapping("/{commandeId}/paiement")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'GESTIONNAIRE')")
     public ResponseEntity<?> confirmerPaiement(
             @PathVariable Long commandeId,
             @Valid @RequestBody CommandeDTO.PaiementDTO paiementDTO,
@@ -286,22 +281,29 @@ public class CommandeController {
     // ENDPOINTS GÉNÉRIQUES (PLACER À LA FIN)
     // ===========================================
 
-    // Endpoint général par ID (PLACER EN DERNIER pour éviter les conflits)
+    // Accès commande par ID — CLIENT (vérifie la propriété) ou ADMIN
     @GetMapping("/{commandeId}")
-    @PreAuthorize("permitAll()") // ✅ Ajoutez cette ligne pour permettre l'accès public
-    public ResponseEntity<?> getCommande(@PathVariable Long commandeId) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getCommande(@PathVariable Long commandeId, Authentication authentication) {
         log.info("🔍 Recherche commande - ID: {}", commandeId);
-
         try {
             CommandeDTO commande = commandeService.getCommandeById(commandeId);
-            return ResponseEntity.ok(commande);
 
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().matches("ROLE_ADMIN|ROLE_SUPER_ADMIN|ROLE_GESTIONNAIRE"));
+            if (!isAdmin) {
+                // Pour un CLIENT, vérifie la propriété
+                Long clientId = clientService.getClientByEmail(authentication.getName()).getIdClient();
+                if (commande.getClientId() == null || !commande.getClientId().equals(clientId)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                            "error", "Accès interdit", "message", "Vous n'avez pas accès à cette commande"));
+                }
+            }
+            return ResponseEntity.ok(commande);
         } catch (Exception e) {
             log.error("❌ Erreur lors de la recherche de commande: ", e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
-                    "error", "Commande non trouvée",
-                    "message", "Aucune commande trouvée avec cet ID"
-            ));
+                    "error", "Commande non trouvée", "message", "Aucune commande trouvée avec cet ID"));
         }
     }
 }
