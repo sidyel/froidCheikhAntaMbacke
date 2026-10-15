@@ -2,6 +2,7 @@ package com.froidcheikh.ecommerce.service;
 
 import com.lowagie.text.*;
 import com.lowagie.text.Font;
+import com.lowagie.text.Image;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.*;
 import com.froidcheikh.ecommerce.entity.CompteurDocument.TypeDocument;
@@ -12,9 +13,13 @@ import com.froidcheikh.ecommerce.entity.ReglementDocument;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.awt.*;
+import com.froidcheikh.ecommerce.entity.ModeEnTeteDocuments;
+
+import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
@@ -157,6 +162,66 @@ public class PdfFacturationService {
             ecrirePied(pdf, document, afficheTva);
 
             // ---- FILIGRANE BROUILLON ----
+            if (brouillon) {
+                ajouterFiligrane(writer, "BROUILLON");
+            }
+
+            pdf.close();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur génération PDF : " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Surcharge avec en-tête configurable. Utilisée par DocumentFacturationService
+     * lors de l'émission et de la prévisualisation.
+     */
+    public byte[] generer(DocumentFacturation document, EnTeteDocumentConfig enTete, boolean brouillon) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Document pdf = new Document(PageSize.A4, 40, 40, 50, 60);
+            PdfWriter writer = PdfWriter.getInstance(pdf, baos);
+            pdf.open();
+
+            Color couleurPrimaire = parseCouleur(enTete.couleurHex(), new Color(0x25, 0x63, 0xEB));
+            String typeLabel = typeLabel(document.getTypeDocument());
+            String devise = enTete.devise();
+
+            // ---- EN-TÊTE PARAMÉTRÉ ----
+            ecrireEnTeteConfig(pdf, writer, document, enTete, couleurPrimaire, typeLabel, brouillon);
+
+            pdf.add(Chunk.NEWLINE);
+
+            // ---- BLOC ADRESSES ----
+            ecrireAdresses(pdf, document, couleurPrimaire);
+            pdf.add(new Paragraph(" "));
+
+            // ---- CONTENU ----
+            boolean afficheTva = document.getTauxTvaDefaut() != null
+                    && document.getTauxTvaDefaut().compareTo(BigDecimal.ZERO) > 0;
+            if (document.getTypeDocument() != TypeDocument.BON_LIVRAISON) {
+                ecrireTableauLignes(pdf, document.getLignes(), couleurPrimaire, afficheTva, devise);
+                pdf.add(new Paragraph(" "));
+                ecireTotaux(pdf, document, afficheTva, couleurPrimaire, devise);
+                pdf.add(new Paragraph(" "));
+                if (document.getMontantEnLettres() != null) {
+                    ecireMontantEnLettres(pdf, document.getMontantEnLettres());
+                    pdf.add(new Paragraph(" "));
+                }
+                if (!document.getReglements().isEmpty()) {
+                    ecrireReglements(pdf, document.getReglements(), couleurPrimaire, devise);
+                    pdf.add(new Paragraph(" "));
+                }
+            } else {
+                ecrireTableauBL(pdf, document.getLignes(), couleurPrimaire);
+                pdf.add(new Paragraph(" "));
+                ecrireSignatureBL(pdf, document);
+            }
+
+            // ---- PIED PARAMÉTRÉ ----
+            ecrirePiedConfig(pdf, document, enTete, afficheTva);
+
             if (brouillon) {
                 ajouterFiligrane(writer, "BROUILLON");
             }
@@ -455,6 +520,166 @@ public class PdfFacturationService {
         right.addElement(new Paragraph("Signature du client :", fontNormal()));
         table.addCell(right);
         pdf.add(table);
+    }
+
+    /** En-tête avec configuration complète (mode COMPOSÉ ou IMAGE). */
+    private void ecrireEnTeteConfig(Document pdf, PdfWriter writer,
+                                     DocumentFacturation doc, EnTeteDocumentConfig enTete,
+                                     Color couleur, String typeLabel, boolean brouillon) throws DocumentException {
+
+        if (enTete.mode() == ModeEnTeteDocuments.IMAGE && enTete.urlImageEnTete() != null) {
+            // Mode IMAGE : image pleine largeur
+            byte[] imgBytes = chargerImage(enTete.urlImageEnTete());
+            if (imgBytes != null) {
+                try {
+                    Image img = Image.getInstance(imgBytes);
+                    img.setWidthPercentage(100);
+                    pdf.add(img);
+                } catch (Exception e) {
+                    // Image invalide — repli sur mode composé
+                    ecrireEnTeteCompose(pdf, doc, enTete, couleur, typeLabel);
+                }
+            } else {
+                ecrireEnTeteCompose(pdf, doc, enTete, couleur, typeLabel);
+            }
+        } else {
+            ecrireEnTeteCompose(pdf, doc, enTete, couleur, typeLabel);
+        }
+
+        // Trait double coloré
+        PdfContentByte canvas = writer.getDirectContent();
+        float left = 40;
+        float right = PageSize.A4.getWidth() - 40;
+        float y = pdf.getPageSize().getTop(50);
+        canvas.saveState();
+        canvas.setColorStroke(couleur);
+        canvas.setLineWidth(2f);
+        canvas.moveTo(left, y - 2);
+        canvas.lineTo(right, y - 2);
+        canvas.stroke();
+        canvas.setLineWidth(0.5f);
+        canvas.moveTo(left, y - 5);
+        canvas.lineTo(right, y - 5);
+        canvas.stroke();
+        canvas.restoreState();
+
+        // Numéro + type du document (droite)
+        PdfPTable info = new PdfPTable(2);
+        info.setWidthPercentage(100);
+        info.setWidths(new float[]{2f, 1f});
+        info.setSpacingBefore(6f);
+        PdfPCell vide = new PdfPCell(new Phrase(""));
+        vide.setBorder(Rectangle.NO_BORDER);
+        info.addCell(vide);
+        String numLabel = doc.getNumero() != null ? typeLabel + " N° " + doc.getNumero() : typeLabel + " (BROUILLON)";
+        PdfPCell numCell = new PdfPCell(new Phrase(numLabel, fontTitre(couleur)));
+        numCell.setBorder(Rectangle.NO_BORDER);
+        numCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        info.addCell(numCell);
+        pdf.add(info);
+    }
+
+    /** En-tête composé : logo gauche + nom entreprise / texte descriptif droite. */
+    private void ecrireEnTeteCompose(Document pdf, DocumentFacturation doc,
+                                      EnTeteDocumentConfig enTete, Color couleur, String typeLabel) throws DocumentException {
+        PdfPTable table = new PdfPTable(2);
+        table.setWidthPercentage(100);
+        table.setWidths(new float[]{1f, 2f});
+
+        // Colonne logo
+        PdfPCell logoCell = new PdfPCell();
+        logoCell.setBorder(Rectangle.NO_BORDER);
+        logoCell.setPadding(4);
+        if (enTete.logoUrl() != null) {
+            byte[] imgBytes = chargerImage(enTete.logoUrl());
+            if (imgBytes != null) {
+                try {
+                    Image logo = Image.getInstance(imgBytes);
+                    logo.scaleToFit(120, 80);
+                    logoCell.addElement(logo);
+                } catch (Exception ignored) {}
+            }
+        }
+        table.addCell(logoCell);
+
+        // Colonne texte entreprise
+        PdfPCell textCell = new PdfPCell();
+        textCell.setBorder(Rectangle.NO_BORDER);
+        textCell.setPadding(4);
+        textCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        if (enTete.raisonSociale() != null) {
+            Paragraph nom = new Paragraph(enTete.raisonSociale().toUpperCase(), fontTitre(couleur));
+            nom.setAlignment(Element.ALIGN_RIGHT);
+            textCell.addElement(nom);
+        }
+        if (enTete.texteDescriptif() != null) {
+            Paragraph desc = new Paragraph(enTete.texteDescriptif(), fontPetit());
+            desc.setAlignment(Element.ALIGN_CENTER);
+            textCell.addElement(desc);
+        }
+        table.addCell(textCell);
+        pdf.add(table);
+    }
+
+    /** Pied de page enrichi avec coordonnées et informations bancaires. */
+    private void ecrirePiedConfig(Document pdf, DocumentFacturation doc,
+                                   EnTeteDocumentConfig enTete, boolean afficheTva) throws DocumentException {
+        pdf.add(new Paragraph(" "));
+
+        // Conditions et mentions standard
+        if (doc.getEntConditionsPaiement() != null) {
+            pdf.add(new Paragraph("Conditions de paiement : " + doc.getEntConditionsPaiement(), fontPetit()));
+        }
+        if (doc.getEntMentionsPied() != null) {
+            pdf.add(new Paragraph(doc.getEntMentionsPied(), fontPetit()));
+        }
+        if (!afficheTva && doc.getEntMentionExonerationTva() != null) {
+            pdf.add(new Paragraph(doc.getEntMentionExonerationTva(), fontPetit()));
+        }
+
+        if (enTete.mode() == ModeEnTeteDocuments.IMAGE && enTete.urlImagePied() != null) {
+            // Mode IMAGE : image pied pleine largeur
+            byte[] imgBytes = chargerImage(enTete.urlImagePied());
+            if (imgBytes != null) {
+                try {
+                    Image img = Image.getInstance(imgBytes);
+                    img.setWidthPercentage(100);
+                    pdf.add(img);
+                    return;
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // Pied composé : coordonnées sur 3 lignes (éléments null omis)
+        java.util.StringJoiner ligne1 = new java.util.StringJoiner("  |  ");
+        if (enTete.adresse() != null) ligne1.add(enTete.adresse());
+        if (enTete.telephone() != null) ligne1.add("Tél : " + enTete.telephone());
+        if (enTete.boitePostale() != null) ligne1.add("BP : " + enTete.boitePostale());
+        if (!ligne1.toString().isBlank()) pdf.add(new Paragraph(ligne1.toString(), fontPetit()));
+
+        java.util.StringJoiner ligne2 = new java.util.StringJoiner("  |  ");
+        if (enTete.ninea() != null) ligne2.add("NINEA : " + enTete.ninea());
+        if (enTete.rccm() != null) ligne2.add("RCCM : " + enTete.rccm());
+        if (enTete.banqueNom() != null && enTete.numeroCompte() != null)
+            ligne2.add(enTete.banqueNom() + " — " + enTete.numeroCompte());
+        if (!ligne2.toString().isBlank()) pdf.add(new Paragraph(ligne2.toString(), fontPetit()));
+
+        if (enTete.email() != null) pdf.add(new Paragraph(enTete.email(), fontPetit()));
+    }
+
+    /** Charge une image depuis une URL HTTP(S) avec timeout. Retourne null en cas d'erreur. */
+    byte[] chargerImage(String url) {
+        if (url == null || url.isBlank()) return null;
+        try {
+            URLConnection conn = new URL(url).openConnection();
+            conn.setConnectTimeout(5_000);
+            conn.setReadTimeout(10_000);
+            try (InputStream is = conn.getInputStream()) {
+                return is.readAllBytes();
+            }
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void ecrirePied(Document pdf, DocumentFacturation doc, boolean afficheTva) throws DocumentException {

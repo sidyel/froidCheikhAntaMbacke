@@ -187,6 +187,33 @@ public class ParametresSite {
     @Column(name = "couleur_documents", length = 7)
     private String couleurDocuments;
 
+    // ---- EN-TÊTE DOCUMENTS PDF ----
+    /** Texte libre décrivant les activités de l'entreprise (affiché dans l'en-tête composé). */
+    @Column(name = "texte_descriptif_activites", columnDefinition = "TEXT")
+    private String texteDescriptifActivites;
+
+    @Column(name = "boite_postale", length = 30)
+    private String boitePostale;
+
+    @Column(name = "banque_nom")
+    private String banqueNom;
+
+    @Column(name = "numero_compte_bancaire")
+    private String numeroCompteBancaire;
+
+    /** Mode de rendu de l'en-tête des PDFs de facturation. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mode_en_tete_documents", length = 10)
+    private ModeEnTeteDocuments modeEnTeteDocuments = ModeEnTeteDocuments.COMPOSE;
+
+    /** URL de l'image pleine largeur utilisée en mode IMAGE pour l'en-tête (Cloudinary). */
+    @Column(name = "url_image_en_tete")
+    private String urlImageEnTete;
+
+    /** URL de l'image pleine largeur utilisée en mode IMAGE pour le pied de page (Cloudinary). */
+    @Column(name = "url_image_pied")
+    private String urlImagePied;
+
     // ---- LOCALISATION ----
     @Column(name = "fuseau_horaire", length = 50)
     private String fuseauHoraire = "Africa/Dakar";

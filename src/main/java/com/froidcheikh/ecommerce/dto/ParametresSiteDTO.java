@@ -174,6 +174,16 @@ public final class ParametresSiteDTO {
         private String urlCachetSignature;
         private String mentionExonerationTva;
         private Integer dureeValiditeJetonHeures;
+        private String couleurDocuments;
+
+        // EN-TÊTE DOCUMENTS PDF
+        private String texteDescriptifActivites;
+        private String boitePostale;
+        private String banqueNom;
+        private String numeroCompteBancaire;
+        private com.froidcheikh.ecommerce.entity.ModeEnTeteDocuments modeEnTeteDocuments;
+        private String urlImageEnTete;
+        private String urlImagePied;
 
         // LIVRAISON
         private String devise;

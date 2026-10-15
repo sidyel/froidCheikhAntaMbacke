@@ -108,7 +108,7 @@ class DocumentFacturationServiceTest {
         DocumentFacturation doc = brouillonDoc();
         when(documentRepo.findById(1L)).thenReturn(Optional.of(doc));
         when(numeroService.attribuerNumero(TypeDocument.FACTURE, "FAC")).thenReturn("FAC-2026-0001");
-        when(pdfService.generer(any(), eq(false))).thenReturn(new byte[]{1, 2, 3});
+        when(pdfService.generer(any(), any(), eq(false))).thenReturn(new byte[]{1, 2, 3});
         when(lettresService.convertir(any())).thenReturn("Arrêtée ...");
 
         service.emettre(1L, "admin", false);
@@ -151,7 +151,7 @@ class DocumentFacturationServiceTest {
         when(documentRepo.findById(2L)).thenReturn(Optional.of(devis));
         when(documentRepo.findById(1L)).thenReturn(Optional.of(nouvelleFacture));
         when(numeroService.attribuerNumero(TypeDocument.FACTURE, "FAC")).thenReturn("FAC-2026-0001");
-        when(pdfService.generer(any(), anyBoolean())).thenReturn(new byte[]{1});
+        when(pdfService.generer(any(), any(), anyBoolean())).thenReturn(new byte[]{1});
         when(lettresService.convertir(any())).thenReturn("Arrêtée ...");
 
         service.convertirDevisEnFacture(2L, "admin");
@@ -237,7 +237,7 @@ class DocumentFacturationServiceTest {
         when(documentRepo.findById(1L)).thenReturn(Optional.of(doc));
         when(documentRepo.countFacturesEmisesParCommande(cmd.getIdCommande())).thenReturn(0L);
         when(numeroService.attribuerNumero(any(), any())).thenReturn("FAC-2026-0001");
-        when(pdfService.generer(any(), eq(false))).thenReturn(new byte[]{1});
+        when(pdfService.generer(any(), any(), eq(false))).thenReturn(new byte[]{1});
         when(lettresService.convertir(any())).thenReturn("Arrêtée ...");
 
         service.emettre(1L, "admin", false);
@@ -256,7 +256,7 @@ class DocumentFacturationServiceTest {
         bl.setTypeDocument(TypeDocument.BON_LIVRAISON);
         when(documentRepo.findById(1L)).thenReturn(Optional.of(bl));
         when(numeroService.attribuerNumero(TypeDocument.BON_LIVRAISON, "BL")).thenReturn("BL-2026-0001");
-        when(pdfService.generer(any(), eq(false))).thenReturn(new byte[]{1});
+        when(pdfService.generer(any(), any(), eq(false))).thenReturn(new byte[]{1});
         when(lettresService.convertir(any())).thenReturn("zéro franc CFA");
 
         service.emettre(1L, "gestionnaire", true);

@@ -163,7 +163,8 @@ public class DocumentFacturationService {
         doc.setMontantEnLettres(lettresService.convertir(doc.getMontantTTC()));
 
         // Génération PDF une seule fois
-        byte[] pdfBytes = pdfService.generer(doc, false);
+        EnTeteDocumentConfig enTete = buildEnTeteConfig(params);
+        byte[] pdfBytes = pdfService.generer(doc, enTete, false);
         doc.setPdfBytes(pdfBytes);
         doc.setPdfSha256(sha256Hex(pdfBytes));
 
@@ -178,10 +179,41 @@ public class DocumentFacturationService {
         return doc.getPdfBytes();
     }
 
+    /** Génère un PDF d'aperçu de l'en-tête/pied de page (aucune persistance). */
+    public byte[] genererApercuEnTete() {
+        ParametresSite params = chargerParams();
+        EnTeteDocumentConfig enTete = buildEnTeteConfig(params);
+
+        // Document fictif pour l'aperçu
+        DocumentFacturation doc = new DocumentFacturation();
+        doc.setTypeDocument(com.froidcheikh.ecommerce.entity.CompteurDocument.TypeDocument.FACTURE);
+        doc.setStatut(DocumentFacturation.StatutDocument.BROUILLON);
+        doc.setNumero(null);
+        doc.setDateCreation(java.time.LocalDateTime.now());
+        doc.setEntRaisonSociale(params.getRaisonSociale());
+        doc.setEntAdresseSiege(params.getAdresseComplete());
+        doc.setEntNinea(params.getNinea());
+        doc.setEntRccm(params.getRccm());
+        doc.setEntCouleurPrimaire(enTete.couleurHex());
+        doc.setEntDevise(enTete.devise());
+        doc.setEntConditionsPaiement(params.getConditionsPaiementDefaut());
+        doc.setEntMentionsPied(params.getMentionsPiedDocument());
+        doc.setTauxTvaDefaut(java.math.BigDecimal.ZERO);
+        doc.setPrixAfficheTTC(false);
+        doc.setRemiseTotalePourcent(java.math.BigDecimal.ZERO);
+        doc.setMontantHT(java.math.BigDecimal.ZERO);
+        doc.setMontantTva(java.math.BigDecimal.ZERO);
+        doc.setMontantTTC(java.math.BigDecimal.ZERO);
+
+        return pdfService.generer(doc, enTete, true);
+    }
+
     public byte[] previsualiserBrouillon(Long id) {
         DocumentFacturation doc = charger(id);
         calculerMontants(doc); // recalculer sans persister
-        return pdfService.generer(doc, true);
+        ParametresSite params = chargerParams();
+        EnTeteDocumentConfig enTete = buildEnTeteConfig(params);
+        return pdfService.generer(doc, enTete, true);
     }
 
     // ---- AVOIR ----
@@ -568,6 +600,37 @@ public class DocumentFacturationService {
             case DEVIS -> params.getPrefixeDevis() != null ? params.getPrefixeDevis() : "DEV";
             case BON_LIVRAISON -> params.getPrefixeBonLivraison() != null ? params.getPrefixeBonLivraison() : "BL";
         };
+    }
+
+    /** Construit la config en-tête depuis ParametresSite. Joints les téléphones séparés par " / ". */
+    EnTeteDocumentConfig buildEnTeteConfig(ParametresSite p) {
+        String telephone = p.getTelephones() == null || p.getTelephones().isEmpty() ? null
+                : p.getTelephones().stream()
+                        .map(t -> t.getNumero())
+                        .filter(n -> n != null && !n.isBlank())
+                        .reduce((a, b) -> a + " / " + b)
+                        .orElse(null);
+        String couleur = p.getCouleurDocuments() != null ? p.getCouleurDocuments()
+                : (p.getCouleurPrimaire() != null ? p.getCouleurPrimaire() : "#000080");
+        String devise = p.getDevise() != null && !p.getDevise().isBlank() ? p.getDevise() : "FCFA";
+        return new EnTeteDocumentConfig(
+                p.getRaisonSociale(),
+                p.getLogoUrl(),
+                p.getTexteDescriptifActivites(),
+                p.getAdresseComplete(),
+                telephone,
+                p.getBoitePostale(),
+                p.getEmailContact(),
+                p.getRccm(),
+                p.getNinea(),
+                p.getBanqueNom(),
+                p.getNumeroCompteBancaire(),
+                p.getModeEnTeteDocuments(),
+                p.getUrlImageEnTete(),
+                p.getUrlImagePied(),
+                couleur,
+                devise
+        );
     }
 
     private DocumentFacturation charger(Long id) {

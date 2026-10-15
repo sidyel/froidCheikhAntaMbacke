@@ -60,6 +60,8 @@ public class ParametresSiteService {
         p.setEmailContact(emailContact);
         p.setAnneesExperience(anneesExperience);
         p.setCouleurDocuments("#000080");
+        p.setTexteDescriptifActivites("Vente, installation et maintenance d'équipements de climatisation et de réfrigération");
+        p.setDevise("FCFA");
         repository.save(p);
     }
 
@@ -216,6 +218,15 @@ public class ParametresSiteService {
         dto.setWhatsappMsgConfirmee(p.getWhatsappMsgConfirmee());
         dto.setWhatsappMsgLivree(p.getWhatsappMsgLivree());
         dto.setWhatsappMsgAnnulee(p.getWhatsappMsgAnnulee());
+        // En-tête documents PDF
+        dto.setCouleurDocuments(p.getCouleurDocuments());
+        dto.setTexteDescriptifActivites(p.getTexteDescriptifActivites());
+        dto.setBoitePostale(p.getBoitePostale());
+        dto.setBanqueNom(p.getBanqueNom());
+        dto.setNumeroCompteBancaire(p.getNumeroCompteBancaire());
+        dto.setModeEnTeteDocuments(p.getModeEnTeteDocuments());
+        dto.setUrlImageEnTete(p.getUrlImageEnTete());
+        dto.setUrlImagePied(p.getUrlImagePied());
         return dto;
     }
 
@@ -280,6 +291,15 @@ public class ParametresSiteService {
         if (dto.getWhatsappMsgConfirmee() != null) p.setWhatsappMsgConfirmee(dto.getWhatsappMsgConfirmee());
         if (dto.getWhatsappMsgLivree() != null) p.setWhatsappMsgLivree(dto.getWhatsappMsgLivree());
         if (dto.getWhatsappMsgAnnulee() != null) p.setWhatsappMsgAnnulee(dto.getWhatsappMsgAnnulee());
+        // En-tête documents PDF
+        if (dto.getCouleurDocuments() != null) p.setCouleurDocuments(dto.getCouleurDocuments());
+        if (dto.getTexteDescriptifActivites() != null) p.setTexteDescriptifActivites(dto.getTexteDescriptifActivites());
+        if (dto.getBoitePostale() != null) p.setBoitePostale(dto.getBoitePostale());
+        if (dto.getBanqueNom() != null) p.setBanqueNom(dto.getBanqueNom());
+        if (dto.getNumeroCompteBancaire() != null) p.setNumeroCompteBancaire(dto.getNumeroCompteBancaire());
+        if (dto.getModeEnTeteDocuments() != null) p.setModeEnTeteDocuments(dto.getModeEnTeteDocuments());
+        if (dto.getUrlImageEnTete() != null) p.setUrlImageEnTete(dto.getUrlImageEnTete());
+        if (dto.getUrlImagePied() != null) p.setUrlImagePied(dto.getUrlImagePied());
         if (dto.getHorairesOuverture() != null) {
             p.getHorairesOuverture().clear();
             dto.getHorairesOuverture().forEach(h -> {
