@@ -519,8 +519,8 @@ public class DocumentFacturationService {
         doc.setEntConditionsPaiement(params.getConditionsPaiementDefaut());
         doc.setEntMentionsPied(params.getMentionsPiedDocument());
         doc.setEntMentionExonerationTva(params.getMentionExonerationTva());
-        // Devise : valeur affichée dans les PDFs (ex. "FCFA") ; repli sur "FCFA" si non défini
-        String d = params.getDevise();
+        // Libellé devise pour affichage PDF (ex. "FCFA") ; repli sur "FCFA" si non défini
+        String d = params.getLibelleDevise();
         doc.setEntDevise(d != null && !d.isBlank() ? d : "FCFA");
     }
 
@@ -612,7 +612,7 @@ public class DocumentFacturationService {
                         .orElse(null);
         String couleur = p.getCouleurDocuments() != null ? p.getCouleurDocuments()
                 : (p.getCouleurPrimaire() != null ? p.getCouleurPrimaire() : "#000080");
-        String devise = p.getDevise() != null && !p.getDevise().isBlank() ? p.getDevise() : "FCFA";
+        String devise = p.getLibelleDevise() != null && !p.getLibelleDevise().isBlank() ? p.getLibelleDevise() : "FCFA";
         return new EnTeteDocumentConfig(
                 p.getRaisonSociale(),
                 p.getLogoUrl(),

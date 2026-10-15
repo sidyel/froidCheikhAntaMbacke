@@ -61,19 +61,28 @@ public class ParametresSiteService {
         p.setAnneesExperience(anneesExperience);
         p.setCouleurDocuments("#000080");
         p.setTexteDescriptifActivites("Vente, installation et maintenance d'équipements de climatisation et de réfrigération");
-        p.setDevise("FCFA");
+        p.setDevise("XOF");
+        p.setLibelleDevise("FCFA");
         repository.save(p);
     }
 
-    /**
-     * Migration douce : met à jour la devise si elle vaut "XOF" (code ISO) → "FCFA" (libellé affiché).
-     * Appelé au démarrage uniquement si le paramètre devise n'a pas encore été ajusté.
-     */
+    /** Migration douce : remet devise à son code ISO si une ancienne migration l'avait mis à "FCFA". */
     @org.springframework.transaction.annotation.Transactional
     public void migrerDevise(String ancienne, String nouvelle) {
         repository.findAll().stream().findFirst().ifPresent(p -> {
             if (ancienne.equals(p.getDevise())) {
                 p.setDevise(nouvelle);
+                repository.save(p);
+            }
+        });
+    }
+
+    /** Migration douce : renseigne libelleDevise si null sur la ligne existante. */
+    @org.springframework.transaction.annotation.Transactional
+    public void initLibelleDeviseSiAbsent(String libelle) {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (p.getLibelleDevise() == null || p.getLibelleDevise().isBlank()) {
+                p.setLibelleDevise(libelle);
                 repository.save(p);
             }
         });
@@ -195,6 +204,7 @@ public class ParametresSiteService {
         dto.setNumeroCfe(p.getNumeroCfe());
         dto.setCapitalSocial(p.getCapitalSocial());
         dto.setDevise(p.getDevise());
+        dto.setLibelleDevise(p.getLibelleDevise());
         dto.setSeuilLivraisonGratuite(p.getSeuilLivraisonGratuite());
         dto.setMetaTitle(p.getMetaTitle());
         dto.setMetaDescription(p.getMetaDescription());
@@ -271,6 +281,7 @@ public class ParametresSiteService {
         if (dto.getNumeroCfe() != null) p.setNumeroCfe(dto.getNumeroCfe());
         if (dto.getCapitalSocial() != null) p.setCapitalSocial(dto.getCapitalSocial());
         if (dto.getDevise() != null) p.setDevise(dto.getDevise());
+        if (dto.getLibelleDevise() != null) p.setLibelleDevise(dto.getLibelleDevise());
         if (dto.getSeuilLivraisonGratuite() != null) p.setSeuilLivraisonGratuite(dto.getSeuilLivraisonGratuite());
         if (dto.getMetaTitle() != null) p.setMetaTitle(dto.getMetaTitle());
         if (dto.getMetaDescription() != null) p.setMetaDescription(dto.getMetaDescription());

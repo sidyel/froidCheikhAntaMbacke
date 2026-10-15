@@ -51,7 +51,10 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             // Migrations douces sur la ligne ParametresSite existante
             parametresSiteService.initCouleurDocumentsSiAbsente("#000080");
-            parametresSiteService.migrerDevise("XOF", "FCFA");
+            // devise doit rester le code ISO 4217 "XOF" ; remet à "XOF" si une ancienne migration avait mis "FCFA"
+            parametresSiteService.migrerDevise("FCFA", "XOF");
+            // libelleDevise = libellé affiché aux clients (ex. "FCFA") — distinct de devise
+            parametresSiteService.initLibelleDeviseSiAbsent("FCFA");
         }
 
         if (imageHeroRepository.count() == 0) {

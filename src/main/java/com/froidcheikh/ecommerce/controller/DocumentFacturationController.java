@@ -166,4 +166,15 @@ public class DocumentFacturationController {
         jetonService.revoquer(jeton, user.getUsername());
         return ResponseEntity.noContent().build();
     }
+
+    /** Aperçu PDF de l'en-tête/pied de page avec les paramètres actuels. Aucun document persisté. */
+    @GetMapping("/apercu-entete")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<byte[]> apercuEnTete() {
+        byte[] pdf = documentService.genererApercuEnTete();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"apercu-entete.pdf\"")
+                .body(pdf);
+    }
 }

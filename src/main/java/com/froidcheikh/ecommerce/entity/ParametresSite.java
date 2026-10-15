@@ -219,8 +219,13 @@ public class ParametresSite {
     private String fuseauHoraire = "Africa/Dakar";
 
     // ---- LIVRAISON ----
+    /** Code ISO 4217 (ex. "XOF") — utilisé pour les paiements, catalogues Meta/Google et Angular. */
     @Column(name = "devise", length = 10)
     private String devise = "XOF";
+
+    /** Libellé affiché aux clients (ex. "FCFA") — utilisé dans les PDFs et sur le site. */
+    @Column(name = "libelle_devise", length = 20)
+    private String libelleDevise = "FCFA";
 
     /** Montant minimum du panier pour bénéficier de la livraison gratuite (null = désactivé). */
     @Column(name = "seuil_livraison_gratuite")

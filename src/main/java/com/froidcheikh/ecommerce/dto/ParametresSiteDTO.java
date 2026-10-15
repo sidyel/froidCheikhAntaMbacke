@@ -187,6 +187,7 @@ public final class ParametresSiteDTO {
 
         // LIVRAISON
         private String devise;
+        private String libelleDevise;
         private Integer seuilLivraisonGratuite;
 
         // SEO
