@@ -51,6 +51,33 @@ public class ParametresSiteService {
 
     @Transactional
     @CacheEvict(value = "siteConfig", allEntries = true)
+    public String updateCachetUrl(String url) {
+        ParametresSite entity = repository.findAll().stream().findFirst().orElseThrow();
+        entity.setUrlCachetSignature(url);
+        repository.save(entity);
+        return url;
+    }
+
+    @Transactional
+    @CacheEvict(value = "siteConfig", allEntries = true)
+    public String updateImageEnTeteUrl(String url) {
+        ParametresSite entity = repository.findAll().stream().findFirst().orElseThrow();
+        entity.setUrlImageEnTete(url);
+        repository.save(entity);
+        return url;
+    }
+
+    @Transactional
+    @CacheEvict(value = "siteConfig", allEntries = true)
+    public String updateImagePiedUrl(String url) {
+        ParametresSite entity = repository.findAll().stream().findFirst().orElseThrow();
+        entity.setUrlImagePied(url);
+        repository.save(entity);
+        return url;
+    }
+
+    @Transactional
+    @CacheEvict(value = "siteConfig", allEntries = true)
     public void initDefault(String nomSite, String sloganSite, String emailContact, Integer anneesExperience) {
         if (!repository.findAll().isEmpty()) return;
 
