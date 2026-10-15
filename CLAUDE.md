@@ -36,6 +36,97 @@ Dépôt frontend associé : `../froidCheikhAntaMbackeFront`
 
 ---
 
+## Méthode d'enrichissement des fiches produits (validée oct. 2026)
+
+### Principe général
+
+L'enrichissement se fait **par lots de 5 à 10 produits** en JSON (`enrichissement_lot_N.json` ou `enrichissement_correction_*.json`). Ces fichiers sont dans `.gitignore` et ne doivent jamais être commités.
+
+### Processus obligatoire
+
+1. **Sauvegarde Neon** — créer une branche `backup-avant-enrichissement-YYYYMMDD` depuis le dashboard Neon avant toute écriture réelle.
+2. **Rédiger le JSON** — suivre le format `EnrichissementProduit` (voir DTOs `dto/enrichissement/`). Pour chaque valeur : `confiance: "valide"` si confirmée, `"a_verifier"` sinon (sera ignoré par le runner).
+3. **Lancer en simulation** (aucune écriture, rollback explicite en fin de transaction) :
+   ```bash
+   mvn spring-boot:run -Dspring-boot.run.profiles=import-enrichissement \
+       -Dspring-boot.run.jvmArguments="-Dimport.fichier=enrichissement_lot_N.json"
+   ```
+4. **Vérifier le rapport** — relever les SKIP, IGNORE et REDIRECT. Corriger le JSON si nécessaire.
+5. **Écriture réelle** (seulement après validation du rapport de simulation) :
+   ```bash
+   mvn spring-boot:run -Dspring-boot.run.profiles=import-enrichissement \
+       -Dspring-boot.run.jvmArguments="-Dimport.fichier=enrichissement_lot_N.json -Dimport.confirmer=true"
+   ```
+6. **Vérification post-écriture** — lancer `verif-produits` pour confirmer que les valeurs sont bien en base :
+   ```bash
+   mvn spring-boot:run -Dspring-boot.run.profiles=verif-produits \
+       -Dspring-boot.run.jvmArguments="-Dverif.ids=X,Y,Z"
+   ```
+
+### Règles de sourçage (sécurité éditoriale)
+
+- **Priorité au site fabricant** officiel ; revendeurs utilisés uniquement pour identifier le modèle ou recouper.
+- **Pour les marques locales sans site détaillé (Astech, etc.)** : priorité aux **photos de plaques techniques** (plaquette signalétique ou étiquette énergétique visible sur le produit ou ses photos). Ces plaques font foi pour le modèle, la puissance, la consommation et le label énergie.
+- Consultation **ponctuelle uniquement** — ne jamais copier une description existante d'un revendeur.
+- N'importer que ce qui est **confirmé par les caractéristiques techniques**.
+- Ignorer les valeurs marquées `"a_verifier"` — les laisser dans le JSON pour traçabilité.
+
+### Règle de confiance par catégorie de caractéristique
+
+#### Caractéristiques à faible risque → `"valide"` si ≥ 2 sources revendeurs concordantes sans contradiction
+Ces données varient peu d'un modèle à l'autre et n'impactent pas directement la décision d'achat :
+- `Tension` (ex. 220–240 V / 50 Hz)
+- `Classe climatique` (ex. T tropical)
+- `Fermeture à clé`
+- `Panier amovible`
+- `Type de condenseur`
+
+#### Caractéristiques importantes pour l'achat → restent `"a_verifier"` sans site officiel ou photo de plaque
+Ces données sont déterminantes pour le choix du client et fréquemment erronées chez les revendeurs :
+- `Consommation` (Watt, kWh/an, kWh/24h)
+- `Classe énergétique` / `labelEnergie`
+- `Poids`
+- `Dimensions`
+- `Capacité totale` / `Capacité nette`
+- `Gaz réfrigérant`
+- `Référence` / `modeleFabricant`
+- `Niveau sonore`
+
+### Support `effacer` dans colonnesTechniques
+
+Quand une colonne contient une **valeur incorrecte** (ex. capacité stockée par erreur dans le champ `dimensions`), utiliser `effacer: true` + `ecraser: true` au niveau produit pour vider la colonne :
+
+```json
+{
+  "idProduit": 19,
+  "ecraser": true,
+  "colonnesTechniques": {
+    "dimensions": {"valeur": null, "effacer": true, "source": "...", "confiance": "valide"}
+  },
+  "attributs": [
+    {"nom": "Capacité totale", "valeur": "195 L", "source": "...", "confiance": "valide"}
+  ]
+}
+```
+
+### Runners disponibles (profils Spring dédiés — jamais au démarrage normal)
+
+| Profil | Runner | Usage |
+|---|---|---|
+| `import-enrichissement` | `ImportEnrichissementRunner` | Import lot JSON (simulation par défaut) |
+| `export` | `ExportEnrichissementRunner` | Export fiches produits en JSON pour enrichissement |
+| `verif-produits` | `VerifProduitsRunner` | Vérification base par IDs ou recherche dimensions suspectes |
+| `migration` | `MigrationImagesRunner` | Migration images `produit_images` → `image_produit` (idempotent) |
+
+### Bilan des lots exécutés (oct. 2026)
+
+| Fichier | Produits ciblés | Résultat | Date |
+|---|---|---|---|
+| `enrichissement_lot_1.json` | 3, 8, 19, 29, 105 | 3 modifiés : `modeleFabricant` produits 3 (`AST-09RB41-MA`) et 8 (`09INV8MA`), attribut `Fermeture à clé = Oui` produit 19 | 15 oct. 2026 |
+| `enrichissement_correction_dimensions.json` | 19–32, 101, 103–105 (17 produits) | 17 modifiés : colonne `dimensions` effacée (contenait la capacité), attribut `Capacité totale` créé pour chacun (valeur numérique, unité L via ModeleAttribut) | 15 oct. 2026 |
+
+---
+
 ## Architecture — entité `ParametresSite`
 
 Table `parametres_site` — **une seule ligne** (id = 1 par convention).
@@ -104,7 +195,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 | Entités de contenu gérable (ImageHero, Partenaire, Prestation, MembreEquipe, Realisation) | ✅ Mergé dans `develop` + `main` | — |
 | Zones de livraison (ZoneLivraison) | ✅ Mergé dans `develop` + `main` | — |
 | Promotions produits (PrixService, PromotionService, CRUD, fiche, catalogue, panier) | ✅ Mergé dans `develop` + `main` | — |
-| Enrichissement fiches produits (EAN, ModeleFabricant, ImageProduit, ModeleAttribut, CRUD AttributProduit, score, export) | ✅ Complet — migration images exécutée (oct. 2026) | feature/modele-produit |
+| Enrichissement fiches produits (runners import/export/verif, ModeleAttribut, AttributProduit, ImageProduit, score — lots 1 + correction_dimensions écrits en base oct. 2026) | ✅ Mergé dans `develop` + `main` | — |
 | Module facturation (PDF) | ⏳ Planifié | — |
 | Migrations Flyway | ⏳ Planifié | — |
 
@@ -226,3 +317,9 @@ Migration lancée (oct. 2026) et idempotence vérifiée. Bloc `else if` retiré 
 
 ### #5 — `FroidCheikhEcommerceApplicationTests` se connecte à la vraie base Neon
 Le test de contexte `FroidCheikhEcommerceApplicationTests` charge le contexte Spring complet, se connecte à la base Neon configurée dans les variables d'environnement et exécute `DataInitializer` (seed zones si table vide + SUPER_ADMIN existant). Il ne s'exécute pas en isolation : il dépend d'une base accessible et d'un état cohérent. À remplacer par une base de test dédiée (H2 in-memory ou Testcontainers) pour isoler les tests de l'environnement réel.
+
+### #9 — Garanties `1 ans` à corriger en `1 an`
+15 produits Astech (IDs 3, 8, 19, 20, 21, 22, 23, 24, 26, 27, 28, 29, 30, 31, 32) ont `garantie = '1 ans'` (faute) au lieu de `'1 an'`. Les 4 produits SMART TECHNOLOGY (101, 103, 104, 105) ont déjà `'1 an'`. Corriger via SQL ou un lot d'enrichissement dédié avant la mise en production :
+```sql
+UPDATE produits SET garantie = '1 an' WHERE garantie = '1 ans';
+```
