@@ -71,6 +71,27 @@ L'enrichissement se fait **par lots de 5 à 10 produits** en JSON (`enrichisseme
 - N'importer que ce qui est **confirmé par les caractéristiques techniques**.
 - Ignorer les valeurs marquées `"a_verifier"` — les laisser dans le JSON pour traçabilité.
 
+### Règle de confiance par catégorie de caractéristique
+
+#### Caractéristiques à faible risque → `"valide"` si ≥ 2 sources revendeurs concordantes sans contradiction
+Ces données varient peu d'un modèle à l'autre et n'impactent pas directement la décision d'achat :
+- `Tension` (ex. 220–240 V / 50 Hz)
+- `Classe climatique` (ex. T tropical)
+- `Fermeture à clé`
+- `Panier amovible`
+- `Type de condenseur`
+
+#### Caractéristiques importantes pour l'achat → restent `"a_verifier"` sans site officiel ou photo de plaque
+Ces données sont déterminantes pour le choix du client et fréquemment erronées chez les revendeurs :
+- `Consommation` (Watt, kWh/an, kWh/24h)
+- `Classe énergétique` / `labelEnergie`
+- `Poids`
+- `Dimensions`
+- `Capacité totale` / `Capacité nette`
+- `Gaz réfrigérant`
+- `Référence` / `modeleFabricant`
+- `Niveau sonore`
+
 ### Support `effacer` dans colonnesTechniques
 
 Quand une colonne contient une **valeur incorrecte** (ex. capacité stockée par erreur dans le champ `dimensions`), utiliser `effacer: true` + `ecraser: true` au niveau produit pour vider la colonne :
