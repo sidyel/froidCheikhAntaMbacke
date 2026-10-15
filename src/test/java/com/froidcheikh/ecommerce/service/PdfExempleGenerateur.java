@@ -4,6 +4,7 @@ import com.froidcheikh.ecommerce.entity.CompteurDocument.TypeDocument;
 import com.froidcheikh.ecommerce.entity.DocumentFacturation;
 import com.froidcheikh.ecommerce.entity.DocumentFacturation.StatutDocument;
 import com.froidcheikh.ecommerce.entity.LigneDocument;
+import com.froidcheikh.ecommerce.entity.ModeEnTeteDocuments;
 import com.froidcheikh.ecommerce.entity.ReglementDocument;
 import com.froidcheikh.ecommerce.entity.ReglementDocument.ModeReglement;
 import org.junit.jupiter.api.Test;
@@ -32,36 +33,92 @@ class PdfExempleGenerateur {
         Path dir = Paths.get("target/pdf-exemples");
         Files.createDirectories(dir);
 
-        // ---- FACTURE ----
+        // En-tête composé (mode par défaut)
+        EnTeteDocumentConfig enTeteCompose = enTeteCompose();
+
+        // ---- FACTURE (mode composé) ----
         DocumentFacturation facture = creerFacture();
         calculerEtFiger(facture);
-        byte[] pdfFacture = pdfService.generer(facture, false);
+        byte[] pdfFacture = pdfService.generer(facture, enTeteCompose, false);
         ecrire(dir, "facture_FAC-2026-0001.pdf", pdfFacture);
 
-        // ---- FACTURE BROUILLON (filigrane) ----
+        // ---- FACTURE BROUILLON (filigrane, mode composé) ----
         DocumentFacturation brouillon = creerFacture();
         brouillon.setStatut(StatutDocument.BROUILLON);
         brouillon.setNumero(null);
         calculerEtFiger(brouillon);
-        byte[] pdfBrouillon = pdfService.generer(brouillon, true);
+        byte[] pdfBrouillon = pdfService.generer(brouillon, enTeteCompose, true);
         ecrire(dir, "brouillon_BROUILLON.pdf", pdfBrouillon);
 
-        // ---- AVOIR ----
+        // ---- AVOIR (mode composé) ----
         DocumentFacturation avoir = creerAvoir(facture);
         calculerEtFiger(avoir);
-        byte[] pdfAvoir = pdfService.generer(avoir, false);
+        byte[] pdfAvoir = pdfService.generer(avoir, enTeteCompose, false);
         ecrire(dir, "avoir_AVO-2026-0001.pdf", pdfAvoir);
 
-        // ---- BON DE LIVRAISON ----
+        // ---- BON DE LIVRAISON (mode composé) ----
         DocumentFacturation bl = creerBonLivraison();
-        byte[] pdfBL = pdfService.generer(bl, false);
+        byte[] pdfBL = pdfService.generer(bl, enTeteCompose, false);
         ecrire(dir, "bon_livraison_BL-2026-0001.pdf", pdfBL);
 
+        // ---- FACTURE mode IMAGE (avec papier à en-tête) ----
+        // Les images sont dans docs/ — si absentes, le service replie sur le mode composé
+        EnTeteDocumentConfig enTeteImage = enTeteImage();
+        DocumentFacturation factureImage = creerFacture();
+        factureImage.setNumero("FAC-2026-IMAGE");
+        calculerEtFiger(factureImage);
+        byte[] pdfImage = pdfService.generer(factureImage, enTeteImage, false);
+        ecrire(dir, "facture_mode_image_FAC-2026-IMAGE.pdf", pdfImage);
+
         System.out.println("\n=== PDFs générés dans : " + dir.toAbsolutePath() + " ===");
-        System.out.println("  - facture_FAC-2026-0001.pdf");
-        System.out.println("  - brouillon_BROUILLON.pdf");
-        System.out.println("  - avoir_AVO-2026-0001.pdf");
-        System.out.println("  - bon_livraison_BL-2026-0001.pdf");
+        System.out.println("  - facture_FAC-2026-0001.pdf             (mode COMPOSÉ, Oswald Bold)");
+        System.out.println("  - brouillon_BROUILLON.pdf               (mode COMPOSÉ, filigrane)");
+        System.out.println("  - avoir_AVO-2026-0001.pdf               (mode COMPOSÉ)");
+        System.out.println("  - bon_livraison_BL-2026-0001.pdf        (mode COMPOSÉ)");
+        System.out.println("  - facture_mode_image_FAC-2026-IMAGE.pdf (mode IMAGE — repli COMPOSÉ si images absentes)");
+    }
+
+    private EnTeteDocumentConfig enTeteCompose() {
+        return new EnTeteDocumentConfig(
+                "Froid Cheikh Anta Mbacke SARL",
+                null, // logoUrl — null pour démo
+                "Vente, installation et maintenance d'équipements de climatisation et de réfrigération",
+                "Zone Industrielle, Lot 47, Dakar, Sénégal",
+                "+221 77 XXX XX XX",
+                "BP XXXX Dakar",   // sera mis à jour depuis l'image
+                "froidcheikhantambacke.dione65@gmail.com",
+                "SN DKR 2020 B 12345",
+                "000123456 2A1",
+                null, // banqueNom — sera mis à jour
+                null, // numeroCompte — sera mis à jour
+                ModeEnTeteDocuments.COMPOSE,
+                null,
+                null,
+                "#000080",
+                "FCFA"
+        );
+    }
+
+    private EnTeteDocumentConfig enTeteImage() {
+        // Chemins locaux vers les images du papier à en-tête
+        // Converties en URL file:// pour chargerImage() ; null si le fichier n'existe pas
+        String imgHaut = toFileUrl("docs/papier-entete-haut.png");
+        String imgBas = toFileUrl("docs/papier-entete-bas.png");
+        return new EnTeteDocumentConfig(
+                "Froid Cheikh Anta Mbacke SARL",
+                null, null, null, null, null, null, null, null, null, null,
+                ModeEnTeteDocuments.IMAGE,
+                imgHaut,
+                imgBas,
+                "#000080",
+                "FCFA"
+        );
+    }
+
+    private String toFileUrl(String relativePath) {
+        java.io.File f = new java.io.File(relativePath);
+        if (!f.exists()) return null;
+        return f.toURI().toString();
     }
 
     // ---- FABRIQUE FACTURE ----

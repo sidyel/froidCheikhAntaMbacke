@@ -46,8 +46,9 @@ public class PdfFacturationService {
     private static final Color NOIR = Color.BLACK;
     private static final Color ROUGE_FILIGRANE = new Color(220, 38, 38, 60);
 
-    // ---- Cache police TTF ----
+    // ---- Cache polices TTF ----
     private volatile BaseFont baseFontCached;
+    private volatile BaseFont baseFontOswaldCached;
 
     /**
      * Charge LiberationSans-Regular.ttf depuis le classpath avec IDENTITY_H (Unicode complet).
@@ -77,9 +78,37 @@ public class PdfFacturationService {
         }
     }
 
+    /**
+     * Charge Oswald-Bold.ttf (police condensée grasse, SIL OFL) avec IDENTITY_H.
+     * Utilisée pour le nom d'entreprise dans l'en-tête composé.
+     * Repli sur la police principale si la ressource est absente.
+     */
+    BaseFont chargerPoliceOswald() {
+        if (baseFontOswaldCached != null) return baseFontOswaldCached;
+        synchronized (this) {
+            if (baseFontOswaldCached != null) return baseFontOswaldCached;
+            try (InputStream is = getClass().getResourceAsStream("/fonts/Oswald-Bold.ttf")) {
+                if (is != null) {
+                    byte[] bytes = is.readAllBytes();
+                    baseFontOswaldCached = BaseFont.createFont("Oswald-Bold.ttf",
+                            BaseFont.IDENTITY_H, BaseFont.EMBEDDED, true, bytes, null);
+                    return baseFontOswaldCached;
+                }
+            } catch (Exception e) {
+                // fall through to fallback
+            }
+            baseFontOswaldCached = chargerPolice();
+            return baseFontOswaldCached;
+        }
+    }
+
     // ---- Fonts ----
     private Font fontTitre(Color couleur) {
         return new Font(chargerPolice(), 18, Font.BOLD, couleur);
+    }
+    /** Nom d'entreprise : Oswald Bold condensé, 20 pt. */
+    private Font fontNomEntreprise(Color couleur) {
+        return new Font(chargerPoliceOswald(), 20, Font.BOLD, couleur);
     }
     private Font fontSousTitre() {
         return new Font(chargerPolice(), 12, Font.BOLD, NOIR);
@@ -608,7 +637,7 @@ public class PdfFacturationService {
         textCell.setPadding(4);
         textCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
         if (enTete.raisonSociale() != null) {
-            Paragraph nom = new Paragraph(enTete.raisonSociale().toUpperCase(), fontTitre(couleur));
+            Paragraph nom = new Paragraph(enTete.raisonSociale().toUpperCase(), fontNomEntreprise(couleur));
             nom.setAlignment(Element.ALIGN_RIGHT);
             textCell.addElement(nom);
         }
