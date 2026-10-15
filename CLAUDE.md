@@ -326,6 +326,10 @@ Le script est idempotent : relancé deux fois, il n'a aucun effet supplémentair
    DROP TABLE produit_images;
    ```
 
+### 11 — Valider le modèle de facture avant la mise en production
+
+> ⚠️ **Important** — faire valider un modèle de facture imprimé (avec données réelles) par le comptable ou le conseiller fiscal **avant** la mise en production. Points à vérifier : mentions obligatoires selon la réglementation sénégalaise (NINEA, RCCM, numérotation séquentielle, date d'émission, dénomination sociale), traitement de la TVA (assujetti ou non), libellés des conditions de paiement. Ne pas émettre de factures clients sans cette validation.
+
 ---
 
 ## Points connus à corriger

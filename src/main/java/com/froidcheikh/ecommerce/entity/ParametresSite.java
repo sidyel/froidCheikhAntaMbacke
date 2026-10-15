@@ -139,6 +139,46 @@ public class ParametresSite {
     @Column(name = "capital_social")
     private String capitalSocial;
 
+    @Column(name = "adresse_siege", columnDefinition = "TEXT")
+    private String adresseSiege;
+
+    /** Taux de TVA par défaut en %. 0 = non assujetti (le PDF masque les colonnes TVA). */
+    @Column(name = "taux_tva_defaut", precision = 5, scale = 2)
+    private java.math.BigDecimal tauxTvaDefaut = java.math.BigDecimal.ZERO;
+
+    /** true = les prix du site sont TTC ; false = HT (non assujetti ou HT affiché). */
+    @Column(name = "prix_affiche_ttc")
+    private Boolean prixAfficheTTC = false;
+
+    @Column(name = "prefixe_facture", length = 10)
+    private String prefixeFacture = "FAC";
+
+    @Column(name = "prefixe_avoir", length = 10)
+    private String prefixeAvoir = "AVO";
+
+    @Column(name = "prefixe_devis", length = 10)
+    private String prefixeDevis = "DEV";
+
+    @Column(name = "prefixe_bon_livraison", length = 10)
+    private String prefixeBonLivraison = "BL";
+
+    @Column(name = "conditions_paiement_defaut", columnDefinition = "TEXT")
+    private String conditionsPaiementDefaut;
+
+    @Column(name = "mentions_pied_document", columnDefinition = "TEXT")
+    private String mentionsPiedDocument;
+
+    @Column(name = "url_cachet_signature")
+    private String urlCachetSignature;
+
+    /** Mention affichée sur les PDFs quand tauxTvaDefaut = 0 (ex : "TVA non applicable"). */
+    @Column(name = "mention_exoneration_tva", length = 200)
+    private String mentionExonerationTva = "TVA non applicable";
+
+    /** Durée de validité des jetons de téléchargement WhatsApp, en heures. */
+    @Column(name = "duree_validite_jeton_heures")
+    private Integer dureeValiditeJetonHeures = 72;
+
     // ---- LOCALISATION ----
     @Column(name = "fuseau_horaire", length = 50)
     private String fuseauHoraire = "Africa/Dakar";

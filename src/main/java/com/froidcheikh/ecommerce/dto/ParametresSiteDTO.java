@@ -162,6 +162,18 @@ public final class ParametresSiteDTO {
         private String rccm;
         private String numeroCfe;
         private String capitalSocial;
+        private String adresseSiege;
+        private java.math.BigDecimal tauxTvaDefaut;
+        private Boolean prixAfficheTTC;
+        private String prefixeFacture;
+        private String prefixeAvoir;
+        private String prefixeDevis;
+        private String prefixeBonLivraison;
+        private String conditionsPaiementDefaut;
+        private String mentionsPiedDocument;
+        private String urlCachetSignature;
+        private String mentionExonerationTva;
+        private Integer dureeValiditeJetonHeures;
 
         // LIVRAISON
         private String devise;
