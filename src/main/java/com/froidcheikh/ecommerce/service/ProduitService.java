@@ -385,6 +385,7 @@ public class ProduitService {
                 a.setValeurAttribut(attr.getValeurAttribut());
                 if (attr.getModeleAttribut() != null) {
                     a.setModeleAttributId(attr.getModeleAttribut().getIdModele());
+                    a.setUnite(attr.getModeleAttribut().getUnite());
                 }
                 return a;
             }).collect(Collectors.toList()));
