@@ -26,6 +26,7 @@ public final class ParametresSiteDTO {
         private String numero;
         private String libelle;
         private Boolean whatsapp;
+        private Boolean afficherEnDocuments;
     }
 
     /**

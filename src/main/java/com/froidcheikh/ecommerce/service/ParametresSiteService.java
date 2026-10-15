@@ -70,8 +70,9 @@ public class ParametresSiteService {
         p.setNinea("0151340-2B1");
         p.setBanqueNom("CBAO");
         p.setNumeroCompteBancaire("36017179-49");
-        p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("33 820 16 33", "Fixe", false));
-        p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("77 335 20 00", "Mobile", false));
+        p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("33 820 16 33", "Fixe", false, true));
+        p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("77 335 20 00", "Mobile", true, true));
+        p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("76 888 04 42", "Mobile", false, false));
         repository.save(p);
     }
 
@@ -113,8 +114,9 @@ public class ParametresSiteService {
     public void initTelephonesSiAbsents() {
         repository.findAll().stream().findFirst().ifPresent(p -> {
             if (p.getTelephones() == null || p.getTelephones().isEmpty()) {
-                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("33 820 16 33", "Fixe", false));
-                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("77 335 20 00", "Mobile", false));
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("33 820 16 33", "Fixe", false, true));
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("77 335 20 00", "Mobile", true, true));
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("76 888 04 42", "Mobile", false, false));
                 repository.save(p);
             }
         });
@@ -142,6 +144,45 @@ public class ParametresSiteService {
                 p.setTexteDescriptifActivites(nouvelle);
                 repository.save(p);
             }
+        });
+    }
+
+    /** Migration ponctuelle idempotente : corrige boitePostale si la valeur est exactement l'ancienne. */
+    @org.springframework.transaction.annotation.Transactional
+    public void migrerBoitePostale(String ancienne, String nouvelle) {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (ancienne.equals(p.getBoitePostale())) {
+                p.setBoitePostale(nouvelle);
+                repository.save(p);
+            }
+        });
+    }
+
+    /**
+     * Migration ponctuelle idempotente : supprime le numéro de test 77 330 00 06 et installe
+     * les trois numéros réels. N'agit que si 77 330 00 06 est présent dans la liste.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void migrerTelephones() {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            boolean aNumeroTest = p.getTelephones().stream()
+                    .anyMatch(t -> "77 330 00 06".equals(t.getNumero()));
+            if (!aNumeroTest) return;
+
+            p.getTelephones().removeIf(t -> "77 330 00 06".equals(t.getNumero()));
+
+            java.util.Set<String> existants = p.getTelephones().stream()
+                    .map(com.froidcheikh.ecommerce.entity.TelephoneSite::getNumero)
+                    .collect(java.util.stream.Collectors.toSet());
+
+            if (!existants.contains("33 820 16 33"))
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("33 820 16 33", "Fixe", false, true));
+            if (!existants.contains("77 335 20 00"))
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("77 335 20 00", "Mobile", true, true));
+            if (!existants.contains("76 888 04 42"))
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("76 888 04 42", "Mobile", false, false));
+
+            repository.save(p);
         });
     }
 
@@ -323,6 +364,7 @@ public class ParametresSiteService {
                 tel.setNumero(t.getNumero());
                 tel.setLibelle(t.getLibelle());
                 tel.setWhatsapp(Boolean.TRUE.equals(t.getWhatsapp()));
+                tel.setAfficherEnDocuments(t.getAfficherEnDocuments() == null || t.getAfficherEnDocuments());
                 p.getTelephones().add(tel);
             });
         }
@@ -399,6 +441,7 @@ public class ParametresSiteService {
             dto.setNumero(t.getNumero());
             dto.setLibelle(t.getLibelle());
             dto.setWhatsapp(t.getWhatsapp());
+            dto.setAfficherEnDocuments(t.getAfficherEnDocuments());
             return dto;
         }).collect(Collectors.toList());
     }

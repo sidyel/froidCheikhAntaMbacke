@@ -606,7 +606,8 @@ public class DocumentFacturationService {
     EnTeteDocumentConfig buildEnTeteConfig(ParametresSite p) {
         String telephone = p.getTelephones() == null || p.getTelephones().isEmpty() ? null
                 : p.getTelephones().stream()
-                        .map(t -> t.getNumero())
+                        .filter(t -> !Boolean.FALSE.equals(t.getAfficherEnDocuments()))
+                        .map(com.froidcheikh.ecommerce.entity.TelephoneSite::getNumero)
                         .filter(n -> n != null && !n.isBlank())
                         .reduce((a, b) -> a + " / " + b)
                         .orElse(null);
