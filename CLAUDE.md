@@ -118,6 +118,13 @@ Quand une colonne contient une **valeur incorrecte** (ex. capacité stockée par
 | `verif-produits` | `VerifProduitsRunner` | Vérification base par IDs ou recherche dimensions suspectes |
 | `migration` | `MigrationImagesRunner` | Migration images `produit_images` → `image_produit` (idempotent) |
 
+### Bilan des lots exécutés (oct. 2026)
+
+| Fichier | Produits ciblés | Résultat | Date |
+|---|---|---|---|
+| `enrichissement_lot_1.json` | 3, 8, 19, 29, 105 | 3 modifiés : `modeleFabricant` produits 3 (`AST-09RB41-MA`) et 8 (`09INV8MA`), attribut `Fermeture à clé = Oui` produit 19 | 15 oct. 2026 |
+| `enrichissement_correction_dimensions.json` | 19–32, 101, 103–105 (17 produits) | 17 modifiés : colonne `dimensions` effacée (contenait la capacité), attribut `Capacité totale` créé pour chacun (valeur numérique, unité L via ModeleAttribut) | 15 oct. 2026 |
+
 ---
 
 ## Architecture — entité `ParametresSite`
@@ -188,7 +195,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 | Entités de contenu gérable (ImageHero, Partenaire, Prestation, MembreEquipe, Realisation) | ✅ Mergé dans `develop` + `main` | — |
 | Zones de livraison (ZoneLivraison) | ✅ Mergé dans `develop` + `main` | — |
 | Promotions produits (PrixService, PromotionService, CRUD, fiche, catalogue, panier) | ✅ Mergé dans `develop` + `main` | — |
-| Enrichissement fiches produits (EAN, ModeleFabricant, ImageProduit, ModeleAttribut, CRUD AttributProduit, score, export) | ✅ Complet — migration images exécutée (oct. 2026) | feature/modele-produit |
+| Enrichissement fiches produits (runners import/export/verif, ModeleAttribut, AttributProduit, ImageProduit, score — lots 1 + correction_dimensions écrits en base oct. 2026) | ✅ Mergé dans `develop` + `main` | — |
 | Module facturation (PDF) | ⏳ Planifié | — |
 | Migrations Flyway | ⏳ Planifié | — |
 
@@ -310,3 +317,9 @@ Migration lancée (oct. 2026) et idempotence vérifiée. Bloc `else if` retiré 
 
 ### #5 — `FroidCheikhEcommerceApplicationTests` se connecte à la vraie base Neon
 Le test de contexte `FroidCheikhEcommerceApplicationTests` charge le contexte Spring complet, se connecte à la base Neon configurée dans les variables d'environnement et exécute `DataInitializer` (seed zones si table vide + SUPER_ADMIN existant). Il ne s'exécute pas en isolation : il dépend d'une base accessible et d'un état cohérent. À remplacer par une base de test dédiée (H2 in-memory ou Testcontainers) pour isoler les tests de l'environnement réel.
+
+### #9 — Garanties `1 ans` à corriger en `1 an`
+15 produits Astech (IDs 3, 8, 19, 20, 21, 22, 23, 24, 26, 27, 28, 29, 30, 31, 32) ont `garantie = '1 ans'` (faute) au lieu de `'1 an'`. Les 4 produits SMART TECHNOLOGY (101, 103, 104, 105) ont déjà `'1 an'`. Corriger via SQL ou un lot d'enrichissement dédié avant la mise en production :
+```sql
+UPDATE produits SET garantie = '1 an' WHERE garantie = '1 ans';
+```
