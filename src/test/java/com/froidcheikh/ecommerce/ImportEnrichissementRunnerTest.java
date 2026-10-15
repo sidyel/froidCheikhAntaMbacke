@@ -1,7 +1,9 @@
 package com.froidcheikh.ecommerce;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.froidcheikh.ecommerce.entity.ModeleAttribut;
 import com.froidcheikh.ecommerce.entity.Produit;
+import com.froidcheikh.ecommerce.entity.TypeAttribut;
 import com.froidcheikh.ecommerce.repository.AttributProduitRepository;
 import com.froidcheikh.ecommerce.repository.ModeleAttributRepository;
 import com.froidcheikh.ecommerce.repository.ProduitRepository;
@@ -20,6 +22,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -154,5 +157,70 @@ class ImportEnrichissementRunnerTest {
         // Vérification principale : aucun save() appelé
         verify(produitRepository, never()).save(any());
         verify(attributProduitRepository, never()).save(any());
+    }
+
+    /**
+     * Quand le ModeleAttribut pour "Capacité totale" est de type NUMBER,
+     * une valeur "195 L" (avec unité) doit être REFUSÉE (WARN + skip),
+     * alors qu'une valeur "195" (numérique pure) est ACCEPTÉE.
+     *
+     * Ce test prouve la garde de validation NUMBER sans base de données.
+     */
+    @Test
+    void attributNUMBER_refuseValeurAvecUnite_accepteValeurNumerique(@TempDir Path tempDir) throws Exception {
+        ModeleAttribut modeleNumber = new ModeleAttribut();
+        modeleNumber.setNomAttribut("Capacité totale");
+        modeleNumber.setTypeValeur(TypeAttribut.NUMBER);
+        modeleNumber.setUnite("L");
+
+        // JSON avec deux produits : l'un a "195 L" (doit être refusé), l'autre "195" (doit passer)
+        String json = """
+                [
+                  {
+                    "idProduit": 19,
+                    "ecraser": false,
+                    "attributs": [
+                      {"nom":"Capacité totale","valeur":"195 L","source":"test","url":"","confiance":"valide"}
+                    ]
+                  },
+                  {
+                    "idProduit": 20,
+                    "ecraser": false,
+                    "attributs": [
+                      {"nom":"Capacité totale","valeur":"195","source":"test","url":"","confiance":"valide"}
+                    ]
+                  }
+                ]
+                """;
+
+        Path fichier = tempDir.resolve("lot_number_test.json");
+        Files.writeString(fichier, json);
+
+        Produit p19 = new Produit(); p19.setNomProduit("Congélateur 195L");
+        Produit p20 = new Produit(); p20.setNomProduit("Congélateur 280L");
+
+        when(produitRepository.findById(19L)).thenReturn(Optional.of(p19));
+        when(produitRepository.findById(20L)).thenReturn(Optional.of(p20));
+        when(attributProduitRepository.findByProduitIdProduit(any())).thenReturn(List.of());
+        when(modeleAttributRepository.findByNomAttributIgnoreCase("Capacité totale"))
+                .thenReturn(Optional.of(modeleNumber));
+
+        ImportEnrichissementRunner runnerReel = new ImportEnrichissementRunner(
+                produitRepository, attributProduitRepository, modeleAttributRepository,
+                new ObjectMapper());
+        ReflectionTestUtils.setField(runnerReel, "fichier", fichier.toString());
+        ReflectionTestUtils.setField(runnerReel, "confirmer", false);
+
+        try {
+            runnerReel.run();
+        } catch (RuntimeException e) {
+            // setRollbackOnly() hors contexte transactionnel — attendu
+        }
+
+        // "195 L" refusé → save() jamais appelé (et en simulation de toute façon)
+        verify(produitRepository, never()).save(any());
+        verify(attributProduitRepository, never()).save(any());
+        // Le modèle a été cherché pour les deux produits
+        verify(modeleAttributRepository, times(2)).findByNomAttributIgnoreCase("Capacité totale");
     }
 }

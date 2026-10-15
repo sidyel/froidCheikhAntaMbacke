@@ -9,6 +9,7 @@ import com.froidcheikh.ecommerce.dto.enrichissement.EnrichissementValeur;
 import com.froidcheikh.ecommerce.entity.AttributProduit;
 import com.froidcheikh.ecommerce.entity.ModeleAttribut;
 import com.froidcheikh.ecommerce.entity.Produit;
+import com.froidcheikh.ecommerce.entity.TypeAttribut;
 import com.froidcheikh.ecommerce.repository.AttributProduitRepository;
 import com.froidcheikh.ecommerce.repository.ModeleAttributRepository;
 import com.froidcheikh.ecommerce.repository.ProduitRepository;
@@ -195,14 +196,30 @@ public class ImportEnrichissementRunner implements CommandLineRunner {
                         log.info("    SKIP attribut '{}' (déjà présent, ecraser=false)", ea.getNom());
                         continue;
                     }
-                    log.info("    + attribut '{}' = '{}' [src: {}]", ea.getNom(), ea.getValeur(), ea.getSource());
+                    // Recherche du modèle hors confirmer — pour validation du type
+                    Optional<ModeleAttribut> modele = modeleAttributRepository.findByNomAttributIgnoreCase(ea.getNom());
+                    // Validation typeValeur NUMBER : la valeur doit être un nombre pur (sans unité)
+                    if (modele.isPresent() && modele.get().getTypeValeur() == TypeAttribut.NUMBER) {
+                        String vTrim = ea.getValeur() != null ? ea.getValeur().trim().replace(",", ".") : "";
+                        boolean estNumerique = !vTrim.isBlank() && vTrim.matches("-?\\d+(\\.\\d+)?");
+                        if (!estNumerique) {
+                            log.warn("    REFUS attribut '{}' — typeValeur=NUMBER, valeur '{}' non numérique" +
+                                    " (retirer l'unité, ex. '195' sans 'L')", ea.getNom(), ea.getValeur());
+                            champsIgnores++;
+                            continue;
+                        }
+                    }
+                    String uniteAffichee = modele.map(ModeleAttribut::getUnite).orElse("");
+                    log.info("    + attribut '{}' = '{}{}' [src: {}]",
+                            ea.getNom(), ea.getValeur(),
+                            uniteAffichee.isBlank() ? "" : " " + uniteAffichee,
+                            ea.getSource());
                     if (confirmer) {
                         AttributProduit attr = new AttributProduit();
                         attr.setNomAttribut(ea.getNom());
                         attr.setValeurAttribut(ea.getValeur());
                         attr.setProduit(p);
-                        modeleAttributRepository.findByNomAttributIgnoreCase(ea.getNom())
-                                .ifPresent(attr::setModeleAttribut);
+                        modele.ifPresent(attr::setModeleAttribut);
                         attributProduitRepository.save(attr);
                     }
                     champsProduit++;

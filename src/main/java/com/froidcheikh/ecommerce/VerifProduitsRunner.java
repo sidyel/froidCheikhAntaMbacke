@@ -37,6 +37,10 @@ public class VerifProduitsRunner implements CommandLineRunner {
     public void run(String... args) {
         if ("search-dimensions".equals(mode)) {
             searchDimensions();
+        } else if ("check-attribut".equals(mode)) {
+            String idsParam = System.getProperty("verif.ids", "");
+            String nomAttribut = System.getProperty("verif.attribut", "Capacité totale");
+            checkAttribut(idsParam, nomAttribut);
         } else {
             String idsParam = System.getProperty("verif.ids", "3,8,19,105,29");
             verifierParIds(idsParam);
@@ -91,6 +95,56 @@ public class VerifProduitsRunner implements CommandLineRunner {
         } else {
             attrs.forEach(log::info);
         }
+        log.info("══════════════════════════════════════════════════════");
+    }
+
+    // ── Mode : vérification d'un attribut sur une liste de produits ───────────
+
+    private void checkAttribut(String idsParam, String nomAttribut) {
+        log.info("══════════════════════════════════════════════════════");
+        log.info("  CHECK ATTRIBUT '{}' — produits : {}",
+                nomAttribut, idsParam.isBlank() ? "19,20,21,22,23,24,26,27,28,29,30,31,32,101,103,104,105" : idsParam);
+        log.info("══════════════════════════════════════════════════════");
+
+        String ids = idsParam.isBlank()
+                ? "19,20,21,22,23,24,26,27,28,29,30,31,32,101,103,104,105"
+                : idsParam;
+
+        // Produits ciblés qui ont déjà l'attribut demandé
+        String sqlExistants = "SELECT p.id_produit, p.nom_produit, ap.nom_attribut, ap.valeur_attribut " +
+                "FROM produits p " +
+                "JOIN attributs_produit ap ON ap.produit_id = p.id_produit " +
+                "WHERE ap.nom_attribut ILIKE ? " +
+                "AND p.id_produit IN (" + ids + ") " +
+                "ORDER BY p.id_produit";
+
+        List<String> existants = jdbc.query(sqlExistants, new Object[]{nomAttribut}, (rs, rowNum) ->
+                String.format("  ID %-5d | %-48s | %s = %s",
+                        rs.getLong("id_produit"),
+                        rs.getString("nom_produit"),
+                        rs.getString("nom_attribut"),
+                        rs.getString("valeur_attribut"))
+        );
+
+        if (existants.isEmpty()) {
+            log.info("  ✓ Aucun des produits ciblés n'a déjà l'attribut '{}' — pas de doublon.", nomAttribut);
+        } else {
+            log.warn("  ⚠  {} produit(s) ont DÉJÀ l'attribut '{}' :", existants.size(), nomAttribut);
+            existants.forEach(log::warn);
+        }
+
+        // Vérification modeleFabricant des produits 3 et 8 (lot 1)
+        log.info("─── Lot 1 — modeleFabricant produits 3 et 8 ────────");
+        String sqlLot1 = "SELECT id_produit, nom_produit, modele_fabricant, date_modification " +
+                "FROM produits WHERE id_produit IN (3, 8) ORDER BY id_produit";
+        List<String> lot1 = jdbc.query(sqlLot1, (rs, rowNum) ->
+                String.format("  ID %-5d | %-48s | modele_fabricant = '%s' | modif = %s",
+                        rs.getLong("id_produit"),
+                        rs.getString("nom_produit"),
+                        rs.getString("modele_fabricant"),
+                        rs.getString("date_modification"))
+        );
+        lot1.forEach(log::info);
         log.info("══════════════════════════════════════════════════════");
     }
 
