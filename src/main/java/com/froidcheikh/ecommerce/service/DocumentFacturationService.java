@@ -11,6 +11,7 @@ import com.froidcheikh.ecommerce.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -119,10 +120,16 @@ public class DocumentFacturationService {
     // ---- ÉMISSION ----
 
     @Transactional
-    public DocumentFacturationDTO.DocumentResponse emettre(Long id, String login) {
+    public DocumentFacturationDTO.DocumentResponse emettre(Long id, String login, boolean estGestionnaire) {
         DocumentFacturation doc = charger(id);
         if (doc.getStatut() != StatutDocument.BROUILLON) {
             throw new IllegalStateException("Seul un brouillon peut être émis");
+        }
+
+        // GESTIONNAIRE : uniquement les bons de livraison
+        if (estGestionnaire && doc.getTypeDocument() != TypeDocument.BON_LIVRAISON) {
+            throw new AccessDeniedException(
+                "Un gestionnaire ne peut émettre que des bons de livraison");
         }
 
         // Unicité facture commande
@@ -263,7 +270,7 @@ public class DocumentFacturationService {
         documentRepo.save(avoir);
 
         // Émettre directement (avoir = document immédiatement figé)
-        return emettre(avoir.getId(), login);
+        return emettre(avoir.getId(), login, false);
     }
 
     // ---- CONVERSION DEVIS → FACTURE ----
@@ -317,7 +324,7 @@ public class DocumentFacturationService {
         devis.setDateModification(LocalDateTime.now());
         documentRepo.save(devis);
 
-        return emettre(facture.getId(), login);
+        return emettre(facture.getId(), login, false);
     }
 
     // ---- RÈGLEMENTS ----

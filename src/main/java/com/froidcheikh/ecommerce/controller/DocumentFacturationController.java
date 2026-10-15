@@ -77,11 +77,13 @@ public class DocumentFacturationController {
     // ---- ÉMISSION ----
 
     @PostMapping("/{id}/emettre")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','GESTIONNAIRE')")
     public DocumentFacturationDTO.DocumentResponse emettre(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails user) {
-        return documentService.emettre(id, user.getUsername());
+        boolean estGestionnaire = user.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_GESTIONNAIRE".equals(a.getAuthority()));
+        return documentService.emettre(id, user.getUsername(), estGestionnaire);
     }
 
     // ---- PDF ----

@@ -18,6 +18,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Optional;
 
+import org.springframework.security.access.AccessDeniedException;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
@@ -109,7 +111,7 @@ class DocumentFacturationServiceTest {
         when(pdfService.generer(any(), eq(false))).thenReturn(new byte[]{1, 2, 3});
         when(lettresService.convertir(any())).thenReturn("Arrêtée ...");
 
-        service.emettre(1L, "admin");
+        service.emettre(1L, "admin", false);
 
         verify(documentRepo).save(docCaptor.capture());
         DocumentFacturation saved = docCaptor.getValue();
@@ -127,7 +129,7 @@ class DocumentFacturationServiceTest {
         when(documentRepo.findById(1L)).thenReturn(Optional.of(doc));
         when(documentRepo.countFacturesEmisesParCommande(cmd.getIdCommande())).thenReturn(1L);
 
-        assertThatThrownBy(() -> service.emettre(1L, "admin"))
+        assertThatThrownBy(() -> service.emettre(1L, "admin", false))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("facture émise existe déjà");
     }
@@ -238,12 +240,49 @@ class DocumentFacturationServiceTest {
         when(pdfService.generer(any(), eq(false))).thenReturn(new byte[]{1});
         when(lettresService.convertir(any())).thenReturn("Arrêtée ...");
 
-        service.emettre(1L, "admin");
+        service.emettre(1L, "admin", false);
 
         verify(documentRepo).save(docCaptor.capture());
         DocumentFacturation saved = docCaptor.getValue();
         assertThat(saved.getMontantTTC()).isEqualByComparingTo(
                 BigDecimal.valueOf(cmd.getMontantTotal().longValue()));
+    }
+
+    // ---- GESTIONNAIRE + BL ----
+
+    @Test
+    void gestionnaireEmetBonDeLivraison() {
+        DocumentFacturation bl = brouillonDoc();
+        bl.setTypeDocument(TypeDocument.BON_LIVRAISON);
+        when(documentRepo.findById(1L)).thenReturn(Optional.of(bl));
+        when(numeroService.attribuerNumero(TypeDocument.BON_LIVRAISON, "BL")).thenReturn("BL-2026-0001");
+        when(pdfService.generer(any(), eq(false))).thenReturn(new byte[]{1});
+        when(lettresService.convertir(any())).thenReturn("zéro franc CFA");
+
+        service.emettre(1L, "gestionnaire", true);
+
+        verify(documentRepo).save(docCaptor.capture());
+        assertThat(docCaptor.getValue().getStatut()).isEqualTo(StatutDocument.EMIS);
+    }
+
+    @Test
+    void gestionnaireRefuseEmettreFacture() {
+        DocumentFacturation facture = brouillonDoc(); // type = FACTURE
+        when(documentRepo.findById(1L)).thenReturn(Optional.of(facture));
+
+        assertThatThrownBy(() -> service.emettre(1L, "gestionnaire", true))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("bons de livraison");
+    }
+
+    @Test
+    void gestionnaireRefuseEmettreDevis() {
+        DocumentFacturation devis = brouillonDoc();
+        devis.setTypeDocument(TypeDocument.DEVIS);
+        when(documentRepo.findById(1L)).thenReturn(Optional.of(devis));
+
+        assertThatThrownBy(() -> service.emettre(1L, "gestionnaire", true))
+                .isInstanceOf(AccessDeniedException.class);
     }
 
     // ---- helpers ----
