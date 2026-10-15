@@ -29,6 +29,7 @@ public class CommandeController {
 
     private final CommandeService commandeService;
     private final ClientService clientService;
+    private final com.froidcheikh.ecommerce.service.SuiviRateLimiterService suiviRateLimiter;
 
     // ===========================================
     // ENDPOINTS SPÉCIFIQUES (ORDRE IMPORTANT)
@@ -105,6 +106,33 @@ public class CommandeController {
     }
 
     // GET /invite/{numero} supprimé — remplacé par GET /suivi?numero=X&telephone=Y (sécurisé)
+
+    @GetMapping("/suivi")
+    public ResponseEntity<?> getSuiviCommande(
+            @RequestParam String numero,
+            @RequestParam String telephone,
+            jakarta.servlet.http.HttpServletRequest request) {
+
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isBlank()) ip = request.getRemoteAddr();
+        // Utiliser la première IP en cas de proxy chain
+        if (ip.contains(",")) ip = ip.split(",")[0].trim();
+
+        if (!suiviRateLimiter.tenterAcces(ip)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of(
+                    "error", "Trop de tentatives", "message", "Réessayez dans 15 minutes"));
+        }
+
+        try {
+            CommandeDTO suivi = commandeService.getSuiviCommande(numero, telephone);
+            return ResponseEntity.ok(suivi);
+        } catch (com.froidcheikh.ecommerce.exception.ResourceNotFoundException e) {
+            // Réponse identique que la commande n'existe pas ou que le téléphone soit faux
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "error", "Commande non trouvée",
+                    "message", "Aucune commande trouvée avec ce numéro et ce téléphone"));
+        }
+    }
 
     // Endpoints clients authentifiés
     @PostMapping("/client")
