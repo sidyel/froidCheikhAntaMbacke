@@ -37,6 +37,11 @@ public class Commande {
     private StatutCommande statutCommande = StatutCommande.EN_ATTENTE;
 
     @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "statut_paiement")
+    private StatutPaiement statutPaiement = StatutPaiement.NON_PAYEE;
+
+    @NotNull
     @Column(name = "montant_total", precision = 10, scale = 2)
     private BigDecimal montantTotal;
 
@@ -106,8 +111,14 @@ public class Commande {
     @Column(name = "telephone_invite")
     private String telephoneInvite;
 
+    /** Cycle de vie livraison simplifié. */
     public enum StatutCommande {
-        EN_ATTENTE, CONFIRMEE, PAYEE, EN_PREPARATION, EXPEDIE, LIVREE, ANNULEE, REMBOURSEE
+        EN_ATTENTE, CONFIRMEE, LIVREE, ANNULEE
+    }
+
+    /** Statut de paiement indépendant du cycle de livraison. */
+    public enum StatutPaiement {
+        NON_PAYEE, PAYEE, REMBOURSEE
     }
 
     public enum ModeLivraison {

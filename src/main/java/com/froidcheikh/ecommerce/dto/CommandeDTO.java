@@ -20,8 +20,9 @@ public class CommandeDTO {
     private String numeroCommande;
     private LocalDateTime dateCommande;
 
-    // ✅ STATUT : Pas de validation - défini automatiquement par le backend
+    // Statuts définis par le backend
     private Commande.StatutCommande statutCommande;
+    private Commande.StatutPaiement statutPaiement;
 
     // ✅ MONTANT : Pas de validation - calculé automatiquement par le backend
     private BigDecimal montantTotal;
@@ -136,4 +137,18 @@ public class CommandeDTO {
         private String referencePaiement;
         private String referenceExterne;
     }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class HistoriqueStatutDTO {
+        private Long id;
+        private Commande.StatutCommande ancienStatut;
+        private Commande.StatutCommande nouveauStatut;
+        private LocalDateTime dateChangement;
+        private String auteur;
+        private String commentaire;
+    }
+
+    private List<HistoriqueStatutDTO> historiqueStatuts;
 }

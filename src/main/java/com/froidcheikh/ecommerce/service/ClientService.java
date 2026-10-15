@@ -364,10 +364,7 @@ public class ClientService {
                 client.getCommandes().stream()
                         .anyMatch(commande ->
                                 commande.getStatutCommande() == Commande.StatutCommande.EN_ATTENTE ||
-                                        commande.getStatutCommande() == Commande.StatutCommande.CONFIRMEE ||
-                                        commande.getStatutCommande() == Commande.StatutCommande.PAYEE ||
-                                        commande.getStatutCommande() == Commande.StatutCommande.EN_PREPARATION ||
-                                        commande.getStatutCommande() == Commande.StatutCommande.EXPEDIE);
+                                        commande.getStatutCommande() == Commande.StatutCommande.CONFIRMEE);
 
         if (hasActiveOrders) {
             throw new RuntimeException("Impossible de supprimer un client avec des commandes en cours");

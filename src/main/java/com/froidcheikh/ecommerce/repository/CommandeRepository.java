@@ -114,7 +114,7 @@ public interface CommandeRepository extends JpaRepository<Commande, Long> {
     /**
      * Trouver les commandes en retard (expédiées mais pas livrées depuis plus de X jours)
      */
-    @Query("SELECT c FROM Commande c WHERE c.statutCommande = 'EXPEDIE' AND c.dateModification < :dateLimit ORDER BY c.dateModification ASC")
+    @Query("SELECT c FROM Commande c WHERE c.statutCommande = 'CONFIRMEE' AND c.dateModification < :dateLimit ORDER BY c.dateModification ASC")
     List<Commande> findCommandesEnRetard(@Param("dateLimit") LocalDateTime dateLimit);
 
     /**

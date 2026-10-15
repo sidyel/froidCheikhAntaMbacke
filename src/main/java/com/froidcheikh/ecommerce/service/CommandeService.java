@@ -212,8 +212,8 @@ public class CommandeService {
 
         paiement = paiementRepository.save(paiement);
 
-        // Mettre à jour le statut de la commande
-        commande.setStatutCommande(Commande.StatutCommande.PAYEE);
+        // Mettre à jour le statut de paiement (indépendant du cycle de livraison)
+        commande.setStatutPaiement(Commande.StatutPaiement.PAYEE);
         commande = commandeRepository.save(commande);
 
         log.info("Paiement confirmé pour la commande : {}", commandeId);
@@ -324,16 +324,8 @@ public class CommandeService {
         commande.setDateModification(LocalDateTime.now());
 
         // Actions spéciales selon le statut
-        switch (nouveauStatut) {
-            case EXPEDIE:
-                if (commande.getNumeroSuivi() == null) {
-                    commande.setNumeroSuivi(genererNumeroSuivi());
-                }
-                break;
-            case ANNULEE:
-                // Remettre en stock les produits si la commande est annulée
-                restaurerStock(commande);
-                break;
+        if (nouveauStatut == Commande.StatutCommande.ANNULEE) {
+            restaurerStock(commande);
         }
 
         commande = commandeRepository.save(commande);
@@ -425,33 +417,18 @@ public class CommandeService {
      * Vérifier si un changement de statut est autorisé
      */
     private boolean isStatutChangeAllowed(Commande.StatutCommande ancienStatut, Commande.StatutCommande nouveauStatut) {
-        // Logique de validation des transitions de statut
         switch (ancienStatut) {
             case EN_ATTENTE:
                 return nouveauStatut == Commande.StatutCommande.CONFIRMEE ||
                         nouveauStatut == Commande.StatutCommande.ANNULEE;
-
             case CONFIRMEE:
-                return nouveauStatut == Commande.StatutCommande.PAYEE ||
+                // Seul l'admin peut annuler depuis CONFIRMEE
+                return nouveauStatut == Commande.StatutCommande.LIVREE ||
                         nouveauStatut == Commande.StatutCommande.ANNULEE;
-
-            case PAYEE:
-                return nouveauStatut == Commande.StatutCommande.EN_PREPARATION ||
-                        nouveauStatut == Commande.StatutCommande.ANNULEE;
-
-            case EN_PREPARATION:
-                return nouveauStatut == Commande.StatutCommande.EXPEDIE ||
-                        nouveauStatut == Commande.StatutCommande.ANNULEE;
-
-            case EXPEDIE:
-                return nouveauStatut == Commande.StatutCommande.LIVREE;
-
             case LIVREE:
-                return false; // Une commande livrée ne peut plus changer de statut
-
+                return false;
             case ANNULEE:
-                return false; // Une commande annulée ne peut plus changer de statut
-
+                return false;
             default:
                 return false;
         }

@@ -118,6 +118,16 @@ public class ParametresSiteService {
         dto.setAfficherPrestations(p.getAfficherPrestations());
         dto.setAfficherEquipe(p.getAfficherEquipe());
         dto.setAfficherRealisations(p.getAfficherRealisations());
+        // WhatsApp : numéro de la boutique calculé + templates
+        dto.setIndicatifPaysDefaut(p.getIndicatifPaysDefaut());
+        dto.setWhatsappMsgNouvelleCommande(p.getWhatsappMsgNouvelleCommande());
+        dto.setWhatsappMsgConfirmee(p.getWhatsappMsgConfirmee());
+        dto.setWhatsappMsgLivree(p.getWhatsappMsgLivree());
+        dto.setWhatsappMsgAnnulee(p.getWhatsappMsgAnnulee());
+        p.getTelephones().stream()
+                .filter(t -> Boolean.TRUE.equals(t.getWhatsapp()))
+                .findFirst()
+                .ifPresent(t -> dto.setTelephoneWhatsappBoutique(t.getNumero()));
         return dto;
     }
 
@@ -171,6 +181,12 @@ public class ParametresSiteService {
         dto.setAfficherPrestations(p.getAfficherPrestations());
         dto.setAfficherEquipe(p.getAfficherEquipe());
         dto.setAfficherRealisations(p.getAfficherRealisations());
+        // WhatsApp
+        dto.setIndicatifPaysDefaut(p.getIndicatifPaysDefaut());
+        dto.setWhatsappMsgNouvelleCommande(p.getWhatsappMsgNouvelleCommande());
+        dto.setWhatsappMsgConfirmee(p.getWhatsappMsgConfirmee());
+        dto.setWhatsappMsgLivree(p.getWhatsappMsgLivree());
+        dto.setWhatsappMsgAnnulee(p.getWhatsappMsgAnnulee());
         return dto;
     }
 
@@ -229,6 +245,12 @@ public class ParametresSiteService {
         if (dto.getAfficherPrestations() != null) p.setAfficherPrestations(dto.getAfficherPrestations());
         if (dto.getAfficherEquipe() != null) p.setAfficherEquipe(dto.getAfficherEquipe());
         if (dto.getAfficherRealisations() != null) p.setAfficherRealisations(dto.getAfficherRealisations());
+        // WhatsApp
+        if (dto.getIndicatifPaysDefaut() != null) p.setIndicatifPaysDefaut(dto.getIndicatifPaysDefaut());
+        if (dto.getWhatsappMsgNouvelleCommande() != null) p.setWhatsappMsgNouvelleCommande(dto.getWhatsappMsgNouvelleCommande());
+        if (dto.getWhatsappMsgConfirmee() != null) p.setWhatsappMsgConfirmee(dto.getWhatsappMsgConfirmee());
+        if (dto.getWhatsappMsgLivree() != null) p.setWhatsappMsgLivree(dto.getWhatsappMsgLivree());
+        if (dto.getWhatsappMsgAnnulee() != null) p.setWhatsappMsgAnnulee(dto.getWhatsappMsgAnnulee());
         if (dto.getHorairesOuverture() != null) {
             p.getHorairesOuverture().clear();
             dto.getHorairesOuverture().forEach(h -> {
