@@ -60,10 +60,64 @@ public class ParametresSiteService {
         p.setEmailContact(emailContact);
         p.setAnneesExperience(anneesExperience);
         p.setCouleurDocuments("#000080");
-        p.setTexteDescriptifActivites("Vente, installation et maintenance d'équipements de climatisation et de réfrigération");
+        p.setTexteDescriptifActivites("Réparation et Vente de tous Appareils de Froid : Electricité, Plomberie, Climatisation Centrale, Chambre Froide, Split Système, Climatiseur et Frigos");
         p.setDevise("XOF");
         p.setLibelleDevise("FCFA");
+        p.setRaisonSociale("FROID CHEIKH ANTA MBACKE - BABACAR DIONE");
+        p.setAdresseSiege("Ouest Foire Cité Aelmas Villa N°168 Rue 577 Yoff, Dakar, Sénégal");
+        p.setBoitePostale("B.P. 7605 Dakar");
+        p.setRccm("92-A-5673");
+        p.setNinea("0151340-2B1");
+        p.setBanqueNom("CBAO");
+        p.setNumeroCompteBancaire("36017179-49");
+        p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("33 820 16 33", "Fixe", false));
+        p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("77 335 20 00", "Mobile", false));
         repository.save(p);
+    }
+
+    /** Migration douce : renseigne les champs de facturation si absents sur la ligne existante. */
+    @org.springframework.transaction.annotation.Transactional
+    public void initInfosFacturationSiAbsentes() {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            boolean modifie = false;
+            if (p.getRaisonSociale() == null || p.getRaisonSociale().isBlank()) {
+                p.setRaisonSociale("FROID CHEIKH ANTA MBACKE - BABACAR DIONE"); modifie = true;
+            }
+            if (p.getTexteDescriptifActivites() == null || p.getTexteDescriptifActivites().isBlank()) {
+                p.setTexteDescriptifActivites("Réparation et Vente de tous Appareils de Froid : Electricité, Plomberie, Climatisation Centrale, Chambre Froide, Split Système, Climatiseur et Frigos"); modifie = true;
+            }
+            if (p.getAdresseSiege() == null || p.getAdresseSiege().isBlank()) {
+                p.setAdresseSiege("Ouest Foire Cité Aelmas Villa N°168 Rue 577 Yoff, Dakar, Sénégal"); modifie = true;
+            }
+            if (p.getBoitePostale() == null || p.getBoitePostale().isBlank()) {
+                p.setBoitePostale("B.P. 7605 Dakar"); modifie = true;
+            }
+            if (p.getRccm() == null || p.getRccm().isBlank()) {
+                p.setRccm("92-A-5673"); modifie = true;
+            }
+            if (p.getNinea() == null || p.getNinea().isBlank()) {
+                p.setNinea("0151340-2B1"); modifie = true;
+            }
+            if (p.getBanqueNom() == null || p.getBanqueNom().isBlank()) {
+                p.setBanqueNom("CBAO"); modifie = true;
+            }
+            if (p.getNumeroCompteBancaire() == null || p.getNumeroCompteBancaire().isBlank()) {
+                p.setNumeroCompteBancaire("36017179-49"); modifie = true;
+            }
+            if (modifie) repository.save(p);
+        });
+    }
+
+    /** Migration douce : ajoute les téléphones par défaut si la liste est vide. */
+    @org.springframework.transaction.annotation.Transactional
+    public void initTelephonesSiAbsents() {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (p.getTelephones() == null || p.getTelephones().isEmpty()) {
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("33 820 16 33", "Fixe", false));
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("77 335 20 00", "Mobile", false));
+                repository.save(p);
+            }
+        });
     }
 
     /** Migration douce : remet devise à son code ISO si une ancienne migration l'avait mis à "FCFA". */

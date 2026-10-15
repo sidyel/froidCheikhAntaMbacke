@@ -80,17 +80,17 @@ class PdfExempleGenerateur {
 
     private EnTeteDocumentConfig enTeteCompose() {
         return new EnTeteDocumentConfig(
-                "Froid Cheikh Anta Mbacke SARL",
-                null, // logoUrl — null pour démo
-                "Vente, installation et maintenance d'équipements de climatisation et de réfrigération",
-                "Zone Industrielle, Lot 47, Dakar, Sénégal",
-                "+221 77 XXX XX XX",
-                "BP XXXX Dakar",   // sera mis à jour depuis l'image
+                "FROID CHEIKH ANTA MBACKE - BABACAR DIONE",
+                null, // logoUrl — charger depuis Cloudinary en production
+                "Réparation et Vente de tous Appareils de Froid : Electricité, Plomberie, Climatisation Centrale, Chambre Froide, Split Système, Climatiseur et Frigos",
+                "Ouest Foire Cité Aelmas Villa N°168 Rue 577 Yoff, Dakar, Sénégal",
+                "33 820 16 33 / 77 335 20 00",
+                "B.P. 7605 Dakar",
                 "froidcheikhantambacke.dione65@gmail.com",
-                "SN DKR 2020 B 12345",
-                "000123456 2A1",
-                null, // banqueNom — sera mis à jour
-                null, // numeroCompte — sera mis à jour
+                "92-A-5673",
+                "0151340-2B1",
+                "CBAO",
+                "36017179-49",
                 ModeEnTeteDocuments.COMPOSE,
                 null,
                 null,
@@ -132,13 +132,13 @@ class PdfExempleGenerateur {
         doc.setDateEmission(LocalDateTime.of(2026, 10, 15, 10, 0));
 
         // Entreprise (copie figée)
-        doc.setEntRaisonSociale("Froid Cheikh Anta Mbacke SARL");
-        doc.setEntAdresseSiege("Zone Industrielle, Lot 47, Dakar, Sénégal");
-        doc.setEntNinea("000123456 2A1");
-        doc.setEntRccm("SN DKR 2020 B 12345");
+        doc.setEntRaisonSociale("FROID CHEIKH ANTA MBACKE - BABACAR DIONE");
+        doc.setEntAdresseSiege("Ouest Foire Cité Aelmas Villa N°168 Rue 577 Yoff, Dakar, Sénégal");
+        doc.setEntNinea("0151340-2B1");
+        doc.setEntRccm("92-A-5673");
         doc.setEntCouleurPrimaire("#000080");
         doc.setEntConditionsPaiement("Paiement à 30 jours. En cas de retard, pénalités de 1,5% par mois.");
-        doc.setEntMentionsPied("Froid Cheikh Anta Mbacke SARL — Capital social : 10 000 000 FCFA");
+        doc.setEntMentionsPied("FROID CHEIKH ANTA MBACKE - BABACAR DIONE | CBAO N° 36017179-49 | NINEA : 0151340-2B1 | RC : 92-A-5673");
         doc.setEntMentionExonerationTva("TVA non applicable — Article 275 du CGI");
 
         // Client (copie figée)
@@ -225,11 +225,11 @@ class PdfExempleGenerateur {
         doc.setLivreurNom("Ibrahima Sow");
         doc.setLivreurTelephone("+221 76 987 65 43");
 
-        doc.setEntRaisonSociale("Froid Cheikh Anta Mbacke SARL");
-        doc.setEntAdresseSiege("Zone Industrielle, Lot 47, Dakar, Sénégal");
-        doc.setEntNinea("000123456 2A1");
+        doc.setEntRaisonSociale("FROID CHEIKH ANTA MBACKE - BABACAR DIONE");
+        doc.setEntAdresseSiege("Ouest Foire Cité Aelmas Villa N°168 Rue 577 Yoff, Dakar, Sénégal");
+        doc.setEntNinea("0151340-2B1");
         doc.setEntCouleurPrimaire("#000080");
-        doc.setEntMentionsPied("Froid Cheikh Anta Mbacke SARL — Capital social : 10 000 000 FCFA");
+        doc.setEntMentionsPied("FROID CHEIKH ANTA MBACKE - BABACAR DIONE | CBAO N° 36017179-49 | NINEA : 0151340-2B1 | RC : 92-A-5673");
 
         doc.setClientNom("Diallo");
         doc.setClientPrenom("Mamadou");

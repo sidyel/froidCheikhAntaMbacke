@@ -55,6 +55,10 @@ public class DataInitializer implements CommandLineRunner {
             parametresSiteService.migrerDevise("FCFA", "XOF");
             // libelleDevise = libellé affiché aux clients (ex. "FCFA") — distinct de devise
             parametresSiteService.initLibelleDeviseSiAbsent("FCFA");
+            // Infos facturation (raisonSociale, adresseSiege, NINEA, RC, banque…) — seulement si champs vides
+            parametresSiteService.initInfosFacturationSiAbsentes();
+            // Téléphones — seulement si la liste est vide
+            parametresSiteService.initTelephonesSiAbsents();
         }
 
         if (imageHeroRepository.count() == 0) {
