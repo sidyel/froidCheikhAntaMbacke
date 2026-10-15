@@ -18,9 +18,25 @@ Dépôt frontend associé : `../froidCheikhAntaMbackeFront`
 
 ---
 
+## Stratégie de branches (backend + frontend)
+
+Les deux dépôts suivent le même modèle :
+
+| Branche | Rôle |
+|---|---|
+| `develop` | Branche d'intégration — reçoit les `feature/*` fusionnés |
+| `main` | Branche de production — ne reçoit `develop` qu'au moment d'une mise en production |
+| `feature/<nom>` | Branche de fonctionnalité — part de `develop`, fusionnée dans `develop` uniquement |
+
+**Règle absolue** : `main` ne doit jamais recevoir directement une branche `feature/*`. Toute fusion passe d'abord par `develop`, puis `develop → main` seulement lors d'un déploiement validé.
+
+> Le frontend utilisait `main` comme branche principale avant oct. 2026 (pas de `develop` existant). La branche `develop` a été créée depuis `main` le 15 oct. 2026 — elle est désormais la branche d'intégration pour les deux dépôts.
+
+---
+
 ## Règles de travail
 
-1. **Branche par fonctionnalité** — toujours créer `feature/<nom>` depuis `develop` (branche principale). Ne jamais travailler directement sur `develop`.
+1. **Branche par fonctionnalité** — toujours créer `feature/<nom>` depuis `develop` (backend et frontend). Ne jamais travailler directement sur `develop`.
 2. **Analyse → Conception → Validation → Code** — ne modifier aucun fichier avant que l'utilisateur ait validé la conception proposée.
 3. **Un commit par étape logique** — message clair, se terminer par :
    ```
