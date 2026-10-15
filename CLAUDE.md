@@ -270,6 +270,20 @@ DELETE FROM commandes;
 - Vérifier la configuration du déploiement automatique (branche suivie, triggers).
 - **Régénérer les identifiants Railway exposés dans l'historique git** : le mot de passe PostgreSQL Railway (`svYhBmqtXnJkAaFEbairZjCtElvTESMe`) et l'URL interne (`postgres.railway.internal:5432/railway`) étaient committés en clair dans `application.properties` sur `origin/main`. Ces identifiants sont compromis — les réinitialiser depuis le dashboard Railway avant tout déploiement.
 
+### 10 — Migration des statuts de commande (module suivi-commandes)
+
+> ⚠️ **Critique** — sans cette étape, toute commande avec un ancien statut (`PAYEE`, `EN_PREPARATION`, `EXPEDIE`, `REMBOURSEE`) causera une `IllegalArgumentException` au démarrage de l'application et empêchera celle-ci de répondre.
+
+1. **Sauvegarder la base** (branche Neon ou dump Railway) avant toute opération.
+2. **Exécuter le script** depuis la console SQL Neon (ou psql) :
+   ```bash
+   psql $DATABASE_URL -f scripts/migration_statuts_suivi_commandes.sql
+   ```
+3. **Vérifier** que le dernier SELECT ne retourne aucune ligne (aucun ancien statut résiduel).
+4. **Démarrer l'application** — le démarrage doit réussir sans erreur JPA.
+
+Le script est idempotent : relancé deux fois, il n'a aucun effet supplémentaire.
+
 ### 9 — Migration des images produit (profil `migration`)
 
 > ⚠️ **Critique** — sans cette étape, les produits n'auront plus d'images en production.
