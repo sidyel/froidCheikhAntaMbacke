@@ -22,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -436,7 +437,8 @@ public class AdminController {
     @PatchMapping("/commandes/{commandeId}/statut")
     public ResponseEntity<?> updateStatutCommande(
             @PathVariable Long commandeId,
-            @RequestBody Map<String, String> request) {
+            @RequestBody Map<String, String> request,
+            Authentication authentication) {
 
         String nouveauStatut = request.get("statut");
         log.info("🔄 Admin - Mise à jour statut commande - ID: {}, Nouveau statut: {}",
@@ -451,7 +453,9 @@ public class AdminController {
 
         try {
             Commande.StatutCommande statutEnum = Commande.StatutCommande.valueOf(nouveauStatut.toUpperCase());
-            CommandeDTO commande = commandeService.updateStatutCommande(commandeId, statutEnum);
+            String commentaire = request.get("commentaire");
+            String auteur = authentication != null ? authentication.getName() : "ADMIN";
+            CommandeDTO commande = commandeService.updateStatutCommande(commandeId, statutEnum, commentaire, auteur);
 
             log.info("✅ Statut commande mis à jour - ID: {}, Nouveau statut: {}",
                     commandeId, statutEnum);
@@ -563,21 +567,9 @@ public class AdminController {
     @GetMapping("/commandes/statistiques")
     public ResponseEntity<?> getStatistiquesCommandes() {
         log.info("📊 Admin - Récupération statistiques commandes");
-
         try {
-            // Vous pouvez implémenter cette méthode dans le service
-            // Map<String, Object> stats = commandeService.getStatistiquesCommandes();
-
-            // Pour l'instant, retourner un placeholder
-            Map<String, Object> stats = Map.of(
-                    "totalCommandes", 0,
-                    "commandesEnAttente", 0,
-                    "commandesLivrees", 0,
-                    "chiffreAffaires", 0
-            );
-
+            Map<String, Long> stats = commandeService.getCommandeStats();
             return ResponseEntity.ok(stats);
-
         } catch (Exception e) {
             log.error("❌ Erreur lors de la récupération des statistiques: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(

@@ -86,6 +86,14 @@ public final class ParametresSiteDTO {
         private Boolean afficherPrestations;
         private Boolean afficherEquipe;
         private Boolean afficherRealisations;
+
+        // WHATSAPP — numéro de la boutique (premier téléphone whatsapp=true) et templates
+        private String telephoneWhatsappBoutique; // calculé par ConfigService, pas mappé depuis ParametresSite
+        private String indicatifPaysDefaut;
+        private String whatsappMsgNouvelleCommande;
+        private String whatsappMsgConfirmee;
+        private String whatsappMsgLivree;
+        private String whatsappMsgAnnulee;
     }
 
     /**
@@ -170,6 +178,13 @@ public final class ParametresSiteDTO {
         private Boolean afficherPrestations;
         private Boolean afficherEquipe;
         private Boolean afficherRealisations;
+
+        // WHATSAPP
+        private String indicatifPaysDefaut;
+        private String whatsappMsgNouvelleCommande;
+        private String whatsappMsgConfirmee;
+        private String whatsappMsgLivree;
+        private String whatsappMsgAnnulee;
 
         // METADATA (lecture seule)
         private LocalDateTime dateModification;

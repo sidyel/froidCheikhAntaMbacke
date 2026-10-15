@@ -16,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -30,6 +32,7 @@ public class CommandeService {
     private final ClientRepository clientRepository;
     private final ProduitRepository produitRepository;
     private final PaiementRepository paiementRepository;
+    private final HistoriqueStatutCommandeRepository historiqueRepository;
     private final ProduitService produitService;
     private final CalculCommandeService calculCommandeService;
     private final PrixService prixService;
@@ -212,8 +215,8 @@ public class CommandeService {
 
         paiement = paiementRepository.save(paiement);
 
-        // Mettre à jour le statut de la commande
-        commande.setStatutCommande(Commande.StatutCommande.PAYEE);
+        // Mettre à jour le statut de paiement (indépendant du cycle de livraison)
+        commande.setStatutPaiement(Commande.StatutPaiement.PAYEE);
         commande = commandeRepository.save(commande);
 
         log.info("Paiement confirmé pour la commande : {}", commandeId);
@@ -267,6 +270,15 @@ public class CommandeService {
             dto.setPaiement(paiementDTO);
         }
 
+        // Historique des statuts
+        List<CommandeDTO.HistoriqueStatutDTO> historique = historiqueRepository
+                .findByCommandeIdCommandeOrderByDateChangementAsc(commande.getIdCommande()).stream()
+                .map(h -> new CommandeDTO.HistoriqueStatutDTO(
+                        h.getId(), h.getAncienStatut(), h.getNouveauStatut(),
+                        h.getDateChangement(), h.getAuteur(), h.getCommentaire()))
+                .collect(Collectors.toList());
+        dto.setHistoriqueStatuts(historique);
+
         return dto;
     }
 
@@ -303,9 +315,12 @@ public class CommandeService {
     }
 
     /**
-     * Mettre à jour le statut d'une commande
+     * Mettre à jour le statut d'une commande (admin).
+     * @param commentaire commentaire optionnel affiché dans l'historique
+     * @param auteur      email de l'admin ou "SYSTEME"
      */
-    public CommandeDTO updateStatutCommande(Long commandeId, Commande.StatutCommande nouveauStatut) {
+    public CommandeDTO updateStatutCommande(Long commandeId, Commande.StatutCommande nouveauStatut,
+                                             String commentaire, String auteur) {
         log.info("🔄 Mise à jour statut commande - ID: {}, Nouveau statut: {}", commandeId, nouveauStatut);
 
         Commande commande = commandeRepository.findById(commandeId)
@@ -313,32 +328,58 @@ public class CommandeService {
 
         Commande.StatutCommande ancienStatut = commande.getStatutCommande();
 
-        // Vérifier si le changement de statut est autorisé
         if (!isStatutChangeAllowed(ancienStatut, nouveauStatut)) {
             throw new IllegalStateException(
-                    String.format("Changement de statut non autorisé : %s -> %s", ancienStatut, nouveauStatut)
-            );
+                    String.format("Changement de statut non autorisé : %s -> %s", ancienStatut, nouveauStatut));
         }
 
         commande.setStatutCommande(nouveauStatut);
         commande.setDateModification(LocalDateTime.now());
 
-        // Actions spéciales selon le statut
-        switch (nouveauStatut) {
-            case EXPEDIE:
-                if (commande.getNumeroSuivi() == null) {
-                    commande.setNumeroSuivi(genererNumeroSuivi());
-                }
-                break;
-            case ANNULEE:
-                // Remettre en stock les produits si la commande est annulée
-                restaurerStock(commande);
-                break;
+        if (nouveauStatut == Commande.StatutCommande.ANNULEE) {
+            restaurerStock(commande);
         }
 
         commande = commandeRepository.save(commande);
-        log.info("✅ Statut commande mis à jour - ID: {}, Statut: {}", commandeId, nouveauStatut);
+        historiqueRepository.save(new HistoriqueStatutCommande(commande, ancienStatut, nouveauStatut,
+                auteur != null ? auteur : "SYSTEME", commentaire));
 
+        log.info("✅ Statut commande mis à jour - ID: {}, Statut: {}", commandeId, nouveauStatut);
+        return convertToDTO(commande);
+    }
+
+    /** Surcharge sans commentaire — rétrocompatibilité interne. */
+    public CommandeDTO updateStatutCommande(Long commandeId, Commande.StatutCommande nouveauStatut) {
+        return updateStatutCommande(commandeId, nouveauStatut, null, "SYSTEME");
+    }
+
+    /**
+     * Annulation par le client — uniquement SA commande, uniquement en EN_ATTENTE.
+     */
+    public CommandeDTO annulerCommandeClient(Long commandeId, Long clientId, String motif) {
+        log.info("❌ Annulation client - commandeId: {}, clientId: {}", commandeId, clientId);
+
+        Commande commande = commandeRepository.findById(commandeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande non trouvée : " + commandeId));
+
+        if (commande.getClient() == null || !commande.getClient().getIdClient().equals(clientId)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Vous n'avez pas accès à cette commande");
+        }
+
+        if (commande.getStatutCommande() != Commande.StatutCommande.EN_ATTENTE) {
+            throw new IllegalStateException(
+                    "Seules les commandes en attente peuvent être annulées par le client");
+        }
+
+        commande.setStatutCommande(Commande.StatutCommande.ANNULEE);
+        commande.setCommentaire(motif != null && !motif.isBlank() ? motif : commande.getCommentaire());
+        commande.setDateModification(LocalDateTime.now());
+        restaurerStock(commande);
+        commande = commandeRepository.save(commande);
+        historiqueRepository.save(new HistoriqueStatutCommande(commande, Commande.StatutCommande.EN_ATTENTE,
+                Commande.StatutCommande.ANNULEE, "CLIENT", motif));
+        log.info("✅ Commande {} annulée par le client {}", commandeId, clientId);
         return convertToDTO(commande);
     }
 
@@ -360,17 +401,74 @@ public class CommandeService {
             throw new IllegalStateException("Cette commande est déjà annulée");
         }
 
+        Commande.StatutCommande ancienStatut = commande.getStatutCommande();
         commande.setStatutCommande(Commande.StatutCommande.ANNULEE);
-       // commande.setMotifAnnulation(motif);
+        if (motif != null && !motif.isBlank()) commande.setCommentaire(motif);
         commande.setDateModification(LocalDateTime.now());
-
-        // Restaurer le stock des produits
         restaurerStock(commande);
-
         commande = commandeRepository.save(commande);
+        historiqueRepository.save(new HistoriqueStatutCommande(commande, ancienStatut,
+                Commande.StatutCommande.ANNULEE, "ADMIN", motif));
         log.info("✅ Commande annulée - ID: {}", commandeId);
-
         return convertToDTO(commande);
+    }
+
+    /**
+     * Récupère le statut d'une commande pour un invité (numéro + téléphone normalisé).
+     * Retourne un DTO limité : statut, date, articles (nom+qté), total, historique simplifié.
+     * Réponse identique (404) si commande inexistante ou téléphone incorrect.
+     */
+    public CommandeDTO getSuiviCommande(String numeroCommande, String telephone) {
+        Commande commande = commandeRepository.findByNumeroCommande(numeroCommande)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande non trouvée"));
+
+        String telNormalise = normaliserTelephone(telephone);
+        String telCommande = commande.getClient() != null
+                ? normaliserTelephone(commande.getAdresseLivraison() != null
+                        ? commande.getAdresseLivraison().getTelephone() : "")
+                : normaliserTelephone(commande.getTelephoneInvite());
+
+        if (!telNormalise.equals(telCommande)) {
+            throw new ResourceNotFoundException("Commande non trouvée");
+        }
+
+        return convertToSuiviDTO(commande);
+    }
+
+    private String normaliserTelephone(String telephone) {
+        if (telephone == null) return "";
+        return telephone.replaceAll("[^0-9]", "");
+    }
+
+    private CommandeDTO convertToSuiviDTO(Commande commande) {
+        CommandeDTO dto = new CommandeDTO();
+        dto.setIdCommande(commande.getIdCommande());
+        dto.setNumeroCommande(commande.getNumeroCommande());
+        dto.setDateCommande(commande.getDateCommande());
+        dto.setStatutCommande(commande.getStatutCommande());
+        dto.setStatutPaiement(commande.getStatutPaiement());
+        dto.setMontantTotal(commande.getMontantTotal());
+        dto.setModeLivraison(commande.getModeLivraison());
+        dto.setZoneNom(commande.getZoneNom());
+        if (commande.getLignesCommande() != null) {
+            dto.setLignesCommande(commande.getLignesCommande().stream()
+                    .map(l -> {
+                        CommandeDTO.LigneCommandeDTO ld = new CommandeDTO.LigneCommandeDTO();
+                        ld.setNomProduitCommande(l.getNomProduitCommande());
+                        ld.setQuantite(l.getQuantite());
+                        return ld;
+                    }).collect(Collectors.toList()));
+        }
+        List<CommandeDTO.HistoriqueStatutDTO> historique = historiqueRepository
+                .findByCommandeIdCommandeOrderByDateChangementAsc(commande.getIdCommande()).stream()
+                .map(h -> {
+                    CommandeDTO.HistoriqueStatutDTO hd = new CommandeDTO.HistoriqueStatutDTO();
+                    hd.setNouveauStatut(h.getNouveauStatut());
+                    hd.setDateChangement(h.getDateChangement());
+                    return hd;
+                }).collect(Collectors.toList());
+        dto.setHistoriqueStatuts(historique);
+        return dto;
     }
 
     /**
@@ -391,39 +489,33 @@ public class CommandeService {
         log.info("✅ Commande supprimée - ID: {}", commandeId);
     }
 
+    /** Compte les commandes par statut — pour le dashboard admin. */
+    public Map<String, Long> getCommandeStats() {
+        Map<String, Long> stats = new LinkedHashMap<>();
+        for (Commande.StatutCommande s : Commande.StatutCommande.values()) {
+            stats.put(s.name(), commandeRepository.countByStatutCommande(s));
+        }
+        return stats;
+    }
+
     // ============== MÉTHODES UTILITAIRES ==============
 
     /**
      * Vérifier si un changement de statut est autorisé
      */
     private boolean isStatutChangeAllowed(Commande.StatutCommande ancienStatut, Commande.StatutCommande nouveauStatut) {
-        // Logique de validation des transitions de statut
         switch (ancienStatut) {
             case EN_ATTENTE:
                 return nouveauStatut == Commande.StatutCommande.CONFIRMEE ||
                         nouveauStatut == Commande.StatutCommande.ANNULEE;
-
             case CONFIRMEE:
-                return nouveauStatut == Commande.StatutCommande.PAYEE ||
+                // Seul l'admin peut annuler depuis CONFIRMEE
+                return nouveauStatut == Commande.StatutCommande.LIVREE ||
                         nouveauStatut == Commande.StatutCommande.ANNULEE;
-
-            case PAYEE:
-                return nouveauStatut == Commande.StatutCommande.EN_PREPARATION ||
-                        nouveauStatut == Commande.StatutCommande.ANNULEE;
-
-            case EN_PREPARATION:
-                return nouveauStatut == Commande.StatutCommande.EXPEDIE ||
-                        nouveauStatut == Commande.StatutCommande.ANNULEE;
-
-            case EXPEDIE:
-                return nouveauStatut == Commande.StatutCommande.LIVREE;
-
             case LIVREE:
-                return false; // Une commande livrée ne peut plus changer de statut
-
+                return false;
             case ANNULEE:
-                return false; // Une commande annulée ne peut plus changer de statut
-
+                return false;
             default:
                 return false;
         }

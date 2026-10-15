@@ -73,14 +73,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/livraison/zones").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/livraison/estimation").permitAll()
 
-                        // Endpoints publics pour commandes invités
+                        // Commandes : création publique (invité + client)
                         .requestMatchers(HttpMethod.POST, "/api/commandes/invite").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/commandes/invite/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/commandes/numero/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/commandes/{id:[0-9]+}").permitAll()
 
-                        // Endpoints publics de paiement
-                        .requestMatchers(HttpMethod.POST, "/api/commandes/*/paiement").permitAll()
+                        // Suivi de commande invité — endpoint sécurisé par numéro+téléphone
+                        .requestMatchers(HttpMethod.GET, "/api/commandes/suivi").permitAll()
 
                         // Endpoints pour les fichiers uploads
                         .requestMatchers("/uploads/**").permitAll()

@@ -185,6 +185,32 @@ public class ParametresSite {
     @Column(name = "afficher_realisations")
     private Boolean afficherRealisations = true;
 
+    // ---- WHATSAPP MESSAGES ----
+
+    /** Indicatif pays par défaut pour la normalisation des numéros (ex. "221" pour le Sénégal). */
+    @Column(name = "indicatif_pays_defaut", length = 5)
+    private String indicatifPaysDefaut = "221";
+
+    /** Message client affiché sur la page de confirmation (bouton → numéro boutique). */
+    @Column(name = "whatsapp_msg_nouvelle_commande", columnDefinition = "TEXT")
+    private String whatsappMsgNouvelleCommande =
+            "Bonjour ! Je viens de passer la commande {numeroCommande}.\nArticles : {articles}\nTotal : {total} {devise}\nZone : {zoneNom} — {modeLivraison}";
+
+    /** Message admin → client : commande confirmée. */
+    @Column(name = "whatsapp_msg_confirmee", columnDefinition = "TEXT")
+    private String whatsappMsgConfirmee =
+            "Bonjour {nomClient}, votre commande {numeroCommande} est confirmée. Montant : {total} {devise}. Merci de votre confiance !";
+
+    /** Message admin → client : commande livrée. */
+    @Column(name = "whatsapp_msg_livree", columnDefinition = "TEXT")
+    private String whatsappMsgLivree =
+            "Bonjour {nomClient}, votre commande {numeroCommande} a bien été livrée. Bonne utilisation !";
+
+    /** Message admin → client : commande annulée. */
+    @Column(name = "whatsapp_msg_annulee", columnDefinition = "TEXT")
+    private String whatsappMsgAnnulee =
+            "Bonjour {nomClient}, votre commande {numeroCommande} a été annulée. Motif : {motif}. Contactez-nous pour plus d'informations.";
+
     // ---- METADATA ----
     @CreationTimestamp
     @Column(name = "date_creation", updatable = false)

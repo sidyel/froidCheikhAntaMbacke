@@ -254,21 +254,41 @@ RUN apk add --no-cache fontconfig ttf-dejavu
 
 Sans cette ligne, toute génération de PDF (iText, JasperReports, Apache PDFBox…) échouera silencieusement en production avec une erreur de police manquante.
 
-### 8 — Nettoyer les commandes de test
+### 8 — Nettoyer les commandes et comptes de test
 
-Avant la mise en ligne, supprimer toutes les commandes créées pendant le développement et les tests. Ces enregistrements ont des montants, des adresses et des modes de livraison qui ne correspondent pas à de vraies transactions. Depuis la console SQL Neon :
+Avant la mise en ligne, supprimer toutes les commandes et tous les comptes clients créés pendant le développement et les tests. Depuis la console SQL Neon :
 
 ```sql
 -- Vérifier d'abord les commandes existantes
 SELECT id_commande, numero_commande, date_commande, montant_total FROM commandes ORDER BY date_commande;
 -- Supprimer après vérification
 DELETE FROM commandes;
+
+-- Vérifier les comptes clients de test (emails @test.local, @test.com, etc.)
+SELECT id_client, email, prenom, nom FROM clients ORDER BY id_client;
+-- Supprimer les comptes de test après vérification (exemples créés lors des tests de sécurité)
+-- sec_test_client@test.local, client2sec@test.local, autre_client_sec@test.local, etc.
+DELETE FROM clients WHERE email LIKE '%@test.local' OR email LIKE '%@test.com';
 ```
 
 ### 7 — Railway (si déploiement via Railway)
 
 - Vérifier la configuration du déploiement automatique (branche suivie, triggers).
 - **Régénérer les identifiants Railway exposés dans l'historique git** : le mot de passe PostgreSQL Railway (`svYhBmqtXnJkAaFEbairZjCtElvTESMe`) et l'URL interne (`postgres.railway.internal:5432/railway`) étaient committés en clair dans `application.properties` sur `origin/main`. Ces identifiants sont compromis — les réinitialiser depuis le dashboard Railway avant tout déploiement.
+
+### 10 — Migration des statuts de commande (module suivi-commandes)
+
+> ⚠️ **Critique** — sans cette étape, toute commande avec un ancien statut (`PAYEE`, `EN_PREPARATION`, `EXPEDIE`, `REMBOURSEE`) causera une `IllegalArgumentException` au démarrage de l'application et empêchera celle-ci de répondre.
+
+1. **Sauvegarder la base** (branche Neon ou dump Railway) avant toute opération.
+2. **Exécuter le script** depuis la console SQL Neon (ou psql) :
+   ```bash
+   psql $DATABASE_URL -f scripts/migration_statuts_suivi_commandes.sql
+   ```
+3. **Vérifier** que le dernier SELECT ne retourne aucune ligne (aucun ancien statut résiduel).
+4. **Démarrer l'application** — le démarrage doit réussir sans erreur JPA.
+
+Le script est idempotent : relancé deux fois, il n'a aucun effet supplémentaire.
 
 ### 9 — Migration des images produit (profil `migration`)
 
