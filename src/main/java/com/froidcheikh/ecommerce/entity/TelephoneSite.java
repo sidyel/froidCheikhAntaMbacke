@@ -17,4 +17,8 @@ public class TelephoneSite {
     private String libelle;
 
     private Boolean whatsapp = false;
+
+    /** Si false, ce numéro est exclu du pied de page des documents PDF. */
+    @jakarta.persistence.Column(name = "afficher_en_documents")
+    private Boolean afficherEnDocuments = true;
 }

@@ -48,6 +48,24 @@ public class DataInitializer implements CommandLineRunner {
                     "froidcheikhantambacke.dione65@gmail.com",
                     15
             );
+        } else {
+            // Migrations douces sur la ligne ParametresSite existante
+            parametresSiteService.initCouleurDocumentsSiAbsente("#000080");
+            // devise doit rester le code ISO 4217 "XOF" ; remet à "XOF" si une ancienne migration avait mis "FCFA"
+            parametresSiteService.migrerDevise("FCFA", "XOF");
+            // libelleDevise = libellé affiché aux clients (ex. "FCFA") — distinct de devise
+            parametresSiteService.initLibelleDeviseSiAbsent("FCFA");
+            // Infos facturation (raisonSociale, adresseSiege, NINEA, RC, banque…) — seulement si champs vides
+            parametresSiteService.initInfosFacturationSiAbsentes();
+            // Téléphones — seulement si la liste est vide
+            parametresSiteService.initTelephonesSiAbsents();
+            // Corrections ponctuelles idempotentes — n'agissent que si la valeur est exactement l'ancienne
+            parametresSiteService.migrerTexteDescriptifActivites(
+                "Vente, installation et maintenance d'équipements de climatisation et de réfrigération",
+                "Réparation et Vente de tous Appareils de Froid : Electricité, Plomberie, Climatisation Centrale, Chambre Froide, Split Système, Climatiseur et Frigos"
+            );
+            parametresSiteService.migrerBoitePostale("BP 7605 Dakar", "B.P. 7605 Dakar");
+            parametresSiteService.migrerTelephones();
         }
 
         if (imageHeroRepository.count() == 0) {

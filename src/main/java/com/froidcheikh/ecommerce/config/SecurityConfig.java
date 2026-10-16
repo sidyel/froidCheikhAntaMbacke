@@ -79,6 +79,9 @@ public class SecurityConfig {
                         // Suivi de commande invité — endpoint sécurisé par numéro+téléphone
                         .requestMatchers(HttpMethod.GET, "/api/commandes/suivi").permitAll()
 
+                        // Téléchargement document via jeton WhatsApp (pas de JWT requis)
+                        .requestMatchers("/api/public/documents/**").permitAll()
+
                         // Endpoints pour les fichiers uploads
                         .requestMatchers("/uploads/**").permitAll()
 

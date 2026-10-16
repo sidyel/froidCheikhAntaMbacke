@@ -51,6 +51,33 @@ public class ParametresSiteService {
 
     @Transactional
     @CacheEvict(value = "siteConfig", allEntries = true)
+    public String updateCachetUrl(String url) {
+        ParametresSite entity = repository.findAll().stream().findFirst().orElseThrow();
+        entity.setUrlCachetSignature(url);
+        repository.save(entity);
+        return url;
+    }
+
+    @Transactional
+    @CacheEvict(value = "siteConfig", allEntries = true)
+    public String updateImageEnTeteUrl(String url) {
+        ParametresSite entity = repository.findAll().stream().findFirst().orElseThrow();
+        entity.setUrlImageEnTete(url);
+        repository.save(entity);
+        return url;
+    }
+
+    @Transactional
+    @CacheEvict(value = "siteConfig", allEntries = true)
+    public String updateImagePiedUrl(String url) {
+        ParametresSite entity = repository.findAll().stream().findFirst().orElseThrow();
+        entity.setUrlImagePied(url);
+        repository.save(entity);
+        return url;
+    }
+
+    @Transactional
+    @CacheEvict(value = "siteConfig", allEntries = true)
     public void initDefault(String nomSite, String sloganSite, String emailContact, Integer anneesExperience) {
         if (!repository.findAll().isEmpty()) return;
 
@@ -59,7 +86,156 @@ public class ParametresSiteService {
         p.setSloganSite(sloganSite);
         p.setEmailContact(emailContact);
         p.setAnneesExperience(anneesExperience);
+        p.setCouleurDocuments("#000080");
+        p.setTexteDescriptifActivites("Réparation et Vente de tous Appareils de Froid : Electricité, Plomberie, Climatisation Centrale, Chambre Froide, Split Système, Climatiseur et Frigos");
+        p.setDevise("XOF");
+        p.setLibelleDevise("FCFA");
+        p.setRaisonSociale("FROID CHEIKH ANTA MBACKE - BABACAR DIONE");
+        p.setAdresseSiege("Ouest Foire Cité Aelmas Villa N°168 Rue 577 Yoff, Dakar, Sénégal");
+        p.setBoitePostale("B.P. 7605 Dakar");
+        p.setRccm("92-A-5673");
+        p.setNinea("0151340-2B1");
+        p.setBanqueNom("CBAO");
+        p.setNumeroCompteBancaire("36017179-49");
+        p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("33 820 16 33", "Fixe", false, true));
+        p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("77 335 20 00", "Mobile", true, true));
+        p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("76 888 04 42", "Mobile", false, false));
         repository.save(p);
+    }
+
+    /** Migration douce : renseigne les champs de facturation si absents sur la ligne existante. */
+    @org.springframework.transaction.annotation.Transactional
+    public void initInfosFacturationSiAbsentes() {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            boolean modifie = false;
+            if (p.getRaisonSociale() == null || p.getRaisonSociale().isBlank()) {
+                p.setRaisonSociale("FROID CHEIKH ANTA MBACKE - BABACAR DIONE"); modifie = true;
+            }
+            if (p.getTexteDescriptifActivites() == null || p.getTexteDescriptifActivites().isBlank()) {
+                p.setTexteDescriptifActivites("Réparation et Vente de tous Appareils de Froid : Electricité, Plomberie, Climatisation Centrale, Chambre Froide, Split Système, Climatiseur et Frigos"); modifie = true;
+            }
+            if (p.getAdresseSiege() == null || p.getAdresseSiege().isBlank()) {
+                p.setAdresseSiege("Ouest Foire Cité Aelmas Villa N°168 Rue 577 Yoff, Dakar, Sénégal"); modifie = true;
+            }
+            if (p.getBoitePostale() == null || p.getBoitePostale().isBlank()) {
+                p.setBoitePostale("B.P. 7605 Dakar"); modifie = true;
+            }
+            if (p.getRccm() == null || p.getRccm().isBlank()) {
+                p.setRccm("92-A-5673"); modifie = true;
+            }
+            if (p.getNinea() == null || p.getNinea().isBlank()) {
+                p.setNinea("0151340-2B1"); modifie = true;
+            }
+            if (p.getBanqueNom() == null || p.getBanqueNom().isBlank()) {
+                p.setBanqueNom("CBAO"); modifie = true;
+            }
+            if (p.getNumeroCompteBancaire() == null || p.getNumeroCompteBancaire().isBlank()) {
+                p.setNumeroCompteBancaire("36017179-49"); modifie = true;
+            }
+            if (modifie) repository.save(p);
+        });
+    }
+
+    /** Migration douce : ajoute les téléphones par défaut si la liste est vide. */
+    @org.springframework.transaction.annotation.Transactional
+    public void initTelephonesSiAbsents() {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (p.getTelephones() == null || p.getTelephones().isEmpty()) {
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("33 820 16 33", "Fixe", false, true));
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("77 335 20 00", "Mobile", true, true));
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("76 888 04 42", "Mobile", false, false));
+                repository.save(p);
+            }
+        });
+    }
+
+    /** Migration douce : remet devise à son code ISO si une ancienne migration l'avait mis à "FCFA". */
+    @org.springframework.transaction.annotation.Transactional
+    public void migrerDevise(String ancienne, String nouvelle) {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (ancienne.equals(p.getDevise())) {
+                p.setDevise(nouvelle);
+                repository.save(p);
+            }
+        });
+    }
+
+    /**
+     * Migration ponctuelle idempotente : corrige texteDescriptifActivites seulement si sa valeur
+     * est EXACTEMENT l'ancienne valeur connue. Sans effet si le champ a été modifié depuis l'admin.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void migrerTexteDescriptifActivites(String ancienne, String nouvelle) {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (ancienne.equals(p.getTexteDescriptifActivites())) {
+                p.setTexteDescriptifActivites(nouvelle);
+                repository.save(p);
+            }
+        });
+    }
+
+    /** Migration ponctuelle idempotente : corrige boitePostale si la valeur est exactement l'ancienne. */
+    @org.springframework.transaction.annotation.Transactional
+    public void migrerBoitePostale(String ancienne, String nouvelle) {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (ancienne.equals(p.getBoitePostale())) {
+                p.setBoitePostale(nouvelle);
+                repository.save(p);
+            }
+        });
+    }
+
+    /**
+     * Migration ponctuelle idempotente : supprime le numéro de test 77 330 00 06 et installe
+     * les trois numéros réels. N'agit que si 77 330 00 06 est présent dans la liste.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void migrerTelephones() {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            boolean aNumeroTest = p.getTelephones().stream()
+                    .anyMatch(t -> "77 330 00 06".equals(t.getNumero()));
+            if (!aNumeroTest) return;
+
+            p.getTelephones().removeIf(t -> "77 330 00 06".equals(t.getNumero()));
+
+            java.util.Set<String> existants = p.getTelephones().stream()
+                    .map(com.froidcheikh.ecommerce.entity.TelephoneSite::getNumero)
+                    .collect(java.util.stream.Collectors.toSet());
+
+            if (!existants.contains("33 820 16 33"))
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("33 820 16 33", "Fixe", false, true));
+            if (!existants.contains("77 335 20 00"))
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("77 335 20 00", "Mobile", true, true));
+            if (!existants.contains("76 888 04 42"))
+                p.getTelephones().add(new com.froidcheikh.ecommerce.entity.TelephoneSite("76 888 04 42", "Mobile", false, false));
+
+            repository.save(p);
+        });
+    }
+
+    /** Migration douce : renseigne libelleDevise si null sur la ligne existante. */
+    @org.springframework.transaction.annotation.Transactional
+    public void initLibelleDeviseSiAbsent(String libelle) {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (p.getLibelleDevise() == null || p.getLibelleDevise().isBlank()) {
+                p.setLibelleDevise(libelle);
+                repository.save(p);
+            }
+        });
+    }
+
+    /**
+     * Migration douce : renseigne couleurDocuments si null sur la ligne existante.
+     * Appelé par DataInitializer au démarrage pour les bases déjà initialisées.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void initCouleurDocumentsSiAbsente(String couleur) {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            if (p.getCouleurDocuments() == null) {
+                p.setCouleurDocuments(couleur);
+                repository.save(p);
+            }
+        });
     }
 
     public boolean exists() {
@@ -164,6 +340,7 @@ public class ParametresSiteService {
         dto.setNumeroCfe(p.getNumeroCfe());
         dto.setCapitalSocial(p.getCapitalSocial());
         dto.setDevise(p.getDevise());
+        dto.setLibelleDevise(p.getLibelleDevise());
         dto.setSeuilLivraisonGratuite(p.getSeuilLivraisonGratuite());
         dto.setMetaTitle(p.getMetaTitle());
         dto.setMetaDescription(p.getMetaDescription());
@@ -187,6 +364,15 @@ public class ParametresSiteService {
         dto.setWhatsappMsgConfirmee(p.getWhatsappMsgConfirmee());
         dto.setWhatsappMsgLivree(p.getWhatsappMsgLivree());
         dto.setWhatsappMsgAnnulee(p.getWhatsappMsgAnnulee());
+        // En-tête documents PDF
+        dto.setCouleurDocuments(p.getCouleurDocuments());
+        dto.setTexteDescriptifActivites(p.getTexteDescriptifActivites());
+        dto.setBoitePostale(p.getBoitePostale());
+        dto.setBanqueNom(p.getBanqueNom());
+        dto.setNumeroCompteBancaire(p.getNumeroCompteBancaire());
+        dto.setModeEnTeteDocuments(p.getModeEnTeteDocuments());
+        dto.setUrlImageEnTete(p.getUrlImageEnTete());
+        dto.setUrlImagePied(p.getUrlImagePied());
         return dto;
     }
 
@@ -205,6 +391,7 @@ public class ParametresSiteService {
                 tel.setNumero(t.getNumero());
                 tel.setLibelle(t.getLibelle());
                 tel.setWhatsapp(Boolean.TRUE.equals(t.getWhatsapp()));
+                tel.setAfficherEnDocuments(t.getAfficherEnDocuments() == null || t.getAfficherEnDocuments());
                 p.getTelephones().add(tel);
             });
         }
@@ -231,6 +418,7 @@ public class ParametresSiteService {
         if (dto.getNumeroCfe() != null) p.setNumeroCfe(dto.getNumeroCfe());
         if (dto.getCapitalSocial() != null) p.setCapitalSocial(dto.getCapitalSocial());
         if (dto.getDevise() != null) p.setDevise(dto.getDevise());
+        if (dto.getLibelleDevise() != null) p.setLibelleDevise(dto.getLibelleDevise());
         if (dto.getSeuilLivraisonGratuite() != null) p.setSeuilLivraisonGratuite(dto.getSeuilLivraisonGratuite());
         if (dto.getMetaTitle() != null) p.setMetaTitle(dto.getMetaTitle());
         if (dto.getMetaDescription() != null) p.setMetaDescription(dto.getMetaDescription());
@@ -251,6 +439,15 @@ public class ParametresSiteService {
         if (dto.getWhatsappMsgConfirmee() != null) p.setWhatsappMsgConfirmee(dto.getWhatsappMsgConfirmee());
         if (dto.getWhatsappMsgLivree() != null) p.setWhatsappMsgLivree(dto.getWhatsappMsgLivree());
         if (dto.getWhatsappMsgAnnulee() != null) p.setWhatsappMsgAnnulee(dto.getWhatsappMsgAnnulee());
+        // En-tête documents PDF
+        if (dto.getCouleurDocuments() != null) p.setCouleurDocuments(dto.getCouleurDocuments());
+        if (dto.getTexteDescriptifActivites() != null) p.setTexteDescriptifActivites(dto.getTexteDescriptifActivites());
+        if (dto.getBoitePostale() != null) p.setBoitePostale(dto.getBoitePostale());
+        if (dto.getBanqueNom() != null) p.setBanqueNom(dto.getBanqueNom());
+        if (dto.getNumeroCompteBancaire() != null) p.setNumeroCompteBancaire(dto.getNumeroCompteBancaire());
+        if (dto.getModeEnTeteDocuments() != null) p.setModeEnTeteDocuments(dto.getModeEnTeteDocuments());
+        if (dto.getUrlImageEnTete() != null) p.setUrlImageEnTete(dto.getUrlImageEnTete());
+        if (dto.getUrlImagePied() != null) p.setUrlImagePied(dto.getUrlImagePied());
         if (dto.getHorairesOuverture() != null) {
             p.getHorairesOuverture().clear();
             dto.getHorairesOuverture().forEach(h -> {
@@ -271,6 +468,7 @@ public class ParametresSiteService {
             dto.setNumero(t.getNumero());
             dto.setLibelle(t.getLibelle());
             dto.setWhatsapp(t.getWhatsapp());
+            dto.setAfficherEnDocuments(t.getAfficherEnDocuments());
             return dto;
         }).collect(Collectors.toList());
     }

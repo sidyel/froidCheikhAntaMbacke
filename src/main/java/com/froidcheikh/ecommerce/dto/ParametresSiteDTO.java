@@ -26,6 +26,7 @@ public final class ParametresSiteDTO {
         private String numero;
         private String libelle;
         private Boolean whatsapp;
+        private Boolean afficherEnDocuments;
     }
 
     /**
@@ -162,9 +163,32 @@ public final class ParametresSiteDTO {
         private String rccm;
         private String numeroCfe;
         private String capitalSocial;
+        private String adresseSiege;
+        private java.math.BigDecimal tauxTvaDefaut;
+        private Boolean prixAfficheTTC;
+        private String prefixeFacture;
+        private String prefixeAvoir;
+        private String prefixeDevis;
+        private String prefixeBonLivraison;
+        private String conditionsPaiementDefaut;
+        private String mentionsPiedDocument;
+        private String urlCachetSignature;
+        private String mentionExonerationTva;
+        private Integer dureeValiditeJetonHeures;
+        private String couleurDocuments;
+
+        // EN-TÊTE DOCUMENTS PDF
+        private String texteDescriptifActivites;
+        private String boitePostale;
+        private String banqueNom;
+        private String numeroCompteBancaire;
+        private com.froidcheikh.ecommerce.entity.ModeEnTeteDocuments modeEnTeteDocuments;
+        private String urlImageEnTete;
+        private String urlImagePied;
 
         // LIVRAISON
         private String devise;
+        private String libelleDevise;
         private Integer seuilLivraisonGratuite;
 
         // SEO

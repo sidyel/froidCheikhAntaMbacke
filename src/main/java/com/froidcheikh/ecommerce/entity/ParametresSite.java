@@ -139,13 +139,93 @@ public class ParametresSite {
     @Column(name = "capital_social")
     private String capitalSocial;
 
+    @Column(name = "adresse_siege", columnDefinition = "TEXT")
+    private String adresseSiege;
+
+    /** Taux de TVA par défaut en %. 0 = non assujetti (le PDF masque les colonnes TVA). */
+    @Column(name = "taux_tva_defaut", precision = 5, scale = 2)
+    private java.math.BigDecimal tauxTvaDefaut = java.math.BigDecimal.ZERO;
+
+    /** true = les prix du site sont TTC ; false = HT (non assujetti ou HT affiché). */
+    @Column(name = "prix_affiche_ttc")
+    private Boolean prixAfficheTTC = false;
+
+    @Column(name = "prefixe_facture", length = 10)
+    private String prefixeFacture = "FAC";
+
+    @Column(name = "prefixe_avoir", length = 10)
+    private String prefixeAvoir = "AVO";
+
+    @Column(name = "prefixe_devis", length = 10)
+    private String prefixeDevis = "DEV";
+
+    @Column(name = "prefixe_bon_livraison", length = 10)
+    private String prefixeBonLivraison = "BL";
+
+    @Column(name = "conditions_paiement_defaut", columnDefinition = "TEXT")
+    private String conditionsPaiementDefaut;
+
+    @Column(name = "mentions_pied_document", columnDefinition = "TEXT")
+    private String mentionsPiedDocument;
+
+    @Column(name = "url_cachet_signature")
+    private String urlCachetSignature;
+
+    /** Mention affichée sur les PDFs quand tauxTvaDefaut = 0 (ex : "TVA non applicable"). */
+    @Column(name = "mention_exoneration_tva", length = 200)
+    private String mentionExonerationTva = "TVA non applicable";
+
+    /** Durée de validité des jetons de téléchargement WhatsApp, en heures. */
+    @Column(name = "duree_validite_jeton_heures")
+    private Integer dureeValiditeJetonHeures = 72;
+
+    /**
+     * Couleur utilisée pour les documents PDF (en-tête tableau, traits, numéro de document).
+     * Si null, la couleurPrimaire du site est utilisée en repli.
+     * Format #RRGGBB.
+     */
+    @Column(name = "couleur_documents", length = 7)
+    private String couleurDocuments;
+
+    // ---- EN-TÊTE DOCUMENTS PDF ----
+    /** Texte libre décrivant les activités de l'entreprise (affiché dans l'en-tête composé). */
+    @Column(name = "texte_descriptif_activites", columnDefinition = "TEXT")
+    private String texteDescriptifActivites;
+
+    @Column(name = "boite_postale", length = 30)
+    private String boitePostale;
+
+    @Column(name = "banque_nom")
+    private String banqueNom;
+
+    @Column(name = "numero_compte_bancaire")
+    private String numeroCompteBancaire;
+
+    /** Mode de rendu de l'en-tête des PDFs de facturation. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mode_en_tete_documents", length = 10)
+    private ModeEnTeteDocuments modeEnTeteDocuments = ModeEnTeteDocuments.COMPOSE;
+
+    /** URL de l'image pleine largeur utilisée en mode IMAGE pour l'en-tête (Cloudinary). */
+    @Column(name = "url_image_en_tete")
+    private String urlImageEnTete;
+
+    /** URL de l'image pleine largeur utilisée en mode IMAGE pour le pied de page (Cloudinary). */
+    @Column(name = "url_image_pied")
+    private String urlImagePied;
+
     // ---- LOCALISATION ----
     @Column(name = "fuseau_horaire", length = 50)
     private String fuseauHoraire = "Africa/Dakar";
 
     // ---- LIVRAISON ----
+    /** Code ISO 4217 (ex. "XOF") — utilisé pour les paiements, catalogues Meta/Google et Angular. */
     @Column(name = "devise", length = 10)
     private String devise = "XOF";
+
+    /** Libellé affiché aux clients (ex. "FCFA") — utilisé dans les PDFs et sur le site. */
+    @Column(name = "libelle_devise", length = 20)
+    private String libelleDevise = "FCFA";
 
     /** Montant minimum du panier pour bénéficier de la livraison gratuite (null = désactivé). */
     @Column(name = "seuil_livraison_gratuite")

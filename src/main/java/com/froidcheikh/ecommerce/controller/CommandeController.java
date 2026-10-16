@@ -1,8 +1,14 @@
 package com.froidcheikh.ecommerce.controller;
 
 import com.froidcheikh.ecommerce.dto.CommandeDTO;
+import com.froidcheikh.ecommerce.entity.CompteurDocument.TypeDocument;
+import com.froidcheikh.ecommerce.entity.DocumentFacturation.StatutDocument;
+import com.froidcheikh.ecommerce.repository.DocumentFacturationRepository;
 import com.froidcheikh.ecommerce.service.CommandeService;
 import com.froidcheikh.ecommerce.service.ClientService;
+import com.froidcheikh.ecommerce.service.DocumentFacturationService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -30,6 +36,7 @@ public class CommandeController {
     private final CommandeService commandeService;
     private final ClientService clientService;
     private final com.froidcheikh.ecommerce.service.SuiviRateLimiterService suiviRateLimiter;
+    private final DocumentFacturationService documentFacturationService;
 
     // ===========================================
     // ENDPOINTS SPÉCIFIQUES (ORDRE IMPORTANT)
@@ -310,6 +317,34 @@ public class CommandeController {
     // ===========================================
 
     // Accès commande par ID — CLIENT (vérifie la propriété) ou ADMIN
+    /** PDF de la facture émise pour une commande (client ou admin). */
+    @GetMapping("/{commandeId}/facture/pdf")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<byte[]> getFacturePdf(@PathVariable Long commandeId, Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().matches("ROLE_ADMIN|ROLE_SUPER_ADMIN|ROLE_GESTIONNAIRE"));
+        if (!isAdmin) {
+            Long clientId = clientService.getClientByEmail(authentication.getName()).getIdClient();
+            CommandeDTO commande = commandeService.getCommandeById(commandeId);
+            if (commande.getClientId() == null || !commande.getClientId().equals(clientId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
+        var factures = documentFacturationService.lister(TypeDocument.FACTURE, StatutDocument.EMIS, null,
+                org.springframework.data.domain.PageRequest.of(0, 1,
+                        org.springframework.data.domain.Sort.by("dateEmission").descending()));
+        var factureOpt = factures.getContent().stream()
+                .filter(f -> f.getId() != null).findFirst();
+        if (factureOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        byte[] pdf = documentFacturationService.telechargerPdf(factureOpt.get().getId());
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"facture-commande-" + commandeId + ".pdf\"")
+                .body(pdf);
+    }
+
     @GetMapping("/{commandeId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getCommande(@PathVariable Long commandeId, Authentication authentication) {
