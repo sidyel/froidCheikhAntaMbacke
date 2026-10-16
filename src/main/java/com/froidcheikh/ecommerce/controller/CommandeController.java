@@ -22,6 +22,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
@@ -46,7 +47,8 @@ public class CommandeController {
     @PostMapping("/invite")
     public ResponseEntity<?> creerCommandeInvite(
             @Valid @RequestBody CommandeDTO commandeDTO,
-            BindingResult bindingResult) {
+            BindingResult bindingResult,
+            HttpServletRequest request) {
 
         log.info("📥 === DÉBUT CRÉATION COMMANDE INVITÉ ===");
         log.info("📧 Email invité: '{}'", commandeDTO.getEmailInvite());
@@ -89,7 +91,9 @@ public class CommandeController {
             }
 
             log.info("✅ Validation réussie, création de la commande...");
-            CommandeDTO commande = commandeService.creerCommandeInvite(commandeDTO);
+            String ipClient = extractIp(request);
+            String userAgent = request.getHeader("User-Agent");
+            CommandeDTO commande = commandeService.creerCommandeInvite(commandeDTO, ipClient, userAgent);
 
             log.info("🎉 Commande créée avec succès - Numéro: {}, ID: {}",
                     commande.getNumeroCommande(), commande.getIdCommande());
@@ -147,7 +151,8 @@ public class CommandeController {
     public ResponseEntity<?> creerCommandeClient(
             @Valid @RequestBody CommandeDTO commandeDTO,
             Authentication authentication,
-            BindingResult bindingResult) {
+            BindingResult bindingResult,
+            HttpServletRequest request) {
 
         log.info("📥 Réception commande client - Utilisateur: {}", authentication.getName());
 
@@ -170,7 +175,9 @@ public class CommandeController {
 
             log.info("✅ Client identifié - ID: {}, Email: {}", clientId, email);
 
-            CommandeDTO commande = commandeService.creerCommandeClient(clientId, commandeDTO);
+            String ipClient = extractIp(request);
+            String userAgent = request.getHeader("User-Agent");
+            CommandeDTO commande = commandeService.creerCommandeClient(clientId, commandeDTO, ipClient, userAgent);
 
             log.info("🎉 Commande client créée - Numéro: {}, ID: {}",
                     commande.getNumeroCommande(), commande.getIdCommande());
@@ -368,5 +375,12 @@ public class CommandeController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                     "error", "Commande non trouvée", "message", "Aucune commande trouvée avec cet ID"));
         }
+    }
+
+    private String extractIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isBlank()) ip = request.getRemoteAddr();
+        if (ip != null && ip.contains(",")) ip = ip.split(",")[0].trim();
+        return ip;
     }
 }

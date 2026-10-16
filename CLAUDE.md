@@ -101,7 +101,7 @@ Les deux dépôts suivent le même modèle :
 7. **`target/` et `.idea/` sont dans `.gitignore`** — ne jamais les commiter.
 
 ### Variables d'environnement requises (voir `.env.example`)
-`DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `JWT_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `ALLOWED_ORIGINS`, `INSTALL_TOKEN`
+`DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `JWT_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `ALLOWED_ORIGINS`, `INSTALL_TOKEN`, `META_CONVERSIONS_TOKEN`
 
 ---
 
@@ -267,6 +267,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 | Enrichissement fiches produits (runners import/export/verif, ModeleAttribut, AttributProduit, ImageProduit, score — lots 1 + correction_dimensions écrits en base oct. 2026) | ✅ Mergé dans `develop` + `main` | — |
 | Module facturation (PDF) — DocumentFacturation, LigneDocument, ReglementDocument, ClientFacturation, CompteurDocument, JetonTelechargement ; PdfFacturationService (**openhtmltopdf + Thymeleaf** — templates dans `templates/pdf/`, en-tête composé/image, Oswald+LiberationSans, Alpine-safe), NumeroDocumentService, CalculDocumentService, MontantEnLettresService, JetonTelechargementService ; uploads cachet/en-tête/pied ; migrations ponctuelles idempotentes ; 91 tests ; frontend complet (liste, formulaire+aperçu brouillon, fiche document, paramètres, page publique jeton, droits GESTIONNAIRE) | ✅ Mergé dans `develop` (oct. 2026 — moteur Thymeleaf oct. 2026) | — |
 | SSR & SEO — backend : champ `siteUrl` ParametresSite, GET /sitemap.xml dynamique (produits + catégories), GET /robots.txt configurable (Disallow admin/panier/checkout/suivi-commande), cache @Cacheable("categories") + suppression N+1 ; frontend : @angular/ssr, SeoService (meta, OG c_pad/b_white, JSON-LD Product + BreadcrumbList + LocalBusiness, OutOfStock), slugs URL (produit/:slug, produits/categorie/:slug), APP_INITIALIZER catégories + TransferState, isPlatformBrowser sur tous les accès DOM, routes client-only sans SSR, timeout 4 s avec fallback index.html, proxy sitemap+robots → backend | ✅ Mergé dans `develop` (oct. 2026) | — |
+| Catalogue publicitaire & Pixel Meta — backend : `CatalogueFeedService` (flux RSS Meta/Google, exclusion logic, `ExclusionDTO`, `RapportFeedDTO`), `CatalogueFeedController` (GET /feeds/meta.xml, /feeds/google.xml, /api/admin/catalogue/exclusions, /api/admin/catalogue/rapport), `MetaConversionsService` (API Conversions côté serveur, événement Purchase), `excluCatalogue` sur `Produit` ; fix `prepareThreshold=0` dans DATABASE_URL (Neon PgBouncer) ; 33 tests ; frontend : `ConsentService`, `PixelService`, `CookieBanner`, intégrations checkout/panier, onglet Publicité admin (compteur, filtre, tableau exclusions), case `excluCatalogue` formulaire produit, proxy /feeds/ → backend | ✅ Mergé dans `develop` (oct. 2026) | — |
 | Migrations Flyway | ⏳ Planifié | — |
 
 ---
@@ -288,6 +289,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 | `CLOUDINARY_API_SECRET` | Secret API Cloudinary production (**régénéré**) |
 | `ALLOWED_ORIGINS` | Vrai domaine de production, ex. `https://www.froidcheikhantambacke.sn` |
 | `INSTALL_TOKEN` | Jeton fort à usage unique pour la première installation |
+| `META_CONVERSIONS_TOKEN` | Jeton API Conversions Meta (optionnel — laisser vide pour désactiver l'envoi serveur) |
 | `PORT` | Port exposé par l'hébergeur (optionnel, défaut 8080) |
 
 ### 2 — Régénérer toutes les clés (secrets historiquement exposés)
@@ -418,6 +420,36 @@ Le script est idempotent : relancé deux fois, il n'a aucun effet supplémentair
 ### 11 — Valider le modèle de facture avant la mise en production
 
 > ⚠️ **Important** — faire valider un modèle de facture imprimé (avec données réelles) par le comptable ou le conseiller fiscal **avant** la mise en production. Points à vérifier : mentions obligatoires selon la réglementation sénégalaise (NINEA, RCCM, numérotation séquentielle, date d'émission, dénomination sociale), traitement de la TVA (assujetti ou non), libellés des conditions de paiement. Ne pas émettre de factures clients sans cette validation.
+
+### 13 — Catalogue publicitaire Meta & Google (module `feature/catalogue-pixel`)
+
+Le module génère les flux RSS `GET /feeds/meta.xml` et `GET /feeds/google.xml` (accès public, sans authentification) et envoie les événements `Purchase` à l'API Conversions Meta côté serveur.
+
+#### Prérequis comptes
+
+1. **Compte Business Meta** (business.facebook.com) — lier la Page Facebook de la boutique.
+2. **Pixel Meta** — créer dans le Gestionnaire d'événements → noter l'**ID Pixel** (ex. `1234567890123456`).
+3. **Jeton API Conversions** — Gestionnaire d'événements → Paramètres → Générer le jeton d'accès. Le stocker dans la variable d'environnement `META_CONVERSIONS_TOKEN` (jamais en base ni dans le code).
+4. **Commerce Manager** (business.facebook.com/commerce) — créer un catalogue, puis ajouter une source de données de type **Flux de données** → URL : `https://<domaine>/feeds/meta.xml` → planification quotidienne.
+5. **Configurer l'ID Pixel dans `ParametresSite`** — admin → onglet Publicité → champ "ID Pixel Meta". Sans cet ID, le Pixel navigateur (`fbq`) ne se déclenche pas.
+
+#### Variable d'environnement à configurer chez l'hébergeur
+
+| Variable | Valeur attendue |
+|---|---|
+| `META_CONVERSIONS_TOKEN` | Jeton API Conversions Meta — généré dans le Gestionnaire d'événements (voir ci-dessus). Laisser vide pour désactiver l'envoi serveur des événements Purchase. |
+
+#### Vérification post-déploiement
+
+```bash
+# Flux accessible sans authentification (doit retourner du XML avec des <item>)
+curl https://<domaine>/feeds/meta.xml | grep -c '<item>'
+
+# Rapport d'exclusions (nécessite un token JWT ADMIN/SUPER_ADMIN/GESTIONNAIRE)
+curl -H "Authorization: Bearer <token>" https://<domaine>/api/admin/catalogue/rapport
+```
+
+L'onglet **Publicité** dans les paramètres admin affiche le rapport en temps réel : total dans le flux, total exclus, répartition par raison (produit désactivé, exclu manuellement, sans image principale, prix absent, marque manquante, description manquante).
 
 ---
 

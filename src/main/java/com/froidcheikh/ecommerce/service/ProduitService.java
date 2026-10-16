@@ -40,6 +40,7 @@ public class ProduitService {
     private final PrixService prixService;
     private final ImageProduitRepository imageProduitRepository;
     private final FileService fileService;
+    private final CatalogueFeedService catalogueFeedService;
 
     public Page<ProduitDTO> getAllProduits(Pageable pageable) {
         return produitRepository.findByDisponibiliteTrue(pageable)
@@ -211,7 +212,7 @@ public class ProduitService {
 
         produit = produitRepository.save(produit);
         log.info("Produit créé avec l'ID : {}", produit.getIdProduit());
-
+        catalogueFeedService.evictFeedCache();
         return convertToDTO(produit);
     }
 
@@ -234,6 +235,7 @@ public class ProduitService {
         produit.setDisponibilite(produitDTO.getDisponibilite());
         produit.setModeleFabricant(produitDTO.getModeleFabricant());
         produit.setEan(produitDTO.getEan());
+        if (produitDTO.getExcluCatalogue() != null) produit.setExcluCatalogue(produitDTO.getExcluCatalogue());
 
         // IMPORTANT: Mise à jour de la fiche technique
         if (produitDTO.getFicheTechniquePDF() != null) {
@@ -266,6 +268,7 @@ public class ProduitService {
         produit = produitRepository.save(produit);
         log.info("✅ Produit mis à jour avec l'ID : {}", produit.getIdProduit());
 
+        catalogueFeedService.evictFeedCache();
         return convertToDTO(produit);
     }
 
@@ -274,6 +277,7 @@ public class ProduitService {
             throw new ResourceNotFoundException("Produit non trouvé avec l'ID : " + id);
         }
         produitRepository.deleteById(id);
+        catalogueFeedService.evictFeedCache();
         log.info("Produit supprimé avec l'ID : {}", id);
     }
 

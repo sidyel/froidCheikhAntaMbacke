@@ -37,6 +37,7 @@ public class CommandeService {
     private final CalculCommandeService calculCommandeService;
     private final PrixService prixService;
     private final ModelMapper modelMapper;
+    private final MetaConversionsService metaConversionsService;
 
     public CommandeDTO getCommandeById(Long id) {
         Commande commande = commandeRepository.findByIdWithLignes(id)
@@ -55,22 +56,25 @@ public class CommandeService {
                 .map(this::convertToDTO);
     }
 
-    public CommandeDTO creerCommandeClient(Long clientId, CommandeDTO commandeDTO) {
+    public CommandeDTO creerCommandeClient(Long clientId, CommandeDTO commandeDTO,
+                                            String ipClient, String userAgent) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé avec l'ID : " + clientId));
 
-        return creerCommande(commandeDTO, client, null);
+        return creerCommande(commandeDTO, client, null, ipClient, userAgent);
     }
 
-    public CommandeDTO creerCommandeInvite(CommandeDTO commandeDTO) {
+    public CommandeDTO creerCommandeInvite(CommandeDTO commandeDTO,
+                                           String ipClient, String userAgent) {
         log.info("🔄 === DÉBUT CRÉATION COMMANDE INVITÉ - SERVICE ===");
         log.info("📧 Email reçu: {}", commandeDTO.getEmailInvite());
         log.info("💰 Montant DTO reçu: {}", commandeDTO.getMontantTotal());
 
-        return creerCommande(commandeDTO, null, commandeDTO);
+        return creerCommande(commandeDTO, null, commandeDTO, ipClient, userAgent);
     }
 
-    private CommandeDTO creerCommande(CommandeDTO commandeDTO, Client client, CommandeDTO inviteInfo) {
+    private CommandeDTO creerCommande(CommandeDTO commandeDTO, Client client, CommandeDTO inviteInfo,
+                                      String ipClient, String userAgent) {
         try {
             log.info("🔧 === DÉBUT CRÉATION COMMANDE DANS creerCommande ===");
 
@@ -185,6 +189,10 @@ public class CommandeService {
 
             // ✅ ÉTAPE 9 : Sauvegarder la commande finale
             commande = commandeRepository.save(commande);
+
+            // ✅ ÉTAPE 10 : Envoyer l'événement Purchase à l'API Conversions Meta (async, si consentement)
+            final Commande commandeFinale = commande;
+            metaConversionsService.sendPurchaseEvent(commandeFinale, commandeDTO, ipClient, userAgent);
 
             log.info("🎉 === COMMANDE CRÉÉE AVEC SUCCÈS ===");
             log.info("🔢 ID: {}", commande.getIdCommande());

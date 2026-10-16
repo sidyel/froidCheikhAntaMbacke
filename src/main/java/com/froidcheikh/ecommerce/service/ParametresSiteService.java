@@ -326,6 +326,9 @@ public class ParametresSiteService {
                 .filter(t -> Boolean.TRUE.equals(t.getWhatsapp()))
                 .findFirst()
                 .ifPresent(t -> dto.setTelephoneWhatsappBoutique(t.getNumero()));
+        // Publicité et suivi
+        dto.setMetaPixelId(p.getMetaPixelId());
+        dto.setGoogleAnalyticsId(p.getGoogleAnalyticsId());
         return dto;
     }
 
@@ -396,6 +399,10 @@ public class ParametresSiteService {
         dto.setModeEnTeteDocuments(p.getModeEnTeteDocuments());
         dto.setUrlImageEnTete(p.getUrlImageEnTete());
         dto.setUrlImagePied(p.getUrlImagePied());
+        // Publicité et suivi
+        dto.setMetaPixelId(p.getMetaPixelId());
+        dto.setGoogleAnalyticsId(p.getGoogleAnalyticsId());
+        dto.setMetaConversionsTestCode(p.getMetaConversionsTestCode());
         return dto;
     }
 
@@ -472,6 +479,10 @@ public class ParametresSiteService {
         if (dto.getModeEnTeteDocuments() != null) p.setModeEnTeteDocuments(dto.getModeEnTeteDocuments());
         if (dto.getUrlImageEnTete() != null) p.setUrlImageEnTete(dto.getUrlImageEnTete());
         if (dto.getUrlImagePied() != null) p.setUrlImagePied(dto.getUrlImagePied());
+        // Publicité et suivi (les valeurs vides sont autorisées pour désactiver)
+        if (dto.getMetaPixelId() != null) p.setMetaPixelId(dto.getMetaPixelId().isBlank() ? null : dto.getMetaPixelId().trim());
+        if (dto.getGoogleAnalyticsId() != null) p.setGoogleAnalyticsId(dto.getGoogleAnalyticsId().isBlank() ? null : dto.getGoogleAnalyticsId().trim());
+        if (dto.getMetaConversionsTestCode() != null) p.setMetaConversionsTestCode(dto.getMetaConversionsTestCode().isBlank() ? null : dto.getMetaConversionsTestCode().trim());
         if (dto.getHorairesOuverture() != null) {
             p.getHorairesOuverture().clear();
             dto.getHorairesOuverture().forEach(h -> {

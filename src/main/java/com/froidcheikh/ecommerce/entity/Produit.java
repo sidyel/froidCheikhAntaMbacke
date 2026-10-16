@@ -108,6 +108,10 @@ public class Produit {
     @OrderBy("ordre ASC")
     private List<ImageProduit> images;
 
+    // ---- CATALOGUE PUBLICITAIRE ----
+    @Column(name = "exclu_catalogue", nullable = false, columnDefinition = "boolean default false")
+    private Boolean excluCatalogue = false;
+
     public enum LabelEnergie {
         A_PLUS_PLUS_PLUS, A_PLUS_PLUS, A_PLUS, A, B, C, D, E, F, G
     }

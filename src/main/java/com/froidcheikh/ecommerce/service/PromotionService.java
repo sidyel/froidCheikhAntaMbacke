@@ -28,13 +28,16 @@ public class PromotionService {
     private final CategorieRepository categorieRepository;
     private final MarqueRepository marqueRepository;
     private final PrixService prixService;
+    private final CatalogueFeedService catalogueFeedService;
 
     @CacheEvict(value = "promotionsActives", allEntries = true)
     public PromotionDTO.Response creer(PromotionDTO.Request dto) {
         valider(dto);
         Promotion p = new Promotion();
         applyDto(p, dto);
-        return toResponse(promotionRepository.save(p));
+        PromotionDTO.Response r = toResponse(promotionRepository.save(p));
+        catalogueFeedService.evictFeedCache();
+        return r;
     }
 
     @CacheEvict(value = "promotionsActives", allEntries = true)
@@ -43,7 +46,9 @@ public class PromotionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Promotion non trouvée : " + id));
         valider(dto);
         applyDto(p, dto);
-        return toResponse(promotionRepository.save(p));
+        PromotionDTO.Response r = toResponse(promotionRepository.save(p));
+        catalogueFeedService.evictFeedCache();
+        return r;
     }
 
     @CacheEvict(value = "promotionsActives", allEntries = true)
@@ -56,6 +61,7 @@ public class PromotionService {
         } else {
             promotionRepository.delete(p);
         }
+        catalogueFeedService.evictFeedCache();
     }
 
     @Transactional(readOnly = true)

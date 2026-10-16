@@ -64,6 +64,7 @@ public class ProduitDTO {
     // Relations
     private CategorieDTO categorie;
     private MarqueDTO marque;
+    private Boolean excluCatalogue;
     private List<AttributProduitDTO> attributs;
 
     @Data

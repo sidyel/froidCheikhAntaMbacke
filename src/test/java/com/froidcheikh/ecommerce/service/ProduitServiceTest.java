@@ -34,6 +34,7 @@ class ProduitServiceTest {
     @Mock private PrixService prixService;
     @Mock private ImageProduitRepository imageProduitRepository;
     @Mock private FileService fileService;
+    @Mock private CatalogueFeedService catalogueFeedService;
 
     @InjectMocks private ProduitService service;
 

@@ -295,6 +295,19 @@ public class ParametresSite {
     private String whatsappMsgAnnulee =
             "Bonjour {nomClient}, votre commande {numeroCommande} a été annulée. Motif : {motif}. Contactez-nous pour plus d'informations.";
 
+    // ---- PUBLICITE ET SUIVI ----
+    /** Identifiant du Meta Pixel (ex. "1234567890"). Vide = Pixel désactivé, aucun script chargé. */
+    @Column(name = "meta_pixel_id", length = 50)
+    private String metaPixelId;
+
+    /** Identifiant GA4 (G-XXXXXXXX) et/ou Google Ads (AW-XXXXXXXXX). Vide = désactivé. */
+    @Column(name = "google_analytics_id", length = 50)
+    private String googleAnalyticsId;
+
+    /** Code de test Meta Conversions API (ex. "TEST12345"). Vide = envoi en production. */
+    @Column(name = "meta_conversions_test_code", length = 30)
+    private String metaConversionsTestCode;
+
     // ---- METADATA ----
     @CreationTimestamp
     @Column(name = "date_creation", updatable = false)

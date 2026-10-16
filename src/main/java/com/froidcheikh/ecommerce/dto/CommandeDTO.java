@@ -74,6 +74,14 @@ public class CommandeDTO {
     @Valid
     private PaiementDTO paiement;
 
+    // ── SUIVI PUBLICITAIRE (optionnel, transmis par le frontend) ──────────────
+    /** true si le visiteur a accepté les cookies publicitaires. */
+    private Boolean consentementCookies;
+    /** Cookie _fbp (identifiant navigateur Meta). Null si absent. */
+    private String fbp;
+    /** Cookie _fbc (identifiant clic Meta). Null si absent. */
+    private String fbc;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
