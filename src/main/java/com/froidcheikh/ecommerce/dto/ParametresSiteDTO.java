@@ -80,6 +80,7 @@ public final class ParametresSiteDTO {
         private String metaTitle;
         private String metaDescription;
         private String metaKeywords;
+        private String siteUrl;
 
         // SECTIONS VISIBILITE
         private Boolean afficherHeroSlider;
@@ -195,6 +196,7 @@ public final class ParametresSiteDTO {
         private String metaTitle;
         private String metaDescription;
         private String metaKeywords;
+        private String siteUrl;
 
         // SECTIONS VISIBILITE
         private Boolean afficherHeroSlider;
