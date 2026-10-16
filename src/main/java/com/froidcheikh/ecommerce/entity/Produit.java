@@ -109,7 +109,7 @@ public class Produit {
     private List<ImageProduit> images;
 
     // ---- CATALOGUE PUBLICITAIRE ----
-    @Column(name = "exclu_catalogue", nullable = false)
+    @Column(name = "exclu_catalogue", nullable = false, columnDefinition = "boolean default false")
     private Boolean excluCatalogue = false;
 
     public enum LabelEnergie {
