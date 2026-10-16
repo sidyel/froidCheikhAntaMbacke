@@ -96,6 +96,10 @@ public final class ParametresSiteDTO {
         private String whatsappMsgConfirmee;
         private String whatsappMsgLivree;
         private String whatsappMsgAnnulee;
+
+        // PUBLICITE ET SUIVI
+        private String metaPixelId;
+        private String googleAnalyticsId;
     }
 
     /**
@@ -211,6 +215,11 @@ public final class ParametresSiteDTO {
         private String whatsappMsgConfirmee;
         private String whatsappMsgLivree;
         private String whatsappMsgAnnulee;
+
+        // PUBLICITE ET SUIVI
+        private String metaPixelId;
+        private String googleAnalyticsId;
+        private String metaConversionsTestCode;
 
         // METADATA (lecture seule)
         private LocalDateTime dateModification;
