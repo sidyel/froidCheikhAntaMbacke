@@ -239,20 +239,18 @@ public class ParametresSiteService {
     }
 
     /**
-     * Migration ponctuelle idempotente (oct. 2026) : vide conditionsPaiementDefaut
-     * et mentionExonerationTva pour que ces mentions n'apparaissent plus dans les PDFs.
-     * Conditions : conditionsPaiementDefaut vidé si non-null ; mentionExonerationTva
-     * vidé si encore à la valeur initiale "TVA non applicable".
+     * Migration ponctuelle idempotente (oct. 2026) : vide mentionExonerationTva si elle vaut
+     * exactement le défaut Java de l'entité. Sans effet si l'admin a saisi une valeur différente.
+     * conditionsPaiementDefaut : aucune migration (le texte n'existait que dans les anciennes
+     * données de test de PdfExempleGenerateur, jamais dans ParametresSite).
      */
+    private static final String OLD_MENTION_EXONERATION_TVA = "TVA non applicable";
+
     @org.springframework.transaction.annotation.Transactional
     public void viderMentionsDefaut() {
         repository.findAll().stream().findFirst().ifPresent(p -> {
             boolean modifie = false;
-            if (p.getConditionsPaiementDefaut() != null && !p.getConditionsPaiementDefaut().isBlank()) {
-                p.setConditionsPaiementDefaut(null);
-                modifie = true;
-            }
-            if ("TVA non applicable".equals(p.getMentionExonerationTva())) {
+            if (OLD_MENTION_EXONERATION_TVA.equals(p.getMentionExonerationTva())) {
                 p.setMentionExonerationTva(null);
                 modifie = true;
             }

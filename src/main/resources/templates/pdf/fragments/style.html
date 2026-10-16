@@ -1,0 +1,19 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+<style type="text/css" th:fragment="style" th:inline="text">
+@page{size:A4;margin:15mm 15mm 30mm 15mm}
+@page{@bottom-left{content:element(docFooter);font-family:'LiberationSans';font-size:7pt;vertical-align:top}}
+@page{@bottom-right{content:"Page " counter(page) " / " counter(pages);font-family:'LiberationSans';font-size:7pt;color:#888;vertical-align:top;padding-top:4pt}}
+body{font-family:'LiberationSans';font-size:9pt;color:#1a1a1a;margin:0;padding:0}
+#docFooter{position:running(docFooter)}
+table{border-collapse:collapse;width:100%}
+td,th{padding:3pt 5pt;font-size:8.5pt}
+.th{background:[[${couleur}]];color:#fff;font-weight:bold;font-size:8pt;padding:4pt 5pt}
+.alt{background:#f7f7f7}
+.r{text-align:right;white-space:nowrap}
+.c{text-align:center}
+.sec{font-weight:bold;font-size:8.5pt;color:[[${couleur}]];border-bottom:0.5pt solid [[${couleur}]];padding-bottom:1pt;margin:4mm 0 1.5mm 0}
+</style>
+</head>
+<body/>
+</html>

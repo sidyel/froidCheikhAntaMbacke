@@ -1,0 +1,83 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8"/>
+<th:block th:insert="~{fragments/style :: style}"/>
+</head>
+<body>
+
+<!-- Pied répété sur chaque page -->
+<th:block th:insert="~{fragments/pied :: pied}"/>
+
+<!-- En-tête -->
+<th:block th:insert="~{fragments/entete :: entete}"/>
+
+<!-- Double trait épais + fin -->
+<div th:style="'border-top:3pt solid '+${couleur}+';border-bottom:1pt solid '+${couleur}+';height:0;padding:2pt 0;margin:2.5mm 0 4mm 0;'"></div>
+
+<!-- Titre + date -->
+<table width="100%"><tr>
+  <td style="vertical-align:top;">
+    <span th:style="${titreFontStyle}" th:text="${typeLabel + ' N° ' + numero}">BON DE LIVRAISON N°</span>
+  </td>
+  <td style="text-align:right;vertical-align:top;font-size:8pt;">
+    <th:block th:if="${dateStr != null}">
+      <span th:text="${dateLabelStr}">Émis le :</span>
+      <strong th:text="${dateStr}">date</strong>
+    </th:block>
+  </td>
+</tr></table>
+<div style="height:3mm;"></div>
+
+<!-- Bloc client -->
+<table width="100%"><tr>
+  <td width="48%" style="border:0.5pt solid #ddd;padding:4pt 6pt;vertical-align:top;">
+    <div style="font-size:7pt;font-weight:bold;text-transform:uppercase;color:#999;margin-bottom:2pt;">Destinataire</div>
+    <th:block th:if="${clientNom != null}"><strong th:text="${clientNom}">Nom</strong><br/></th:block>
+    <th:block th:if="${clientAdresse != null}"><span th:text="${clientAdresse}">Adresse</span><br/></th:block>
+    <th:block th:if="${clientTelephone != null}"><span>Tél&#160;: </span><span th:text="${clientTelephone}">Tél</span></th:block>
+  </td>
+  <td></td>
+</tr></table>
+
+<div style="height:3mm;"></div>
+
+<!-- Infos livreur -->
+<th:block th:if="${livreurNom != null or livreurTelephone != null}">
+  <div style="font-size:8.5pt;margin-bottom:3mm;">
+    <strong>Livreur&#160;: </strong>
+    <span th:if="${livreurNom != null}" th:text="${livreurNom}">Livreur</span>
+    <th:block th:if="${livreurTelephone != null}">
+      <span> — Tél&#160;: </span><span th:text="${livreurTelephone}">Tél</span>
+    </th:block>
+  </div>
+</th:block>
+
+<!-- Tableau articles livrés -->
+<th:block th:if="${not #lists.isEmpty(lignes)}">
+  <div class="sec">Articles livrés</div>
+  <table width="100%">
+    <tr>
+      <td class="th" style="width:55%">Désignation</td>
+      <td class="th c" style="width:15%">Qté commandée</td>
+      <td class="th c" style="width:15%">Qté livrée</td>
+      <td class="th" style="width:15%">Observations</td>
+    </tr>
+    <tr th:each="ligne,ls : ${lignes}" th:class="${ls.odd ? 'alt' : ''}">
+      <td th:text="${ligne.designation}">Désignation</td>
+      <td class="c" th:text="${ligne.qte}">1</td>
+      <td class="c" th:text="${ligne.qte}">1</td>
+      <td></td>
+    </tr>
+  </table>
+</th:block>
+
+<!-- Zone signatures -->
+<div style="height:10mm;"></div>
+<table width="100%"><tr>
+  <td width="45%" style="border-top:0.5pt solid #aaa;padding-top:2pt;font-size:8pt;">Signature émetteur</td>
+  <td width="10%"></td>
+  <td width="45%" style="border-top:0.5pt solid #aaa;padding-top:2pt;font-size:8pt;">Signature destinataire (Bon pour accord)</td>
+</tr></table>
+
+</body>
+</html>

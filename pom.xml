@@ -88,6 +88,12 @@
             <version>3.1.1</version>
         </dependency>
 
+        <!-- Thymeleaf : moteur de templates pour les PDFs de facturation (core uniquement, sans auto-config web) -->
+        <dependency>
+            <groupId>org.thymeleaf</groupId>
+            <artifactId>thymeleaf</artifactId>
+        </dependency>
+
         <!-- PDF generation (factures, avoirs, devis, bons de livraison) -->
         <!-- openhtmltopdf : rendu HTML/CSS → PDF via PDFBox (polices TTF classpath, sans fontconfig) -->
         <dependency>

@@ -262,13 +262,23 @@ Ces deux propriétés sont actuellement à `true` (utile en dev, verbeux et non 
 
 ### 6 — Dockerfile Alpine et génération PDF
 
-L'image de production utilise `eclipse-temurin:21-jre-alpine`. Alpine ne contient pas de polices système par défaut. Avant d'activer le module facturation PDF (voir feuille de route #3), ajouter dans le `Dockerfile` :
+L'image de production utilise `eclipse-temurin:21-jre-alpine`. Alpine ne contient pas de polices système par défaut. Le module PDF (`PdfFacturationService`) charge ses polices TTF depuis le classpath (LiberationSans, Oswald) : aucune dépendance aux polices système, aucune ligne `apk add fontconfig` requise.
 
-```dockerfile
-RUN apk add --no-cache fontconfig ttf-dejavu
+> **Note** : si une bibliothèque tierce (JasperReports, iText classique, etc.) est ajoutée ultérieurement, elle pourrait nécessiter `RUN apk add --no-cache fontconfig ttf-dejavu`. Ce n'est pas le cas avec l'implémentation openhtmltopdf actuelle.
+
+#### Vérifier la génération PDF dans l'image Docker Alpine avant la mise en ligne
+
+Avant tout déploiement en production, valider que les polices TTF du classpath fonctionnent dans l'environnement Alpine cible :
+
+```powershell
+docker run --rm `
+  -v "$env:USERPROFILE\.m2:/root/.m2" `
+  -v "${PWD}:/project" -w /project `
+  maven:3.9.9-eclipse-temurin-21-alpine `
+  mvn test -Dtest=PoliceUnicodeTest -Dsurefire.useFile=false --no-transfer-progress
 ```
 
-Sans cette ligne, toute génération de PDF (iText, JasperReports, Apache PDFBox…) échouera silencieusement en production avec une erreur de police manquante.
+Le test `PoliceUnicodeTest` doit passer (1/1). S'il échoue dans Alpine, vérifier que les fichiers TTF sont bien dans `src/main/resources/fonts/` et inclus dans le JAR.
 
 ### 8 — Nettoyer les commandes et comptes de test
 

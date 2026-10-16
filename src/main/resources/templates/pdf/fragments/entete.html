@@ -1,0 +1,27 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="entete">
+
+  <!-- Mode IMAGE avec image disponible -->
+  <th:block th:if="${isImageMode and imageEnTeteUri != null}">
+    <div style="text-align:center;">
+      <img th:src="${imageEnTeteUri}" style="display:block;width:100%;max-height:48mm;"/>
+    </div>
+  </th:block>
+
+  <!-- Mode COMPOSÉ (ou fallback si image absente) -->
+  <th:block th:unless="${isImageMode and imageEnTeteUri != null}">
+    <table width="100%"><tr>
+      <td width="18%" style="vertical-align:middle;padding-right:3mm;" th:if="${logoUri != null}">
+        <img th:src="${logoUri}" style="max-width:100%;max-height:22mm;display:block;"/>
+      </td>
+      <td style="vertical-align:middle;text-align:center;">
+        <div th:style="${nomFontStyle}" th:text="${raisonSociale}">Nom entreprise</div>
+        <div th:if="${texteDescriptif != null}" style="font-size:7pt;color:#555;margin-top:2pt;" th:text="${texteDescriptif}">Description</div>
+      </td>
+    </tr></table>
+  </th:block>
+
+</th:block>
+</body>
+</html>
