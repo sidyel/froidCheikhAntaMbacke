@@ -19,6 +19,58 @@ Dépôt frontend associé : `../froidCheikhAntaMbackeFront`
 
 ---
 
+## Lancer le site en mode SSR en local
+
+Le frontend utilise Angular SSR depuis `feature/ssr-seo` (mergé dans `develop`). Trois processus sont nécessaires.
+
+> **Prérequis** : fichier `.env` configuré avec les variables listées ci-dessous, port **8181** libre pour le backend (le port 8080 est réservé au gateway JHipster UCAD en local).
+
+### 1 — Backend Spring Boot (port 8181)
+
+```powershell
+# Depuis C:\Users\DELL\Documents\froidCheikhAntaMbacke\froidCheikhAntaMbacke
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dserver.port=8181"
+```
+
+### 2 — Build frontend (obligatoire après chaque modification)
+
+```powershell
+# Depuis C:\Users\DELL\Documents\froidCheikhAntaMbacke\froidCheikhAntaMbackeFront
+ng build
+# IMPORTANT : ne pas utiliser "ng build --ssr" — ne génère PAS server.mjs
+```
+
+### 3 — Serveur SSR Node.js (port 4000)
+
+```powershell
+# Depuis C:\Users\DELL\Documents\froidCheikhAntaMbacke\froidCheikhAntaMbackeFront
+$env:API_URL="http://localhost:8181"; node dist/froid-cheikh-ecommerce-frontend/server/server.mjs
+```
+
+Le site est accessible sur **http://localhost:4000**. Le backend répond sur **http://localhost:8181/api**.
+
+### Vérifier le rendu SSR
+
+```powershell
+# Catégories présentes dans le HTML (doit retourner des liens)
+curl http://localhost:4000/ | Select-String "produits/categorie"
+
+# og:image + product:price sur une fiche produit
+curl "http://localhost:4000/produit/3-astech-split-9000-btu-1cv" | Select-String "og:image|product:price"
+
+# Sitemap (proxié depuis le backend)
+curl http://localhost:4000/sitemap.xml | Select-String "<loc>"
+```
+
+### Notes importantes
+
+- `prerender: false` dans `angular.json` : chaque requête est rendue dynamiquement (catégories et méta-balises à jour à chaque rendu).
+- Timeout SSR : **4 secondes**. Si le backend ne répond pas dans ce délai, Express sert `browser/index.html` (shell SPA sans SSR). En production avec PostgreSQL local, prévoir < 500 ms.
+- Routes client-only (pas de SSR) : `/admin`, `/panier`, `/commande`, `/connexion`, `/inscription`, `/profil`, `/mes-commandes`, `/wishlist`, `/telecharger`.
+- `API_URL` est obligatoire côté serveur Node.js. Sans cette variable, le SSR appelle `http://localhost:8080` (port par défaut) au lieu du backend réel.
+
+---
+
 ## Stratégie de branches (backend + frontend)
 
 Les deux dépôts suivent le même modèle :
@@ -214,7 +266,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 | Promotions produits (PrixService, PromotionService, CRUD, fiche, catalogue, panier) | ✅ Mergé dans `develop` + `main` | — |
 | Enrichissement fiches produits (runners import/export/verif, ModeleAttribut, AttributProduit, ImageProduit, score — lots 1 + correction_dimensions écrits en base oct. 2026) | ✅ Mergé dans `develop` + `main` | — |
 | Module facturation (PDF) — DocumentFacturation, LigneDocument, ReglementDocument, ClientFacturation, CompteurDocument, JetonTelechargement ; PdfFacturationService (**openhtmltopdf + Thymeleaf** — templates dans `templates/pdf/`, en-tête composé/image, Oswald+LiberationSans, Alpine-safe), NumeroDocumentService, CalculDocumentService, MontantEnLettresService, JetonTelechargementService ; uploads cachet/en-tête/pied ; migrations ponctuelles idempotentes ; 91 tests ; frontend complet (liste, formulaire+aperçu brouillon, fiche document, paramètres, page publique jeton, droits GESTIONNAIRE) | ✅ Mergé dans `develop` (oct. 2026 — moteur Thymeleaf oct. 2026) | — |
-| SSR & SEO — backend : champ `siteUrl` ParametresSite, GET /sitemap.xml dynamique (produits + catégories), GET /robots.txt configurable (Disallow admin/panier/checkout/suivi-commande) ; frontend : @angular/ssr, SeoService (meta, OG c_pad/b_white, JSON-LD Product + BreadcrumbList + LocalBusiness, OutOfStock), slugs URL (produit/:slug, produits/categorie/:slug), isPlatformBrowser sur tous les accès DOM, routes client-only sans SSR, timeout Neon 4s avec fallback index.html, proxy sitemap+robots → backend | ⏳ En cours — `feature/ssr-seo` (oct. 2026) | `feature/ssr-seo` |
+| SSR & SEO — backend : champ `siteUrl` ParametresSite, GET /sitemap.xml dynamique (produits + catégories), GET /robots.txt configurable (Disallow admin/panier/checkout/suivi-commande), cache @Cacheable("categories") + suppression N+1 ; frontend : @angular/ssr, SeoService (meta, OG c_pad/b_white, JSON-LD Product + BreadcrumbList + LocalBusiness, OutOfStock), slugs URL (produit/:slug, produits/categorie/:slug), APP_INITIALIZER catégories + TransferState, isPlatformBrowser sur tous les accès DOM, routes client-only sans SSR, timeout 4 s avec fallback index.html, proxy sitemap+robots → backend | ✅ Mergé dans `develop` (oct. 2026) | — |
 | Migrations Flyway | ⏳ Planifié | — |
 
 ---
