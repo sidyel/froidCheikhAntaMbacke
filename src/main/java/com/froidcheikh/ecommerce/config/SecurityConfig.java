@@ -85,6 +85,9 @@ public class SecurityConfig {
                         // Endpoints pour les fichiers uploads
                         .requestMatchers("/uploads/**").permitAll()
 
+                        // SEO — sitemap et robots accessibles sans authentification
+                        .requestMatchers(HttpMethod.GET, "/sitemap.xml", "/robots.txt").permitAll()
+
                         // Endpoints de test (optionnel - à retirer en production)
                         .requestMatchers("/api/test/**").permitAll()
 
