@@ -13,6 +13,7 @@
 | Build | Maven |
 | Mapping | ModelMapper |
 | Validation | Jakarta Validation (`@Valid`, `@NotBlank`, `@Pattern`, etc.) |
+| PDF | **openhtmltopdf 1.1.85** + PDFBox 3.0.7 — rendu HTML/CSS → PDF. Templates **Thymeleaf XML** dans `src/main/resources/templates/pdf/` (modifiable sans toucher au Java). Polices TTF classpath (LiberationSans, Oswald) : compatible Alpine JRE sans fontconfig. |
 
 Dépôt frontend associé : `../froidCheikhAntaMbackeFront`
 
@@ -212,7 +213,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 | Zones de livraison (ZoneLivraison) | ✅ Mergé dans `develop` + `main` | — |
 | Promotions produits (PrixService, PromotionService, CRUD, fiche, catalogue, panier) | ✅ Mergé dans `develop` + `main` | — |
 | Enrichissement fiches produits (runners import/export/verif, ModeleAttribut, AttributProduit, ImageProduit, score — lots 1 + correction_dimensions écrits en base oct. 2026) | ✅ Mergé dans `develop` + `main` | — |
-| Module facturation (PDF) — DocumentFacturation, LigneDocument, ReglementDocument, ClientFacturation, CompteurDocument, JetonTelechargement ; PdfFacturationService (OpenPDF, en-tête composé/image, Oswald+LiberationSans), NumeroDocumentService, CalculDocumentService, MontantEnLettresService, JetonTelechargementService ; uploads cachet/en-tête/pied ; migrations ponctuelles idempotentes ; 91 tests ; frontend complet (liste, formulaire+aperçu brouillon, fiche document, paramètres, page publique jeton, droits GESTIONNAIRE) | ✅ Mergé dans `develop` (oct. 2026) | — |
+| Module facturation (PDF) — DocumentFacturation, LigneDocument, ReglementDocument, ClientFacturation, CompteurDocument, JetonTelechargement ; PdfFacturationService (**openhtmltopdf + Thymeleaf** — templates dans `templates/pdf/`, en-tête composé/image, Oswald+LiberationSans, Alpine-safe), NumeroDocumentService, CalculDocumentService, MontantEnLettresService, JetonTelechargementService ; uploads cachet/en-tête/pied ; migrations ponctuelles idempotentes ; 91 tests ; frontend complet (liste, formulaire+aperçu brouillon, fiche document, paramètres, page publique jeton, droits GESTIONNAIRE) | ✅ Mergé dans `develop` (oct. 2026 — moteur Thymeleaf oct. 2026) | — |
 | Migrations Flyway | ⏳ Planifié | — |
 
 ---
