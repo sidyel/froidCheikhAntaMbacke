@@ -304,6 +304,31 @@ DELETE FROM clients WHERE email LIKE '%@test.local' OR email LIKE '%@test.com';
 - Vérifier la configuration du déploiement automatique (branche suivie, triggers).
 - **Régénérer les identifiants Railway exposés dans l'historique git** : le mot de passe PostgreSQL Railway (`svYhBmqtXnJkAaFEbairZjCtElvTESMe`) et l'URL interne (`postgres.railway.internal:5432/railway`) étaient committés en clair dans `application.properties` sur `origin/main`. Ces identifiants sont compromis — les réinitialiser depuis le dashboard Railway avant tout déploiement.
 
+### 12 — Hébergement cible envisagé : VPS Europe
+
+**Contexte** : le projet tourne actuellement sur Neon (us-east-2, région USA). La latence réseau vers Neon (~150–200 ms par requête SQL) et la mise en veille serverless (~4–5 s au réveil) pénalisent les temps de réponse SSR et l'expérience utilisateur. Un VPS en Europe supprime ces deux contraintes.
+
+**Architecture cible recommandée** :
+- **VPS en Europe** (ex. OVHcloud, Hetzner, Scaleway) — 4 vCore, 8 Go RAM minimum
+- PostgreSQL installé sur le même serveur (ou réseau local interne) pour éliminer la latence réseau vers la base
+- Backend Spring Boot + serveur SSR Angular sur le même VPS (Docker Compose recommandé)
+- Reverse proxy Nginx devant le port 8080 (Spring Boot) et le port 4000 (SSR Node.js)
+
+**Avantages** :
+- Latence SQL : de ~150–200 ms (Neon us-east-2) à **< 1 ms** (connexion locale)
+- Pas de mise en veille serverless — démarrage immédiat à chaque requête
+- Temps de réponse SSR attendu : **< 200 ms** pour les pages mises en cache Spring
+
+**Prérequis avant migration** :
+1. Export des données Neon (pg_dump) + import sur PostgreSQL local
+2. Mise à jour `DATABASE_URL` dans les variables d'environnement de l'hébergeur
+3. Configuration HTTPS (Certbot / Let's Encrypt) sur Nginx
+4. Pare-feu : n'exposer que les ports 80, 443 et 22 (SSH) ; PostgreSQL écoute uniquement en local (127.0.0.1)
+5. Sauvegardes automatiques de la base **hors du serveur** (objet S3, Cloudinary, ou Neon en lecture seule comme backup distant)
+6. Mettre à jour `siteUrl` dans `ParametresSite` avec le vrai domaine après migration (affecte sitemap, canonical, og:url)
+
+> **Note SSR** : depuis `feature/ssr-seo`, le frontend nécessite Node.js (pas d'hébergement statique seul). Variable `API_URL` requise côté Node.js (ex. `http://localhost:8080` si colocalisation). Voir point #12 dans *Points connus à corriger*.
+
 ### 10 — Migration des statuts de commande (module suivi-commandes)
 
 > ⚠️ **Critique** — sans cette étape, toute commande avec un ancien statut (`PAYEE`, `EN_PREPARATION`, `EXPEDIE`, `REMBOURSEE`) causera une `IllegalArgumentException` au démarrage de l'application et empêchera celle-ci de répondre.
