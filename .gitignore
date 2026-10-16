@@ -26,6 +26,9 @@ Thumbs.db
 *.env
 .env.local
 
+# Secrets Docker (mot de passe PostgreSQL local)
+.secrets/
+
 # Spring Boot local overrides
 application-local.properties
 

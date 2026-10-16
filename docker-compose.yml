@@ -1,0 +1,30 @@
+services:
+  postgres-local:
+    # Version alignée sur Neon — sera confirmée par scripts/neon-version.ps1
+    # Neon tourne sur PostgreSQL 16 (vérifiable via SELECT version())
+    image: postgres:16
+    container_name: froidcheikh-postgres-local
+    restart: unless-stopped
+    ports:
+      - "5433:5432"   # 5432 local déjà pris par PostgreSQL 14
+    environment:
+      POSTGRES_DB:       froidcheikh_local
+      POSTGRES_USER:     froidcheikh_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - froidcheikh-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U froidcheikh_user -d froidcheikh_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+secrets:
+  postgres_password:
+    file: .secrets/postgres_password.txt
+
+volumes:
+  froidcheikh-pgdata:
+    driver: local
