@@ -238,6 +238,28 @@ public class ParametresSiteService {
         });
     }
 
+    /**
+     * Migration ponctuelle idempotente (oct. 2026) : vide conditionsPaiementDefaut
+     * et mentionExonerationTva pour que ces mentions n'apparaissent plus dans les PDFs.
+     * Conditions : conditionsPaiementDefaut vidé si non-null ; mentionExonerationTva
+     * vidé si encore à la valeur initiale "TVA non applicable".
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void viderMentionsDefaut() {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            boolean modifie = false;
+            if (p.getConditionsPaiementDefaut() != null && !p.getConditionsPaiementDefaut().isBlank()) {
+                p.setConditionsPaiementDefaut(null);
+                modifie = true;
+            }
+            if ("TVA non applicable".equals(p.getMentionExonerationTva())) {
+                p.setMentionExonerationTva(null);
+                modifie = true;
+            }
+            if (modifie) repository.save(p);
+        });
+    }
+
     public boolean exists() {
         return !repository.findAll().isEmpty();
     }

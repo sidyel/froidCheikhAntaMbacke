@@ -1,785 +1,592 @@
 package com.froidcheikh.ecommerce.service;
 
-import com.lowagie.text.*;
-import com.lowagie.text.Font;
-import com.lowagie.text.Image;
-import com.lowagie.text.Rectangle;
-import com.lowagie.text.pdf.*;
 import com.froidcheikh.ecommerce.entity.CompteurDocument.TypeDocument;
 import com.froidcheikh.ecommerce.entity.DocumentFacturation;
-import com.froidcheikh.ecommerce.entity.DocumentFacturation.StatutDocument;
 import com.froidcheikh.ecommerce.entity.LigneDocument;
+import com.froidcheikh.ecommerce.entity.ModeEnTeteDocuments;
 import com.froidcheikh.ecommerce.entity.ReglementDocument;
-import lombok.RequiredArgsConstructor;
+import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import com.openhtmltopdf.util.XRLog;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import com.froidcheikh.ecommerce.entity.ModeEnTeteDocuments;
-
-import java.awt.Color;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URL;
+import java.net.URLConnection;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.List;
 
 /**
- * Génère les PDFs de facturation avec OpenPDF.
- * Police LiberationSans TTF (src/main/resources/fonts/) chargée en IDENTITY_H + embedded,
- * ce qui assure un rendu correct de tous les caractères Latin (é è à ç ô ë ñ ŋ…).
- * Repli sur Helvetica/CP1252 si la ressource est absente.
- * Compatible Alpine sans fontconfig (police embarquée dans le JAR).
+ * Génère les PDFs de facturation avec openhtmltopdf (moteur PDFBox).
+ * Polices TTF chargées depuis le classpath (LiberationSans, Oswald).
+ * Aucune dépendance aux polices système : compatible Alpine JRE sans fontconfig.
  */
 @Service
-@RequiredArgsConstructor
+@Slf4j
 public class PdfFacturationService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    // Couleurs
-    private static final Color GRIS_CLAIRE = new Color(0xF5, 0xF5, 0xF5);
-    private static final Color GRIS_BORDURE = new Color(0xDD, 0xDD, 0xDD);
-    private static final Color BLANC = Color.WHITE;
-    private static final Color NOIR = Color.BLACK;
-    private static final Color ROUGE_FILIGRANE = new Color(220, 38, 38, 60);
+    // Cache polices TTF (thread-safe via double-checked locking)
+    private volatile byte[] fontLsBytes;
+    private volatile byte[] fontOswBytes;
 
-    // ---- Cache polices TTF ----
-    private volatile BaseFont baseFontCached;
-    private volatile BaseFont baseFontOswaldCached;
+    // ── API publique (signatures inchangées) ──────────────────────────────────
 
-    /**
-     * Charge LiberationSans-Regular.ttf depuis le classpath avec IDENTITY_H (Unicode complet).
-     * Résultat mis en cache (thread-safe via double-checked locking).
-     * Repli sur Helvetica/CP1252 si la ressource est introuvable.
-     */
-    BaseFont chargerPolice() {
-        if (baseFontCached != null) return baseFontCached;
-        synchronized (this) {
-            if (baseFontCached != null) return baseFontCached;
-            try (InputStream is = getClass().getResourceAsStream("/fonts/LiberationSans-Regular.ttf")) {
-                if (is != null) {
-                    byte[] bytes = is.readAllBytes();
-                    baseFontCached = BaseFont.createFont("LiberationSans-Regular.ttf",
-                            BaseFont.IDENTITY_H, BaseFont.EMBEDDED, true, bytes, null);
-                    return baseFontCached;
-                }
-            } catch (Exception e) {
-                // fall through to Helvetica fallback
-            }
-            try {
-                baseFontCached = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
-            } catch (Exception e2) {
-                throw new RuntimeException("Impossible de charger la police de facturation", e2);
-            }
-            return baseFontCached;
-        }
+    /** Sans config : construit un contexte minimal depuis les champs figés du document. */
+    public byte[] generer(DocumentFacturation doc, boolean brouillon) {
+        EnTeteDocumentConfig cfg = new EnTeteDocumentConfig(
+                doc.getEntRaisonSociale(), null, null,
+                doc.getEntAdresseSiege(), null, null, null,
+                doc.getEntRccm(), doc.getEntNinea(), null, null,
+                ModeEnTeteDocuments.COMPOSE, null, null,
+                doc.getEntCouleurPrimaire(), doc.getEntDevise()
+        );
+        return generer(doc, cfg, brouillon);
     }
 
-    /**
-     * Charge Oswald-Bold.ttf (police condensée grasse, SIL OFL) avec IDENTITY_H.
-     * Utilisée pour le nom d'entreprise dans l'en-tête composé.
-     * Repli sur la police principale si la ressource est absente.
-     */
-    BaseFont chargerPoliceOswald() {
-        if (baseFontOswaldCached != null) return baseFontOswaldCached;
-        synchronized (this) {
-            if (baseFontOswaldCached != null) return baseFontOswaldCached;
-            try (InputStream is = getClass().getResourceAsStream("/fonts/Oswald-Bold.ttf")) {
-                if (is != null) {
-                    byte[] bytes = is.readAllBytes();
-                    baseFontOswaldCached = BaseFont.createFont("Oswald-Bold.ttf",
-                            BaseFont.IDENTITY_H, BaseFont.EMBEDDED, true, bytes, null);
-                    return baseFontOswaldCached;
-                }
-            } catch (Exception e) {
-                // fall through to fallback
-            }
-            baseFontOswaldCached = chargerPolice();
-            return baseFontOswaldCached;
-        }
-    }
-
-    // ---- Fonts ----
-    private Font fontTitre(Color couleur) {
-        return new Font(chargerPolice(), 18, Font.BOLD, couleur);
-    }
-    /** Nom d'entreprise : Oswald Bold condensé, 20 pt. */
-    private Font fontNomEntreprise(Color couleur) {
-        return new Font(chargerPoliceOswald(), 20, Font.BOLD, couleur);
-    }
-    private Font fontSousTitre() {
-        return new Font(chargerPolice(), 12, Font.BOLD, NOIR);
-    }
-    private Font fontNormal() {
-        return new Font(chargerPolice(), 11, Font.NORMAL, NOIR);
-    }
-    private Font fontNormalGras() {
-        return new Font(chargerPolice(), 11, Font.BOLD, NOIR);
-    }
-    private Font fontPetit() {
-        return new Font(chargerPolice(), 9, Font.NORMAL, new Color(0x55, 0x55, 0x55));
-    }
-    private Font fontEntete(Color couleur) {
-        return new Font(chargerPolice(), 11, Font.BOLD, couleur);
-    }
-    /** Total intermédiaire (HT, TVA, remise) : 12 pt gras. */
-    private Font fontTotal() {
-        return new Font(chargerPolice(), 12, Font.BOLD, NOIR);
-    }
-    /** Ligne TOTAL / TOTAL TTC : 13 pt gras. */
-    private Font fontTotalTTC() {
-        return new Font(chargerPolice(), 13, Font.BOLD, NOIR);
-    }
-
-    /**
-     * Génère un PDF pour le document donné.
-     *
-     * @param document  le document à rendre (lignes et règlements chargés)
-     * @param brouillon si true, ajoute le filigrane "BROUILLON" et ne stocke pas en base
-     * @return bytes PDF
-     */
-    public byte[] generer(DocumentFacturation document, boolean brouillon) {
+    public byte[] generer(DocumentFacturation doc, EnTeteDocumentConfig cfg, boolean brouillon) {
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Document pdf = new Document(PageSize.A4, 40, 40, 50, 60);
-            PdfWriter writer = PdfWriter.getInstance(pdf, baos);
-            pdf.open();
-
-            Color couleurPrimaire = parseCouleur(document.getEntCouleurPrimaire(), new Color(0x25, 0x63, 0xEB));
-            String typeLabel = typeLabel(document.getTypeDocument());
-            // Devise depuis le document figé (ex. "FCFA") ; repli sur "FCFA"
-            String devise = document.getEntDevise() != null && !document.getEntDevise().isBlank()
-                    ? document.getEntDevise() : "FCFA";
-
-            // ---- EN-TÊTE ----
-            ecrireEnTete(pdf, writer, document, couleurPrimaire, typeLabel, brouillon);
-
-            pdf.add(Chunk.NEWLINE);
-
-            // ---- BLOC ADRESSES ----
-            ecrireAdresses(pdf, document, couleurPrimaire);
-
-            pdf.add(new Paragraph(" "));
-
-            // ---- TABLEAU LIGNES ----
-            boolean afficheTva = document.getTauxTvaDefaut() != null
-                    && document.getTauxTvaDefaut().compareTo(BigDecimal.ZERO) > 0;
-            // Pour BON_LIVRAISON : pas de prix
-            if (document.getTypeDocument() != TypeDocument.BON_LIVRAISON) {
-                ecrireTableauLignes(pdf, document.getLignes(), couleurPrimaire, afficheTva, devise);
-                pdf.add(new Paragraph(" "));
-                ecireTotaux(pdf, document, afficheTva, couleurPrimaire, devise);
-                pdf.add(new Paragraph(" "));
-                if (document.getMontantEnLettres() != null) {
-                    ecireMontantEnLettres(pdf, document.getMontantEnLettres());
-                    pdf.add(new Paragraph(" "));
-                }
-                if (!document.getReglements().isEmpty()) {
-                    ecrireReglements(pdf, document.getReglements(), couleurPrimaire, devise);
-                    pdf.add(new Paragraph(" "));
-                }
-            } else {
-                ecrireTableauBL(pdf, document.getLignes(), couleurPrimaire);
-                pdf.add(new Paragraph(" "));
-                ecrireSignatureBL(pdf, document);
-            }
-
-            // ---- PIED ----
-            ecrirePied(pdf, document, afficheTva);
-
-            // ---- FILIGRANE BROUILLON ----
-            if (brouillon) {
-                ajouterFiligrane(writer, "BROUILLON");
-            }
-
-            pdf.close();
-            return baos.toByteArray();
+            return renderHtml(buildHtml(doc, cfg, brouillon));
         } catch (Exception e) {
             throw new RuntimeException("Erreur génération PDF : " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Surcharge avec en-tête configurable. Utilisée par DocumentFacturationService
-     * lors de l'émission et de la prévisualisation.
-     */
-    public byte[] generer(DocumentFacturation document, EnTeteDocumentConfig enTete, boolean brouillon) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Document pdf = new Document(PageSize.A4, 40, 40, 50, 60);
-            PdfWriter writer = PdfWriter.getInstance(pdf, baos);
-            pdf.open();
+    // ── Construction HTML ─────────────────────────────────────────────────────
 
-            Color couleurPrimaire = parseCouleur(enTete.couleurHex(), new Color(0x25, 0x63, 0xEB));
-            String typeLabel = typeLabel(document.getTypeDocument());
-            String devise = enTete.devise();
+    private String buildHtml(DocumentFacturation doc, EnTeteDocumentConfig cfg, boolean brouillon) {
+        String couleur  = safe(cfg.couleurHex(), "#000080");
+        String devise   = safe(doc.getEntDevise(), safe(cfg.devise(), "FCFA"));
+        boolean isBL    = doc.getTypeDocument() == TypeDocument.BON_LIVRAISON;
+        boolean hasTva  = doc.getTauxTvaDefaut() != null
+                && doc.getTauxTvaDefaut().compareTo(BigDecimal.ZERO) > 0;
+        String logoUri  = loadImageDataUri(cfg.logoUrl());
 
-            // ---- EN-TÊTE PARAMÉTRÉ ----
-            ecrireEnTeteConfig(pdf, writer, document, enTete, couleurPrimaire, typeLabel, brouillon);
+        StringBuilder sb = new StringBuilder(8192);
+        sb.append("<!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><meta charset=\"UTF-8\"/><style>");
+        appendCss(sb, couleur, brouillon);
+        sb.append("</style></head><body>");
 
-            pdf.add(Chunk.NEWLINE);
+        if (brouillon) sb.append("<div id=\"brouillon\">BROUILLON</div>");
 
-            // ---- BLOC ADRESSES ----
-            ecrireAdresses(pdf, document, couleurPrimaire);
-            pdf.add(new Paragraph(" "));
+        // Pied répété sur chaque page (running element — extrait du flux avant le corps)
+        appendRunningFooter(sb, cfg);
 
-            // ---- CONTENU ----
-            boolean afficheTva = document.getTauxTvaDefaut() != null
-                    && document.getTauxTvaDefaut().compareTo(BigDecimal.ZERO) > 0;
-            if (document.getTypeDocument() != TypeDocument.BON_LIVRAISON) {
-                ecrireTableauLignes(pdf, document.getLignes(), couleurPrimaire, afficheTva, devise);
-                pdf.add(new Paragraph(" "));
-                ecireTotaux(pdf, document, afficheTva, couleurPrimaire, devise);
-                pdf.add(new Paragraph(" "));
-                if (document.getMontantEnLettres() != null) {
-                    ecireMontantEnLettres(pdf, document.getMontantEnLettres());
-                    pdf.add(new Paragraph(" "));
-                }
-                if (!document.getReglements().isEmpty()) {
-                    ecrireReglements(pdf, document.getReglements(), couleurPrimaire, devise);
-                    pdf.add(new Paragraph(" "));
-                }
-            } else {
-                ecrireTableauBL(pdf, document.getLignes(), couleurPrimaire);
-                pdf.add(new Paragraph(" "));
-                ecrireSignatureBL(pdf, document);
-            }
-
-            // ---- PIED PARAMÉTRÉ ----
-            ecrirePiedConfig(pdf, document, enTete, afficheTva);
-
-            if (brouillon) {
-                ajouterFiligrane(writer, "BROUILLON");
-            }
-
-            pdf.close();
-            return baos.toByteArray();
-        } catch (Exception e) {
-            throw new RuntimeException("Erreur génération PDF : " + e.getMessage(), e);
-        }
-    }
-
-    // ---- SECTIONS ----
-
-    private void ecrireEnTete(Document pdf, PdfWriter writer,
-                               DocumentFacturation doc, Color couleur,
-                               String typeLabel, boolean brouillon) throws DocumentException {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        table.setWidths(new float[]{1.5f, 1f});
-
-        // Colonne gauche : infos entreprise
-        PdfPCell gauche = new PdfPCell();
-        gauche.setBorder(Rectangle.NO_BORDER);
-        gauche.setPaddingBottom(8);
-        if (doc.getEntRaisonSociale() != null) {
-            gauche.addElement(new Paragraph(doc.getEntRaisonSociale(), fontSousTitre()));
-        }
-        if (doc.getEntAdresseSiege() != null) {
-            gauche.addElement(new Paragraph(doc.getEntAdresseSiege(), fontNormal()));
-        }
-        if (doc.getEntNinea() != null) {
-            gauche.addElement(new Paragraph("NINEA : " + doc.getEntNinea(), fontNormal()));
-        }
-        if (doc.getEntRccm() != null) {
-            gauche.addElement(new Paragraph("RCCM : " + doc.getEntRccm(), fontNormal()));
-        }
-        table.addCell(gauche);
-
-        // Colonne droite : type + numéro
-        PdfPCell droite = new PdfPCell();
-        droite.setBorder(Rectangle.NO_BORDER);
-        droite.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        droite.setPaddingBottom(8);
-        Paragraph titre = new Paragraph(typeLabel, fontTitre(couleur));
-        titre.setAlignment(Element.ALIGN_RIGHT);
-        droite.addElement(titre);
-        if (doc.getNumero() != null) {
-            Paragraph num = new Paragraph("N° " + doc.getNumero(), fontNormalGras());
-            num.setAlignment(Element.ALIGN_RIGHT);
-            droite.addElement(num);
-        }
-        if (doc.getDateEmission() != null) {
-            Paragraph date = new Paragraph("Émise le " + doc.getDateEmission().format(DATE_FMT), fontNormal());
-            date.setAlignment(Element.ALIGN_RIGHT);
-            droite.addElement(date);
+        // En-tête
+        if (cfg.mode() == ModeEnTeteDocuments.IMAGE && hasValue(cfg.urlImageEnTete())) {
+            appendEnTeteImage(sb, cfg);
         } else {
-            Paragraph date = new Paragraph("Créée le " + doc.getDateCreation().format(DATE_FMT), fontNormal());
-            date.setAlignment(Element.ALIGN_RIGHT);
-            droite.addElement(date);
+            appendEnTeteCompose(sb, cfg, couleur, logoUri);
         }
-        if (doc.getDateValidite() != null) {
-            Paragraph dv = new Paragraph("Valable jusqu'au " + doc.getDateValidite().format(DATE_FMT), fontNormal());
-            dv.setAlignment(Element.ALIGN_RIGHT);
-            droite.addElement(dv);
+
+        // Double trait (épais + fin)
+        sb.append("<div style=\"border-top:3pt solid ").append(couleur)
+          .append(";border-bottom:1pt solid ").append(couleur)
+          .append(";height:0;padding:2pt 0;margin:2.5mm 0 4mm 0;\"></div>");
+
+        // Titre + date
+        appendTitreDate(sb, doc, couleur);
+
+        // Bloc client
+        appendBlocClient(sb, doc);
+
+        sb.append("<div style=\"height:3mm;\"></div>");
+
+        // Corps du document
+        if (isBL) {
+            appendTableauBL(sb, doc, couleur);
+            appendSignatureBL(sb, doc);
+        } else {
+            appendTableauLignes(sb, doc, couleur, hasTva, devise);
+            appendRecap(sb, doc, hasTva, couleur, devise);
+            List<ReglementDocument> regs = reglementsActifs(doc);
+            if (!regs.isEmpty()) appendTableauReglements(sb, regs, couleur, devise);
         }
-        table.addCell(droite);
 
-        // Séparateur coloré
-        PdfPCell sep = new PdfPCell(new Phrase(""));
-        sep.setColspan(2);
-        sep.setFixedHeight(3f);
-        sep.setBackgroundColor(couleur);
-        sep.setBorder(Rectangle.NO_BORDER);
-        table.addCell(sep);
-
-        pdf.add(table);
+        appendMentions(sb, doc);
+        sb.append("</body></html>");
+        return sb.toString();
     }
 
-    private void ecrireAdresses(Document pdf, DocumentFacturation doc, Color couleur) throws DocumentException {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        table.setWidths(new float[]{1f, 1f});
-        table.setSpacingBefore(10);
+    // ── CSS ───────────────────────────────────────────────────────────────────
 
-        PdfPCell facturer = cellAdresse("FACTURER À", doc, couleur);
-        table.addCell(facturer);
-
-        // Commande liée
-        PdfPCell refCell = new PdfPCell();
-        refCell.setBorder(Rectangle.NO_BORDER);
-        refCell.setPadding(8);
-        if (doc.getCommande() != null) {
-            refCell.addElement(new Paragraph("Référence commande :", fontPetit()));
-            refCell.addElement(new Paragraph(doc.getCommande().getNumeroCommande(), fontNormalGras()));
+    private void appendCss(StringBuilder sb, String couleur, boolean brouillon) {
+        sb.append("@page{size:A4;margin:15mm 15mm 30mm 15mm}");
+        // Pied ancré dans la marge basse de chaque page
+        sb.append("@page{@bottom-left{content:element(docFooter);font-family:'LiberationSans';font-size:7pt;vertical-align:top}}");
+        sb.append("@page{@bottom-right{content:\"Page \" counter(page) \" / \" counter(pages);font-family:'LiberationSans';font-size:7pt;color:#888;vertical-align:top;padding-top:4pt}}");
+        sb.append("body{font-family:'LiberationSans';font-size:9pt;color:#1a1a1a;margin:0;padding:0}");
+        sb.append("#docFooter{position:running(docFooter)}");
+        sb.append("table{border-collapse:collapse;width:100%}");
+        sb.append("td,th{padding:3pt 5pt;font-size:8.5pt}");
+        sb.append(".th{background:").append(couleur).append(";color:#fff;font-weight:bold;font-size:8pt;padding:4pt 5pt}");
+        sb.append(".alt{background:#f7f7f7}");
+        sb.append(".r{text-align:right;white-space:nowrap}");
+        sb.append(".c{text-align:center}");
+        sb.append(".sec{font-weight:bold;font-size:8.5pt;color:").append(couleur)
+          .append(";border-bottom:0.5pt solid ").append(couleur)
+          .append(";padding-bottom:1pt;margin:4mm 0 1.5mm 0}");
+        if (brouillon) {
+            sb.append("#brouillon{position:fixed;top:38%;left:5%;width:90%;text-align:center;")
+              .append("font-family:'Oswald';font-weight:bold;font-size:70pt;")
+              .append("color:rgba(200,0,0,0.13);transform:rotate(-30deg);z-index:-1}");
         }
-        if (doc.getDocumentOrigine() != null && doc.getDocumentOrigine().getNumero() != null) {
-            refCell.addElement(new Paragraph("Document d'origine :", fontPetit()));
-            refCell.addElement(new Paragraph(doc.getDocumentOrigine().getNumero(), fontNormalGras()));
-        }
-        table.addCell(refCell);
-
-        pdf.add(table);
     }
 
-    private PdfPCell cellAdresse(String titre, DocumentFacturation doc, Color couleur) {
-        PdfPCell cell = new PdfPCell();
-        cell.setBorder(Rectangle.BOX);
-        cell.setBorderColor(GRIS_BORDURE);
-        cell.setPadding(8);
-        Paragraph t = new Paragraph(titre, fontEntete(couleur));
-        cell.addElement(t);
-        cell.addElement(new Phrase(" "));
+    // ── Pied de page (running element) ────────────────────────────────────────
+
+    private void appendRunningFooter(StringBuilder sb, EnTeteDocumentConfig cfg) {
+        sb.append("<div id=\"docFooter\">");
+        if (cfg.mode() == ModeEnTeteDocuments.IMAGE && hasValue(cfg.urlImagePied())) {
+            String imgUri = loadImageDataUri(cfg.urlImagePied());
+            if (imgUri != null) {
+                sb.append("<img src=\"").append(imgUri)
+                  .append("\" style=\"width:100%;display:block;\"/>");
+                sb.append("</div>");
+                return;
+            }
+        }
+        // Mode composé : texte compact sur 2-3 lignes
+        sb.append("<div style=\"border-top:0.5pt solid #bbb;padding-top:2pt;font-size:7pt;color:#555;\">");
+        if (hasValue(cfg.adresse())) {
+            sb.append(h(cfg.adresse()));
+            if (hasValue(cfg.boitePostale())) sb.append(" — ").append(h(cfg.boitePostale()));
+            sb.append("<br/>");
+        }
+        // Ligne 2 : téléphone | RC | NINEA
+        boolean l2 = false;
+        if (hasValue(cfg.telephone())) { sb.append("Tél : ").append(h(cfg.telephone())); l2 = true; }
+        if (hasValue(cfg.rccm()))      { if (l2) sb.append(" | "); sb.append("RC : ").append(h(cfg.rccm())); l2 = true; }
+        if (hasValue(cfg.ninea()))     { if (l2) sb.append(" | "); sb.append("NINEA : ").append(h(cfg.ninea())); l2 = true; }
+        if (l2) sb.append("<br/>");
+        // Ligne 3 : banque | email
+        boolean l3 = false;
+        if (hasValue(cfg.banqueNom()) || hasValue(cfg.numeroCompte())) {
+            sb.append("Banque : ").append(h(safe(cfg.banqueNom(), "")));
+            if (hasValue(cfg.numeroCompte())) sb.append(" N° ").append(h(cfg.numeroCompte()));
+            l3 = true;
+        }
+        if (hasValue(cfg.email())) { if (l3) sb.append(" | "); sb.append(h(cfg.email())); }
+        sb.append("</div></div>");
+    }
+
+    // ── En-tête composé ───────────────────────────────────────────────────────
+
+    private void appendEnTeteCompose(StringBuilder sb, EnTeteDocumentConfig cfg,
+                                     String couleur, String logoUri) {
+        int fs = nomFontPt(cfg.raisonSociale());
+        sb.append("<table width=\"100%\"><tr>");
+        if (hasValue(logoUri)) {
+            sb.append("<td width=\"18%\" style=\"vertical-align:middle;padding-right:3mm;\">")
+              .append("<img src=\"").append(logoUri)
+              .append("\" style=\"max-width:100%;max-height:22mm;display:block;\"/>")
+              .append("</td>")
+              .append("<td style=\"vertical-align:middle;text-align:center;\">");
+        } else {
+            sb.append("<td style=\"vertical-align:middle;text-align:center;\">");
+        }
+        sb.append("<div style=\"font-family:'Oswald';font-weight:bold;font-size:").append(fs)
+          .append("pt;color:").append(couleur).append(";white-space:nowrap;overflow:hidden;\">")
+          .append(h(safe(cfg.raisonSociale(), "")))
+          .append("</div>");
+        if (hasValue(cfg.texteDescriptif())) {
+            sb.append("<div style=\"font-size:7pt;color:#555;margin-top:2pt;\">")
+              .append(h(cfg.texteDescriptif())).append("</div>");
+        }
+        sb.append("</td></tr></table>");
+    }
+
+    private void appendEnTeteImage(StringBuilder sb, EnTeteDocumentConfig cfg) {
+        String imgUri = loadImageDataUri(cfg.urlImageEnTete());
+        if (imgUri == null) {
+            appendEnTeteCompose(sb, cfg, "#000080", loadImageDataUri(cfg.logoUrl()));
+            return;
+        }
+        sb.append("<div style=\"text-align:center;\"><img src=\"").append(imgUri)
+          .append("\" style=\"display:block;width:100%;max-height:48mm;\"/></div>");
+    }
+
+    // ── Titre + date ──────────────────────────────────────────────────────────
+
+    private void appendTitreDate(StringBuilder sb, DocumentFacturation doc, String couleur) {
+        String label  = typeLabel(doc.getTypeDocument());
+        String numero = hasValue(doc.getNumero()) ? doc.getNumero() : "(brouillon)";
+        String titre  = label + " N° " + h(numero);
+
+        // Référence à la facture origine pour les avoirs
+        String originRef = null;
+        if (doc.getTypeDocument() == TypeDocument.AVOIR && doc.getDocumentOrigine() != null
+                && hasValue(doc.getDocumentOrigine().getNumero())) {
+            originRef = doc.getDocumentOrigine().getNumero();
+        }
+
+        sb.append("<table width=\"100%\"><tr>");
+        sb.append("<td style=\"vertical-align:top;\">")
+          .append("<span style=\"font-family:'Oswald';font-weight:bold;font-size:13pt;color:")
+          .append(couleur).append(";white-space:nowrap;\">").append(titre).append("</span>");
+        if (originRef != null) {
+            sb.append("<br/><span style=\"font-size:8pt;color:#555;\">Avoir sur ")
+              .append(h(originRef)).append("</span>");
+        }
+        sb.append("</td>");
+        sb.append("<td style=\"text-align:right;vertical-align:top;font-size:8pt;\">");
+        if (doc.getDateEmission() != null)
+            sb.append("Émis le : <strong>").append(doc.getDateEmission().format(DATE_FMT)).append("</strong><br/>");
+        else if (doc.getDateCreation() != null)
+            sb.append("Créé le : <strong>").append(doc.getDateCreation().format(DATE_FMT)).append("</strong><br/>");
+        if (doc.getDateValidite() != null)
+            sb.append("Valide jusqu'au : <strong>").append(doc.getDateValidite().format(DATE_FMT)).append("</strong>");
+        sb.append("</td></tr></table>");
+        sb.append("<div style=\"height:3mm;\"></div>");
+    }
+
+    // ── Bloc client ───────────────────────────────────────────────────────────
+
+    private void appendBlocClient(StringBuilder sb, DocumentFacturation doc) {
+        sb.append("<table width=\"100%\"><tr>");
+        sb.append("<td width=\"48%\" style=\"border:0.5pt solid #ddd;padding:4pt 6pt;vertical-align:top;\">");
+        sb.append("<div style=\"font-size:7pt;font-weight:bold;text-transform:uppercase;color:#999;margin-bottom:2pt;\">Facturé à</div>");
         String nom = concat(doc.getClientPrenom(), doc.getClientNom());
-        if (!nom.isBlank()) cell.addElement(new Paragraph(nom, fontNormalGras()));
-        if (doc.getClientAdresse() != null) cell.addElement(new Paragraph(doc.getClientAdresse(), fontNormal()));
-        if (doc.getClientTelephone() != null) cell.addElement(new Paragraph("Tél : " + doc.getClientTelephone(), fontNormal()));
-        if (doc.getClientEmail() != null) cell.addElement(new Paragraph(doc.getClientEmail(), fontNormal()));
-        if (doc.getClientNinea() != null) cell.addElement(new Paragraph("NINEA : " + doc.getClientNinea(), fontNormal()));
-        if (doc.getClientRccm() != null) cell.addElement(new Paragraph("RCCM : " + doc.getClientRccm(), fontNormal()));
-        return cell;
+        if (hasValue(nom))                  sb.append("<strong>").append(h(nom)).append("</strong><br/>");
+        if (hasValue(doc.getClientAdresse())) sb.append(h(doc.getClientAdresse())).append("<br/>");
+        if (hasValue(doc.getClientTelephone())) sb.append("Tél : ").append(h(doc.getClientTelephone())).append("<br/>");
+        if (hasValue(doc.getClientEmail()))    sb.append(h(doc.getClientEmail())).append("<br/>");
+        if (hasValue(doc.getClientNinea()))    sb.append("NINEA : ").append(h(doc.getClientNinea())).append("<br/>");
+        if (hasValue(doc.getClientRccm()))     sb.append("RC : ").append(h(doc.getClientRccm()));
+        sb.append("</td><td></td></tr></table>");
     }
 
-    private void ecrireTableauLignes(Document pdf, List<LigneDocument> lignes,
-                                      Color couleur, boolean afficheTva, String devise) throws DocumentException {
-        int cols = afficheTva ? 7 : 5;
-        PdfPTable table = new PdfPTable(cols);
-        table.setWidthPercentage(100);
-        if (afficheTva) {
-            table.setWidths(new float[]{3.0f, 0.6f, 1.4f, 0.8f, 1.6f, 0.7f, 1.7f});
-        } else {
-            table.setWidths(new float[]{4.0f, 0.7f, 1.5f, 0.9f, 1.7f});
+    // ── Tableau des lignes (FACTURE / DEVIS / AVOIR) ──────────────────────────
+
+    private void appendTableauLignes(StringBuilder sb, DocumentFacturation doc,
+                                     String couleur, boolean hasTva, String devise) {
+        List<LigneDocument> lignes = doc.getLignes();
+        if (lignes == null || lignes.isEmpty()) return;
+        sb.append("<div class=\"sec\">Détail des prestations</div>");
+        sb.append("<table width=\"100%\">");
+        sb.append("<tr>");
+        th(sb, "Désignation",              "width:40%");
+        th(sb, "Qté",                      "width:7%;text-align:center");
+        th(sb, "Prix unit. HT",            "width:14%;text-align:right");
+        if (hasTva) th(sb, "TVA",          "width:8%;text-align:center");
+        th(sb, "Remise",                   "width:9%;text-align:center");
+        th(sb, hasTva ? "Total TTC" : "Total HT", "width:14%;text-align:right");
+        sb.append("</tr>");
+        for (int i = 0; i < lignes.size(); i++) {
+            LigneDocument l = lignes.get(i);
+            sb.append("<tr").append(i % 2 == 1 ? " class=\"alt\"" : "").append(">");
+            td(sb, h(l.getDesignation()), "");
+            td(sb, formatQuantite(l.getQuantite()), "text-align:center");
+            td(sb, formatMontant(l.getPrixUnitaireHT()), "text-align:right");
+            if (hasTva) td(sb, formatPourcent(l.getTauxTva()), "text-align:center");
+            td(sb, formatPourcent(l.getRemisePourcent()), "text-align:center");
+            BigDecimal total = hasTva ? l.getMontantTTC() : l.getMontantHT();
+            td(sb, "<strong>" + formatMontant(total) + "</strong>", "text-align:right");
+            sb.append("</tr>");
+        }
+        sb.append("</table>");
+    }
+
+    // ── Récapitulatif ─────────────────────────────────────────────────────────
+
+    private void appendRecap(StringBuilder sb, DocumentFacturation doc,
+                             boolean hasTva, String couleur, String devise) {
+        BigDecimal ht  = safe0(doc.getMontantHT());
+        BigDecimal tva = safe0(doc.getMontantTva());
+        BigDecimal ttc = safe0(doc.getMontantTTC());
+
+        BigDecimal dejaRegle = reglementsActifs(doc).stream()
+                .map(ReglementDocument::getMontant)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        boolean hasRegl = dejaRegle.compareTo(BigDecimal.ZERO) > 0;
+        BigDecimal reste = ttc.subtract(dejaRegle).max(BigDecimal.ZERO);
+
+        String statut; String statutColor;
+        if (!hasRegl) { statut = "Non payée"; statutColor = "#dc2626"; }
+        else if (reste.compareTo(BigDecimal.ZERO) == 0) { statut = "Payée"; statutColor = "#16a34a"; }
+        else { statut = "Partiellement payée"; statutColor = "#d97706"; }
+
+        sb.append("<div style=\"height:3mm;\"></div><table width=\"100%\"><tr><td width=\"52%\">");
+        if (hasValue(doc.getMontantEnLettres())) {
+            sb.append("<div style=\"font-size:8pt;font-style:italic;color:#555;border:0.5pt solid #ddd;padding:3pt 5pt;\">")
+              .append("Arrêtée à : <strong>").append(h(doc.getMontantEnLettres())).append("</strong></div>");
+        }
+        sb.append("</td><td width=\"48%\"><table width=\"100%\">");
+        if (hasTva) {
+            recapRow(sb, "Total HT", formatMontant(ht) + " " + h(devise), "#1a1a1a", false);
+            if (tva.compareTo(BigDecimal.ZERO) > 0)
+                recapRow(sb, "TVA (" + formatPourcent(doc.getTauxTvaDefaut()) + ")",
+                        formatMontant(tva) + " " + h(devise), "#1a1a1a", false);
+        }
+        recapRow(sb, "Total " + (hasTva ? "TTC" : "HT"), formatMontant(ttc) + " " + h(devise), couleur, true);
+        if (hasRegl) {
+            recapRow(sb, "Déjà réglé", "(" + formatMontant(dejaRegle) + " " + h(devise) + ")", "#16a34a", false);
+            if (reste.compareTo(BigDecimal.ZERO) > 0)
+                recapRow(sb, "Reste à payer", formatMontant(reste) + " " + h(devise), "#dc2626", true);
+        }
+        sb.append("</table>");
+        sb.append("<div style=\"text-align:right;margin-top:2pt;\">")
+          .append("<span style=\"font-family:'LiberationSans';font-weight:bold;font-size:8pt;color:")
+          .append(statutColor).append(";\">").append(statut).append("</span></div>");
+        sb.append("</td></tr></table>");
+    }
+
+    private void recapRow(StringBuilder sb, String label, String valeur, String color, boolean gras) {
+        String g = gras ? "font-weight:bold;" : "";
+        sb.append("<tr>")
+          .append("<td style=\"padding:2pt 5pt;text-align:right;font-size:8.5pt;").append(g).append("\">")
+          .append(h(label)).append("</td>")
+          .append("<td style=\"padding:2pt 5pt;text-align:right;white-space:nowrap;font-size:8.5pt;")
+          .append(g).append("color:").append(color).append(";\">").append(valeur).append("</td>")
+          .append("</tr>");
+    }
+
+    // ── Tableau des règlements ─────────────────────────────────────────────────
+
+    private void appendTableauReglements(StringBuilder sb, List<ReglementDocument> regs,
+                                         String couleur, String devise) {
+        sb.append("<div class=\"sec\" style=\"margin-top:5mm;\">Règlements</div>");
+        sb.append("<table width=\"100%\"><tr>");
+        th(sb, "Date",       "width:20%");
+        th(sb, "Mode",       "width:20%");
+        th(sb, "Référence",  "width:42%");
+        th(sb, "Montant",    "width:18%;text-align:right");
+        sb.append("</tr>");
+        for (int i = 0; i < regs.size(); i++) {
+            ReglementDocument r = regs.get(i);
+            sb.append("<tr").append(i % 2 == 1 ? " class=\"alt\"" : "").append(">");
+            td(sb, r.getDateReglement() != null ? r.getDateReglement().format(DATE_FMT) : "-", "");
+            td(sb, r.getMode() != null ? h(r.getMode().toString()) : "-", "");
+            td(sb, hasValue(r.getReference()) ? h(r.getReference()) : "-", "");
+            td(sb, "<strong>" + formatMontant(r.getMontant()) + " " + h(devise) + "</strong>", "text-align:right");
+            sb.append("</tr>");
+        }
+        sb.append("</table>");
+    }
+
+    // ── Bon de livraison ──────────────────────────────────────────────────────
+
+    private void appendTableauBL(StringBuilder sb, DocumentFacturation doc, String couleur) {
+        List<LigneDocument> lignes = doc.getLignes();
+        if (lignes == null || lignes.isEmpty()) return;
+
+        // Infos livreur
+        if (hasValue(doc.getLivreurNom()) || hasValue(doc.getLivreurTelephone())) {
+            sb.append("<div style=\"font-size:8.5pt;margin-bottom:3mm;\">");
+            sb.append("<strong>Livreur : </strong>").append(h(safe(doc.getLivreurNom(), "")));
+            if (hasValue(doc.getLivreurTelephone()))
+                sb.append(" — Tél : ").append(h(doc.getLivreurTelephone()));
+            sb.append("</div>");
         }
 
-        // En-têtes — devise indiquée dans les colonnes montants
-        String[] headers = afficheTva
-                ? new String[]{"Désignation", "Qté", "P.U. (" + devise + ")", "Remise", "Montant HT (" + devise + ")", "TVA", "Montant TTC (" + devise + ")"}
-                : new String[]{"Désignation", "Qté", "P.U. (" + devise + ")", "Remise", "Montant (" + devise + ")"};
-
-        for (String h : headers) {
-            PdfPCell cell = new PdfPCell(new Phrase(h, fontEntete(BLANC)));
-            cell.setBackgroundColor(couleur);
-            cell.setPadding(5);
-            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-            table.addCell(cell);
+        sb.append("<div class=\"sec\">Articles livrés</div>");
+        sb.append("<table width=\"100%\"><tr>");
+        th(sb, "Désignation",    "width:55%");
+        th(sb, "Qté commandée",  "width:15%;text-align:center");
+        th(sb, "Qté livrée",     "width:15%;text-align:center");
+        th(sb, "Observations",   "width:15%");
+        sb.append("</tr>");
+        for (int i = 0; i < lignes.size(); i++) {
+            LigneDocument l = lignes.get(i);
+            sb.append("<tr").append(i % 2 == 1 ? " class=\"alt\"" : "").append(">");
+            td(sb, h(l.getDesignation()), "");
+            td(sb, formatQuantite(l.getQuantite()), "text-align:center");
+            td(sb, formatQuantite(l.getQuantite()), "text-align:center");
+            td(sb, "", "");
+            sb.append("</tr>");
         }
+        sb.append("</table>");
+    }
 
-        // Lignes
-        boolean gris = false;
-        for (LigneDocument ligne : lignes) {
-            Color bg = gris ? GRIS_CLAIRE : BLANC;
-            gris = !gris;
+    private void appendSignatureBL(StringBuilder sb, DocumentFacturation doc) {
+        sb.append("<div style=\"height:10mm;\"></div>");
+        sb.append("<table width=\"100%\"><tr>")
+          .append("<td width=\"45%\" style=\"border-top:0.5pt solid #aaa;padding-top:2pt;font-size:8pt;\">Signature émetteur</td>")
+          .append("<td width=\"10%\"></td>")
+          .append("<td width=\"45%\" style=\"border-top:0.5pt solid #aaa;padding-top:2pt;font-size:8pt;\">Signature destinataire (Bon pour accord)</td>")
+          .append("</tr></table>");
+    }
 
-            addCell(table, ligne.getDesignation(), Element.ALIGN_LEFT, bg);
-            addCell(table, formatQuantite(ligne.getQuantite()), Element.ALIGN_CENTER, bg);
-            addCell(table, formatMontant(ligne.getPrixUnitaireHT()), Element.ALIGN_RIGHT, bg);
-            String remise = ligne.getRemisePourcent() != null && ligne.getRemisePourcent().compareTo(BigDecimal.ZERO) > 0
-                    ? formatPourcent(ligne.getRemisePourcent()) : "-";
-            addCell(table, remise, Element.ALIGN_CENTER, bg);
+    // ── Mentions conditionnelles ──────────────────────────────────────────────
 
-            if (afficheTva) {
-                addCell(table, formatMontant(ligne.getMontantHT()), Element.ALIGN_RIGHT, bg);
-                addCell(table, formatPourcent(ligne.getTauxTva()), Element.ALIGN_CENTER, bg);
-                addCell(table, formatMontant(ligne.getMontantTTC()), Element.ALIGN_RIGHT, bg);
-            } else {
-                addCell(table, formatMontant(ligne.getMontantHT()), Element.ALIGN_RIGHT, bg);
+    private void appendMentions(StringBuilder sb, DocumentFacturation doc) {
+        if (hasValue(doc.getEntConditionsPaiement())) {
+            sb.append("<div style=\"margin-top:4mm;font-size:7.5pt;color:#444;\"><strong>Conditions de paiement : </strong>")
+              .append(h(doc.getEntConditionsPaiement())).append("</div>");
+        }
+        if (hasValue(doc.getEntMentionExonerationTva())) {
+            sb.append("<div style=\"margin-top:2mm;font-size:7.5pt;font-style:italic;color:#555;\">")
+              .append(h(doc.getEntMentionExonerationTva())).append("</div>");
+        }
+        if (hasValue(doc.getEntMentionsPied())) {
+            sb.append("<div style=\"margin-top:2mm;font-size:7pt;color:#777;\">")
+              .append(h(doc.getEntMentionsPied())).append("</div>");
+        }
+        if (hasValue(doc.getEntCachetUrl())) {
+            String uri = loadImageDataUri(doc.getEntCachetUrl());
+            if (uri != null) {
+                sb.append("<div style=\"margin-top:4mm;text-align:right;\">")
+                  .append("<img src=\"").append(uri)
+                  .append("\" style=\"max-width:35mm;max-height:20mm;\"/>")
+                  .append("</div>");
             }
         }
-
-        pdf.add(table);
     }
 
-    private void ecrireTableauBL(Document pdf, List<LigneDocument> lignes, Color couleur) throws DocumentException {
-        PdfPTable table = new PdfPTable(3);
-        table.setWidthPercentage(100);
-        table.setWidths(new float[]{4f, 1f, 0.8f});
+    // ── Rendu HTML → PDF ──────────────────────────────────────────────────────
 
-        String[] headers = {"Désignation", "Quantité", "Reçu"};
-        for (String h : headers) {
-            PdfPCell cell = new PdfPCell(new Phrase(h, fontEntete(BLANC)));
-            cell.setBackgroundColor(couleur);
-            cell.setPadding(5);
-            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-            table.addCell(cell);
-        }
-
-        boolean gris = false;
-        for (LigneDocument ligne : lignes) {
-            Color bg = gris ? GRIS_CLAIRE : BLANC;
-            gris = !gris;
-            addCell(table, ligne.getDesignation(), Element.ALIGN_LEFT, bg);
-            addCell(table, formatQuantite(ligne.getQuantite()), Element.ALIGN_CENTER, bg);
-            // Case de signature
-            PdfPCell sig = new PdfPCell(new Phrase(""));
-            sig.setFixedHeight(20f);
-            sig.setBackgroundColor(bg);
-            table.addCell(sig);
-        }
-        pdf.add(table);
-    }
-
-    private void ecireTotaux(Document pdf, DocumentFacturation doc,
-                              boolean afficheTva, Color couleur, String devise) throws DocumentException {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(50);
-        table.setHorizontalAlignment(Element.ALIGN_RIGHT);
-
-        if (afficheTva) {
-            ligneTotal(table, "Total HT", doc.getMontantHT(), false, devise);
-            ligneTotal(table, "TVA (" + doc.getTauxTvaDefaut() + "%)", doc.getMontantTva(), false, devise);
-            if (doc.getRemiseTotalePourcent() != null && doc.getRemiseTotalePourcent().compareTo(BigDecimal.ZERO) > 0) {
-                ligneTotal(table, "Remise globale (" + formatPourcent(doc.getRemiseTotalePourcent()) + ")", null, false, devise);
+    private byte[] renderHtml(String html) {
+        // Réduit les logs verbeux de la bibliothèque
+        XRLog.setLoggingEnabled(false);
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            byte[] ls  = fontBytes("/fonts/LiberationSans-Regular.ttf", true);
+            byte[] osw = fontBytes("/fonts/Oswald-Bold.ttf", false);
+            PdfRendererBuilder builder = new PdfRendererBuilder();
+            if (ls != null) {
+                final byte[] lsf = ls;
+                builder.useFont(() -> new ByteArrayInputStream(lsf), "LiberationSans", 400,
+                        PdfRendererBuilder.FontStyle.NORMAL, true);
+                builder.useFont(() -> new ByteArrayInputStream(lsf), "LiberationSans", 700,
+                        PdfRendererBuilder.FontStyle.NORMAL, true);
             }
-            ligneTotal(table, "TOTAL TTC", doc.getMontantTTC(), true, devise);
-        } else {
-            if (doc.getEntMentionExonerationTva() != null) {
-                PdfPCell mention = new PdfPCell(new Phrase(doc.getEntMentionExonerationTva(), fontPetit()));
-                mention.setColspan(2);
-                mention.setBorder(Rectangle.NO_BORDER);
-                mention.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                table.addCell(mention);
+            if (osw != null) {
+                final byte[] owf = osw;
+                builder.useFont(() -> new ByteArrayInputStream(owf), "Oswald", 700,
+                        PdfRendererBuilder.FontStyle.NORMAL, true);
             }
-            ligneTotal(table, "TOTAL", doc.getMontantTTC(), true, devise);
+            builder.withHtmlContent(html, null);
+            builder.toStream(baos);
+            builder.run();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Rendu HTML→PDF : " + e.getMessage(), e);
         }
-        pdf.add(table);
     }
 
-    private void ligneTotal(PdfPTable table, String label, BigDecimal valeur, boolean isTTC, String devise) {
-        Font f = isTTC ? fontTotalTTC() : fontTotal();
-        PdfPCell cLabel = new PdfPCell(new Phrase(label, f));
-        cLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        cLabel.setPadding(5);
-        cLabel.setBorderColor(GRIS_BORDURE);
-        if (isTTC) cLabel.setBackgroundColor(GRIS_CLAIRE);
-        table.addCell(cLabel);
+    // ── Cache polices ─────────────────────────────────────────────────────────
 
-        String valStr = valeur != null ? formatMontant(valeur) + " " + devise : "";
-        PdfPCell cVal = new PdfPCell(new Phrase(valStr, f));
-        cVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        cVal.setPadding(5);
-        cVal.setBorderColor(GRIS_BORDURE);
-        if (isTTC) cVal.setBackgroundColor(GRIS_CLAIRE);
-        table.addCell(cVal);
-    }
-
-    private void ecireMontantEnLettres(Document pdf, String lettres) throws DocumentException {
-        PdfPTable table = new PdfPTable(1);
-        table.setWidthPercentage(100);
-        // 11 pt = fontNormal() — déjà à la bonne taille
-        PdfPCell cell = new PdfPCell(new Phrase(lettres, fontNormal()));
-        cell.setPadding(7);
-        cell.setBorderColor(GRIS_BORDURE);
-        table.addCell(cell);
-        pdf.add(table);
-    }
-
-    private void ecrireReglements(Document pdf, List<ReglementDocument> reglements,
-                                   Color couleur, String devise) throws DocumentException {
-        pdf.add(new Paragraph("Règlements enregistrés", fontSousTitre()));
-        PdfPTable table = new PdfPTable(4);
-        table.setWidthPercentage(80);
-        String[] h = {"Date", "Mode", "Référence", "Montant"};
-        for (String header : h) {
-            PdfPCell cell = new PdfPCell(new Phrase(header, fontEntete(BLANC)));
-            cell.setBackgroundColor(couleur);
-            cell.setPadding(4);
-            table.addCell(cell);
-        }
-        for (ReglementDocument r : reglements) {
-            if (r.getSupprimePar() != null) continue;
-            addCell(table, r.getDateReglement().format(DATE_FMT), Element.ALIGN_CENTER, BLANC);
-            addCell(table, r.getMode().name(), Element.ALIGN_CENTER, BLANC);
-            addCell(table, r.getReference() != null ? r.getReference() : "-", Element.ALIGN_LEFT, BLANC);
-            addCell(table, formatMontant(r.getMontant()) + " " + devise, Element.ALIGN_RIGHT, BLANC);
-        }
-        pdf.add(table);
-    }
-
-    private void ecrireSignatureBL(Document pdf, DocumentFacturation doc) throws DocumentException {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        if (doc.getLivreurNom() != null) {
-            PdfPCell left = new PdfPCell();
-            left.setBorder(Rectangle.BOX);
-            left.setPadding(8);
-            left.setMinimumHeight(60f);
-            left.addElement(new Paragraph("Livreur : " + doc.getLivreurNom(), fontNormal()));
-            if (doc.getLivreurTelephone() != null) {
-                left.addElement(new Paragraph("Tél : " + doc.getLivreurTelephone(), fontNormal()));
-            }
-            table.addCell(left);
-        }
-        PdfPCell right = new PdfPCell();
-        right.setBorder(Rectangle.BOX);
-        right.setPadding(8);
-        right.setMinimumHeight(60f);
-        right.addElement(new Paragraph("Signature du client :", fontNormal()));
-        table.addCell(right);
-        pdf.add(table);
-    }
-
-    /** En-tête avec configuration complète (mode COMPOSÉ ou IMAGE). */
-    private void ecrireEnTeteConfig(Document pdf, PdfWriter writer,
-                                     DocumentFacturation doc, EnTeteDocumentConfig enTete,
-                                     Color couleur, String typeLabel, boolean brouillon) throws DocumentException {
-
-        if (enTete.mode() == ModeEnTeteDocuments.IMAGE && enTete.urlImageEnTete() != null) {
-            // Mode IMAGE : image pleine largeur
-            byte[] imgBytes = chargerImage(enTete.urlImageEnTete());
-            if (imgBytes != null) {
-                try {
-                    Image img = Image.getInstance(imgBytes);
-                    img.setWidthPercentage(100);
-                    pdf.add(img);
-                } catch (Exception e) {
-                    // Image invalide — repli sur mode composé
-                    ecrireEnTeteCompose(pdf, doc, enTete, couleur, typeLabel);
-                }
-            } else {
-                ecrireEnTeteCompose(pdf, doc, enTete, couleur, typeLabel);
-            }
-        } else {
-            ecrireEnTeteCompose(pdf, doc, enTete, couleur, typeLabel);
-        }
-
-        // Trait double coloré
-        PdfContentByte canvas = writer.getDirectContent();
-        float left = 40;
-        float right = PageSize.A4.getWidth() - 40;
-        float y = pdf.getPageSize().getTop(50);
-        canvas.saveState();
-        canvas.setColorStroke(couleur);
-        canvas.setLineWidth(2f);
-        canvas.moveTo(left, y - 2);
-        canvas.lineTo(right, y - 2);
-        canvas.stroke();
-        canvas.setLineWidth(0.5f);
-        canvas.moveTo(left, y - 5);
-        canvas.lineTo(right, y - 5);
-        canvas.stroke();
-        canvas.restoreState();
-
-        // Numéro + type du document (droite)
-        PdfPTable info = new PdfPTable(2);
-        info.setWidthPercentage(100);
-        info.setWidths(new float[]{2f, 1f});
-        info.setSpacingBefore(6f);
-        PdfPCell vide = new PdfPCell(new Phrase(""));
-        vide.setBorder(Rectangle.NO_BORDER);
-        info.addCell(vide);
-        String numLabel = doc.getNumero() != null ? typeLabel + " N° " + doc.getNumero() : typeLabel + " (BROUILLON)";
-        PdfPCell numCell = new PdfPCell(new Phrase(numLabel, fontTitre(couleur)));
-        numCell.setBorder(Rectangle.NO_BORDER);
-        numCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        info.addCell(numCell);
-        pdf.add(info);
-    }
-
-    /** En-tête composé : logo gauche + nom entreprise / texte descriptif droite. */
-    private void ecrireEnTeteCompose(Document pdf, DocumentFacturation doc,
-                                      EnTeteDocumentConfig enTete, Color couleur, String typeLabel) throws DocumentException {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        table.setWidths(new float[]{1f, 2f});
-
-        // Colonne logo
-        PdfPCell logoCell = new PdfPCell();
-        logoCell.setBorder(Rectangle.NO_BORDER);
-        logoCell.setPadding(4);
-        if (enTete.logoUrl() != null) {
-            byte[] imgBytes = chargerImage(enTete.logoUrl());
-            if (imgBytes != null) {
-                try {
-                    Image logo = Image.getInstance(imgBytes);
-                    logo.scaleToFit(120, 80);
-                    logoCell.addElement(logo);
-                } catch (Exception ignored) {}
+    private byte[] fontBytes(String path, boolean isLs) {
+        byte[] cached = isLs ? fontLsBytes : fontOswBytes;
+        if (cached != null) return cached;
+        synchronized (this) {
+            cached = isLs ? fontLsBytes : fontOswBytes;
+            if (cached != null) return cached;
+            try (InputStream is = getClass().getResourceAsStream(path)) {
+                if (is == null) { log.warn("Police absente du classpath : {}", path); return null; }
+                byte[] b = is.readAllBytes();
+                if (isLs) fontLsBytes = b; else fontOswBytes = b;
+                return b;
+            } catch (Exception e) {
+                log.warn("Erreur lecture police {} : {}", path, e.getMessage());
+                return null;
             }
         }
-        table.addCell(logoCell);
-
-        // Colonne texte entreprise
-        PdfPCell textCell = new PdfPCell();
-        textCell.setBorder(Rectangle.NO_BORDER);
-        textCell.setPadding(4);
-        textCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        if (enTete.raisonSociale() != null) {
-            Paragraph nom = new Paragraph(enTete.raisonSociale().toUpperCase(), fontNomEntreprise(couleur));
-            nom.setAlignment(Element.ALIGN_RIGHT);
-            textCell.addElement(nom);
-        }
-        if (enTete.texteDescriptif() != null) {
-            Paragraph desc = new Paragraph(enTete.texteDescriptif(), fontPetit());
-            desc.setAlignment(Element.ALIGN_CENTER);
-            textCell.addElement(desc);
-        }
-        table.addCell(textCell);
-        pdf.add(table);
     }
 
-    /** Pied de page enrichi avec coordonnées et informations bancaires. */
-    private void ecrirePiedConfig(Document pdf, DocumentFacturation doc,
-                                   EnTeteDocumentConfig enTete, boolean afficheTva) throws DocumentException {
-        pdf.add(new Paragraph(" "));
+    // ── Chargement image → base64 data URI ───────────────────────────────────
 
-        // Conditions et mentions standard
-        if (doc.getEntConditionsPaiement() != null) {
-            pdf.add(new Paragraph("Conditions de paiement : " + doc.getEntConditionsPaiement(), fontPetit()));
-        }
-        if (doc.getEntMentionsPied() != null) {
-            pdf.add(new Paragraph(doc.getEntMentionsPied(), fontPetit()));
-        }
-        if (!afficheTva && doc.getEntMentionExonerationTva() != null) {
-            pdf.add(new Paragraph(doc.getEntMentionExonerationTva(), fontPetit()));
-        }
-
-        if (enTete.mode() == ModeEnTeteDocuments.IMAGE && enTete.urlImagePied() != null) {
-            // Mode IMAGE : image pied pleine largeur
-            byte[] imgBytes = chargerImage(enTete.urlImagePied());
-            if (imgBytes != null) {
-                try {
-                    Image img = Image.getInstance(imgBytes);
-                    img.setWidthPercentage(100);
-                    pdf.add(img);
-                    return;
-                } catch (Exception ignored) {}
-            }
-        }
-
-        // Pied composé : coordonnées sur 3 lignes (éléments null omis)
-        java.util.StringJoiner ligne1 = new java.util.StringJoiner("  |  ");
-        if (enTete.adresse() != null) ligne1.add(enTete.adresse());
-        if (enTete.telephone() != null) ligne1.add("Tél : " + enTete.telephone());
-        if (enTete.boitePostale() != null) ligne1.add("BP : " + enTete.boitePostale());
-        if (!ligne1.toString().isBlank()) pdf.add(new Paragraph(ligne1.toString(), fontPetit()));
-
-        java.util.StringJoiner ligne2 = new java.util.StringJoiner("  |  ");
-        if (enTete.ninea() != null) ligne2.add("NINEA : " + enTete.ninea());
-        if (enTete.rccm() != null) ligne2.add("RCCM : " + enTete.rccm());
-        if (enTete.banqueNom() != null && enTete.numeroCompte() != null)
-            ligne2.add(enTete.banqueNom() + " — " + enTete.numeroCompte());
-        if (!ligne2.toString().isBlank()) pdf.add(new Paragraph(ligne2.toString(), fontPetit()));
-
-        if (enTete.email() != null) pdf.add(new Paragraph(enTete.email(), fontPetit()));
-    }
-
-    /** Charge une image depuis une URL HTTP(S) avec timeout. Retourne null en cas d'erreur. */
-    byte[] chargerImage(String url) {
-        if (url == null || url.isBlank()) return null;
+    private String loadImageDataUri(String url) {
+        if (!hasValue(url)) return null;
         try {
             URLConnection conn = new URL(url).openConnection();
-            conn.setConnectTimeout(5_000);
-            conn.setReadTimeout(10_000);
-            try (InputStream is = conn.getInputStream()) {
-                return is.readAllBytes();
-            }
+            conn.setConnectTimeout(6000);
+            conn.setReadTimeout(10000);
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+            byte[] bytes = conn.getInputStream().readAllBytes();
+            String mime = conn.getContentType() != null
+                    ? conn.getContentType().split(";")[0].trim() : "image/jpeg";
+            return "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(bytes);
         } catch (Exception e) {
+            log.warn("Chargement image échoué ({}) : {}", url, e.getMessage());
             return null;
         }
     }
 
-    private void ecrirePied(Document pdf, DocumentFacturation doc, boolean afficheTva) throws DocumentException {
-        pdf.add(new Paragraph(" "));
-        if (doc.getEntConditionsPaiement() != null) {
-            pdf.add(new Paragraph("Conditions de paiement : " + doc.getEntConditionsPaiement(), fontPetit()));
-        }
-        if (doc.getEntMentionsPied() != null) {
-            pdf.add(new Paragraph(doc.getEntMentionsPied(), fontPetit()));
-        }
-        if (!afficheTva && doc.getEntMentionExonerationTva() != null) {
-            pdf.add(new Paragraph(doc.getEntMentionExonerationTva(), fontPetit()));
-        }
+    // ── Utilitaires HTML ──────────────────────────────────────────────────────
+
+    private void th(StringBuilder sb, String text, String style) {
+        sb.append("<td class=\"th\"");
+        if (hasValue(style)) sb.append(" style=\"").append(style).append("\"");
+        sb.append(">").append(h(text)).append("</td>");
     }
 
-    private void ajouterFiligrane(PdfWriter writer, String texte) throws DocumentException {
-        PdfContentByte canvas = writer.getDirectContentUnder();
-        BaseFont bf;
-        try {
-            bf = BaseFont.createFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
-        } catch (Exception e) {
-            return;
-        }
-        canvas.saveState();
-        canvas.setColorFill(ROUGE_FILIGRANE);
-        canvas.beginText();
-        canvas.setFontAndSize(bf, 80);
-        canvas.showTextAligned(Element.ALIGN_CENTER, texte,
-                PageSize.A4.getWidth() / 2, PageSize.A4.getHeight() / 2, 45);
-        canvas.endText();
-        canvas.restoreState();
+    private void td(StringBuilder sb, String html, String style) {
+        sb.append("<td");
+        if (hasValue(style)) sb.append(" style=\"").append(style).append("\"");
+        sb.append(">").append(html).append("</td>");
     }
 
-    // ---- HELPERS ----
-
-    private void addCell(PdfPTable table, String text, int align, Color bg) {
-        PdfPCell cell = new PdfPCell(new Phrase(text, fontNormal()));
-        cell.setHorizontalAlignment(align);
-        cell.setPadding(4);
-        cell.setBorderColor(GRIS_BORDURE);
-        cell.setBackgroundColor(bg);
-        table.addCell(cell);
+    /** Échappe les caractères HTML spéciaux dans le contenu utilisateur. */
+    private static String h(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 
-    private String typeLabel(TypeDocument type) {
-        return switch (type) {
-            case FACTURE -> "FACTURE";
-            case DEVIS -> "DEVIS";
-            case AVOIR -> "AVOIR";
+    // ── Utilitaires métier ────────────────────────────────────────────────────
+
+    private static List<ReglementDocument> reglementsActifs(DocumentFacturation doc) {
+        if (doc.getReglements() == null) return List.of();
+        return doc.getReglements().stream()
+                .filter(r -> r.getSupprimePar() == null)
+                .toList();
+    }
+
+    private static String typeLabel(TypeDocument t) {
+        if (t == null) return "DOCUMENT";
+        return switch (t) {
+            case FACTURE       -> "FACTURE";
+            case DEVIS         -> "DEVIS";
+            case AVOIR         -> "AVOIR";
             case BON_LIVRAISON -> "BON DE LIVRAISON";
         };
     }
 
-    private Color parseCouleur(String hex, Color defaut) {
-        if (hex == null || !hex.startsWith("#") || hex.length() != 7) return defaut;
-        try {
-            int r = Integer.parseInt(hex.substring(1, 3), 16);
-            int g = Integer.parseInt(hex.substring(3, 5), 16);
-            int b = Integer.parseInt(hex.substring(5, 7), 16);
-            return new Color(r, g, b);
-        } catch (NumberFormatException e) {
-            return defaut;
-        }
+    /**
+     * Taille de police (en pt) pour le nom d'entreprise sur une seule ligne.
+     * Adapte automatiquement à la longueur de la chaîne.
+     */
+    private static int nomFontPt(String nom) {
+        if (nom == null) return 18;
+        int len = nom.length();
+        if (len <= 25) return 20;
+        if (len <= 35) return 17;
+        if (len <= 45) return 15;
+        return 12;
+    }
+
+    private static String safe(String s, String def) {
+        return (s != null && !s.isBlank()) ? s : def;
+    }
+
+    private static BigDecimal safe0(BigDecimal v) {
+        return v != null ? v : BigDecimal.ZERO;
+    }
+
+    private static boolean hasValue(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    private static String concat(String a, String b) {
+        String pa = a != null ? a.trim() : "";
+        String pb = b != null ? b.trim() : "";
+        if (pa.isEmpty()) return pb;
+        if (pb.isEmpty()) return pa;
+        return pa + " " + pb;
     }
 
     /**
-     * Visible pour les tests unitaires.
-     * Formate un montant entier FCFA avec espace insécable U+00A0 comme séparateur des milliers.
+     * Formate un montant entier FCFA avec espace comme séparateur des milliers.
+     * Visible pour les tests unitaires (FormatMontantTest).
      * Exemple : 185000 → "185 000", 1250000 → "1 250 000", 0 → "0".
-     * Pas de décimales, pas de symbole devise (ajouté à l'appel).
-     * Utilise U+00A0 au lieu de U+202F (espace fine insécable) car CP1252 ne supporte pas U+202F.
      */
     String formatMontant(BigDecimal val) {
         if (val == null) return "-";
@@ -793,30 +600,21 @@ public class PdfFacturationService {
         StringBuilder sb = new StringBuilder();
         sb.append(s, 0, first);
         for (int i = first; i < len; i += 3) {
-            sb.append(' ');
+            sb.append(' '); // espace insécable U+00A0 — identique à l'original OpenPDF
             sb.append(s, i, i + 3);
         }
         return neg ? "-" + sb : sb.toString();
     }
 
-    private String formatQuantite(BigDecimal val) {
+    private static String formatQuantite(BigDecimal val) {
         if (val == null) return "-";
-        if (val.scale() == 0 || val.stripTrailingZeros().scale() <= 0) {
-            return formatMontant(val);
-        }
+        if (val.scale() == 0 || val.stripTrailingZeros().scale() <= 0)
+            return Long.toString(val.longValue());
         return val.stripTrailingZeros().toPlainString();
     }
 
-    private String formatPourcent(BigDecimal val) {
+    private static String formatPourcent(BigDecimal val) {
         if (val == null) return "-";
         return val.stripTrailingZeros().toPlainString() + "%";
-    }
-
-    private String concat(String a, String b) {
-        String pa = a != null ? a.trim() : "";
-        String pb = b != null ? b.trim() : "";
-        if (pa.isEmpty()) return pb;
-        if (pb.isEmpty()) return pa;
-        return pa + " " + pb;
     }
 }

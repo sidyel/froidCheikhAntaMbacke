@@ -66,6 +66,8 @@ public class DataInitializer implements CommandLineRunner {
             );
             parametresSiteService.migrerBoitePostale("BP 7605 Dakar", "B.P. 7605 Dakar");
             parametresSiteService.migrerTelephones();
+            // PDF template (oct. 2026) : ces champs vides → mentions absentes du PDF
+            parametresSiteService.viderMentionsDefaut();
         }
 
         if (imageHeroRepository.count() == 0) {

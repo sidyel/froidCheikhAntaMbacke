@@ -24,8 +24,8 @@ import java.time.LocalDateTime;
  */
 class PdfExempleGenerateur {
 
-    private final PdfFacturationService pdfService = new PdfFacturationService();
-    private final CalculDocumentService calculService = new CalculDocumentService();
+    private final PdfFacturationService pdfService    = new PdfFacturationService();
+    private final CalculDocumentService calculService  = new CalculDocumentService();
     private final MontantEnLettresService lettresService = new MontantEnLettresService();
 
     @Test
@@ -33,56 +33,62 @@ class PdfExempleGenerateur {
         Path dir = Paths.get("target/pdf-exemples");
         Files.createDirectories(dir);
 
-        // En-tête composé (mode par défaut)
-        EnTeteDocumentConfig enTeteCompose = enTeteCompose();
+        EnTeteDocumentConfig cfg = enTeteCompose();
 
-        // ---- FACTURE (mode composé) ----
-        DocumentFacturation facture = creerFacture();
+        // 1 — FACTURE PARTIELLEMENT PAYÉE sur 2 pages
+        DocumentFacturation facture = creerFactureLongue();
         calculerEtFiger(facture);
-        byte[] pdfFacture = pdfService.generer(facture, enTeteCompose, false);
-        ecrire(dir, "facture_FAC-2026-0001.pdf", pdfFacture);
+        ecrire(dir, "facture_partielle_2pages_FAC-2026-0001.pdf",
+                pdfService.generer(facture, cfg, false));
 
-        // ---- FACTURE BROUILLON (filigrane, mode composé) ----
-        DocumentFacturation brouillon = creerFacture();
+        // 2 — AVOIR (sur la facture précédente)
+        DocumentFacturation avoir = creerAvoir(facture);
+        calculerEtFiger(avoir);
+        ecrire(dir, "avoir_AVO-2026-0001.pdf",
+                pdfService.generer(avoir, cfg, false));
+
+        // 3 — BON DE LIVRAISON
+        DocumentFacturation bl = creerBonLivraison();
+        ecrire(dir, "bon_livraison_BL-2026-0001.pdf",
+                pdfService.generer(bl, cfg, false));
+
+        // 4 — DEVIS
+        DocumentFacturation devis = creerDevis();
+        calculerEtFiger(devis);
+        ecrire(dir, "devis_DEV-2026-0001.pdf",
+                pdfService.generer(devis, cfg, false));
+
+        // 5 — BROUILLON (filigrane)
+        DocumentFacturation brouillon = creerFactureLongue();
         brouillon.setStatut(StatutDocument.BROUILLON);
         brouillon.setNumero(null);
         calculerEtFiger(brouillon);
-        byte[] pdfBrouillon = pdfService.generer(brouillon, enTeteCompose, true);
-        ecrire(dir, "brouillon_BROUILLON.pdf", pdfBrouillon);
+        ecrire(dir, "brouillon_BROUILLON.pdf",
+                pdfService.generer(brouillon, cfg, true));
 
-        // ---- AVOIR (mode composé) ----
-        DocumentFacturation avoir = creerAvoir(facture);
-        calculerEtFiger(avoir);
-        byte[] pdfAvoir = pdfService.generer(avoir, enTeteCompose, false);
-        ecrire(dir, "avoir_AVO-2026-0001.pdf", pdfAvoir);
-
-        // ---- BON DE LIVRAISON (mode composé) ----
-        DocumentFacturation bl = creerBonLivraison();
-        byte[] pdfBL = pdfService.generer(bl, enTeteCompose, false);
-        ecrire(dir, "bon_livraison_BL-2026-0001.pdf", pdfBL);
-
-        // ---- FACTURE mode IMAGE (avec papier à en-tête) ----
-        // Les images sont dans docs/ — si absentes, le service replie sur le mode composé
-        EnTeteDocumentConfig enTeteImage = enTeteImage();
-        DocumentFacturation factureImage = creerFacture();
-        factureImage.setNumero("FAC-2026-IMAGE");
-        calculerEtFiger(factureImage);
-        byte[] pdfImage = pdfService.generer(factureImage, enTeteImage, false);
-        ecrire(dir, "facture_mode_image_FAC-2026-IMAGE.pdf", pdfImage);
+        // 6 — Mode IMAGE (repli composé si images absentes)
+        DocumentFacturation factureImg = creerFactureLongue();
+        factureImg.setNumero("FAC-2026-IMAGE");
+        calculerEtFiger(factureImg);
+        ecrire(dir, "facture_mode_image_FAC-2026-IMAGE.pdf",
+                pdfService.generer(factureImg, enTeteImage(), false));
 
         System.out.println("\n=== PDFs générés dans : " + dir.toAbsolutePath() + " ===");
-        System.out.println("  - facture_FAC-2026-0001.pdf             (mode COMPOSÉ, Oswald Bold)");
-        System.out.println("  - brouillon_BROUILLON.pdf               (mode COMPOSÉ, filigrane)");
-        System.out.println("  - avoir_AVO-2026-0001.pdf               (mode COMPOSÉ)");
-        System.out.println("  - bon_livraison_BL-2026-0001.pdf        (mode COMPOSÉ)");
-        System.out.println("  - facture_mode_image_FAC-2026-IMAGE.pdf (mode IMAGE — repli COMPOSÉ si images absentes)");
+        System.out.println("  1. facture_partielle_2pages_FAC-2026-0001.pdf  (partiellement payée, 2 pages)");
+        System.out.println("  2. avoir_AVO-2026-0001.pdf");
+        System.out.println("  3. bon_livraison_BL-2026-0001.pdf");
+        System.out.println("  4. devis_DEV-2026-0001.pdf");
+        System.out.println("  5. brouillon_BROUILLON.pdf                     (filigrane)");
+        System.out.println("  6. facture_mode_image_FAC-2026-IMAGE.pdf       (mode IMAGE — repli composé si absent)");
     }
+
+    // ── Configs en-tête ───────────────────────────────────────────────────────
 
     private EnTeteDocumentConfig enTeteCompose() {
         return new EnTeteDocumentConfig(
                 "FROID CHEIKH ANTA MBACKE - BABACAR DIONE",
-                null, // logoUrl — charger depuis Cloudinary en production
-                "Réparation et Vente de tous Appareils de Froid : Electricité, Plomberie, Climatisation Centrale, Chambre Froide, Split Système, Climatiseur et Frigos",
+                null, // logoUrl — null ici pour le test sans réseau
+                "Réparation et Vente de tous Appareils de Froid : Électricité, Plomberie, Climatisation Centrale, Chambre Froide, Split Système, Climatiseur et Frigos",
                 "Ouest Foire Cité Aelmas Villa N°168 Rue 577 Yoff, Dakar, Sénégal",
                 "33 820 16 33 / 77 335 20 00",
                 "B.P. 7605 Dakar",
@@ -100,30 +106,24 @@ class PdfExempleGenerateur {
     }
 
     private EnTeteDocumentConfig enTeteImage() {
-        // Chemins locaux vers les images du papier à en-tête
-        // Converties en URL file:// pour chargerImage() ; null si le fichier n'existe pas
         String imgHaut = toFileUrl("docs/papier-entete-haut.png");
-        String imgBas = toFileUrl("docs/papier-entete-bas.png");
+        String imgBas  = toFileUrl("docs/papier-entete-bas.png");
         return new EnTeteDocumentConfig(
-                "Froid Cheikh Anta Mbacke SARL",
+                "FROID CHEIKH ANTA MBACKE - BABACAR DIONE",
                 null, null, null, null, null, null, null, null, null, null,
-                ModeEnTeteDocuments.IMAGE,
-                imgHaut,
-                imgBas,
-                "#000080",
-                "FCFA"
+                ModeEnTeteDocuments.IMAGE, imgHaut, imgBas, "#000080", "FCFA"
         );
     }
 
     private String toFileUrl(String relativePath) {
         java.io.File f = new java.io.File(relativePath);
-        if (!f.exists()) return null;
-        return f.toURI().toString();
+        return f.exists() ? f.toURI().toString() : null;
     }
 
-    // ---- FABRIQUE FACTURE ----
+    // ── Fabriques de documents ────────────────────────────────────────────────
 
-    private DocumentFacturation creerFacture() {
+    /** Facture avec 12 lignes pour déborder sur 2 pages, + règlement partiel. */
+    private DocumentFacturation creerFactureLongue() {
         DocumentFacturation doc = new DocumentFacturation();
         doc.setTypeDocument(TypeDocument.FACTURE);
         doc.setStatut(StatutDocument.EMIS);
@@ -131,53 +131,46 @@ class PdfExempleGenerateur {
         doc.setDateCreation(LocalDateTime.of(2026, 10, 15, 9, 30));
         doc.setDateEmission(LocalDateTime.of(2026, 10, 15, 10, 0));
 
-        // Entreprise (copie figée)
-        doc.setEntRaisonSociale("FROID CHEIKH ANTA MBACKE - BABACAR DIONE");
-        doc.setEntAdresseSiege("Ouest Foire Cité Aelmas Villa N°168 Rue 577 Yoff, Dakar, Sénégal");
-        doc.setEntNinea("0151340-2B1");
-        doc.setEntRccm("92-A-5673");
-        doc.setEntCouleurPrimaire("#000080");
-        doc.setEntConditionsPaiement("Paiement à 30 jours. En cas de retard, pénalités de 1,5% par mois.");
-        doc.setEntMentionsPied("FROID CHEIKH ANTA MBACKE - BABACAR DIONE | CBAO N° 36017179-49 | NINEA : 0151340-2B1 | RC : 92-A-5673");
-        doc.setEntMentionExonerationTva("TVA non applicable — Article 275 du CGI");
+        figerEntreprise(doc);
+        doc.setEntConditionsPaiement(null);        // vide → ne s'affiche pas
+        doc.setEntMentionExonerationTva(null);     // vide → ne s'affiche pas
+        doc.setEntMentionsPied(null);              // vide → ne s'affiche pas
 
-        // Client (copie figée)
         doc.setClientNom("Diallo");
         doc.setClientPrenom("Mamadou");
         doc.setClientTelephone("+221 77 123 45 67");
         doc.setClientEmail("mamadou.diallo@example.com");
         doc.setClientAdresse("Rue 10, Angle Rue 12, Médina, Dakar");
 
-        // Paramètres TVA : non assujetti (taux 0)
         doc.setTauxTvaDefaut(BigDecimal.ZERO);
         doc.setPrixAfficheTTC(false);
         doc.setRemiseTotalePourcent(BigDecimal.ZERO);
 
-        // Lignes
-        doc.getLignes().add(ligne(doc, 1, "Climatiseur Astech 9000 BTU AST-09RB41-MA",
-                "1", "185000", BigDecimal.ZERO, BigDecimal.ZERO));
-        doc.getLignes().add(ligne(doc, 2, "Climatiseur Samsung 12000 BTU AR12TXHQAS",
-                "1", "235000", BigDecimal.ZERO, BigDecimal.ZERO));
-        doc.getLignes().add(ligne(doc, 3, "Kit installation (tuyaux + supports + câble 3m)",
-                "1", "25000", BigDecimal.ZERO, BigDecimal.ZERO));
-        doc.getLignes().add(ligne(doc, 4, "Main d'œuvre pose et mise en service",
-                "2", "15000", BigDecimal.ZERO, BigDecimal.ZERO));
-        doc.getLignes().add(ligne(doc, 5, "Frais de livraison (Zone Médina)",
-                "1", "3000", BigDecimal.ZERO, BigDecimal.ZERO));
+        // 12 lignes pour forcer le saut de page
+        doc.getLignes().add(ligne(doc, 1,  "Climatiseur Astech 9000 BTU AST-09RB41-MA",           "1", "185000"));
+        doc.getLignes().add(ligne(doc, 2,  "Climatiseur Samsung 12000 BTU AR12TXHQAS",             "1", "235000"));
+        doc.getLignes().add(ligne(doc, 3,  "Climatiseur LG 18000 BTU S4-W18JA3WA Inverter",        "1", "320000"));
+        doc.getLignes().add(ligne(doc, 4,  "Climatiseur Midea 24000 BTU MSMABU-24HRFN8",           "1", "420000"));
+        doc.getLignes().add(ligne(doc, 5,  "Réfrigérateur combiné Hisense RT414N4AWU 300 L",       "1", "275000"));
+        doc.getLignes().add(ligne(doc, 6,  "Réfrigérateur bar Astech 85 L AST-DH85",               "2", "65000"));
+        doc.getLignes().add(ligne(doc, 7,  "Congélateur coffre Haier HCE301R 301 L",               "1", "185000"));
+        doc.getLignes().add(ligne(doc, 8,  "Kit installation climatiseur (tuyaux 4 m + fixations)", "2", "25000"));
+        doc.getLignes().add(ligne(doc, 9,  "Câble électrique 3×2,5 mm² (10 m)",                    "3", "8500"));
+        doc.getLignes().add(ligne(doc, 10, "Main-d'œuvre pose et mise en service climatiseur",      "3", "15000"));
+        doc.getLignes().add(ligne(doc, 11, "Main-d'œuvre livraison et installation frigo",          "2", "10000"));
+        doc.getLignes().add(ligne(doc, 12, "Frais de livraison zone Médina",                        "1", "5000"));
 
-        // Règlement partiel
-        ReglementDocument r1 = new ReglementDocument();
-        r1.setDateReglement(LocalDate.of(2026, 10, 15));
-        r1.setMontant(new BigDecimal("250000"));
-        r1.setMode(ModeReglement.WAVE);
-        r1.setReference("WAVE-20261015-7834");
-        r1.setEnregistrePar("admin@froidcheikh.sn");
-        doc.getReglements().add(r1);
+        // Règlement partiel : 500 000 FCFA par Wave
+        ReglementDocument r = new ReglementDocument();
+        r.setDateReglement(LocalDate.of(2026, 10, 15));
+        r.setMontant(new BigDecimal("500000"));
+        r.setMode(ModeReglement.WAVE);
+        r.setReference("WAVE-20261015-7834");
+        r.setEnregistrePar("admin@froidcheikh.sn");
+        doc.getReglements().add(r);
 
         return doc;
     }
-
-    // ---- FABRIQUE AVOIR ----
 
     private DocumentFacturation creerAvoir(DocumentFacturation factureOrigine) {
         DocumentFacturation doc = new DocumentFacturation();
@@ -188,32 +181,21 @@ class PdfExempleGenerateur {
         doc.setDateEmission(LocalDateTime.of(2026, 10, 16, 14, 5));
         doc.setDocumentOrigine(factureOrigine);
 
-        // Mêmes infos entreprise et client
-        doc.setEntRaisonSociale(factureOrigine.getEntRaisonSociale());
-        doc.setEntAdresseSiege(factureOrigine.getEntAdresseSiege());
-        doc.setEntNinea(factureOrigine.getEntNinea());
-        doc.setEntRccm(factureOrigine.getEntRccm());
-        doc.setEntCouleurPrimaire(factureOrigine.getEntCouleurPrimaire());
-        doc.setEntMentionsPied(factureOrigine.getEntMentionsPied());
-        doc.setEntMentionExonerationTva(factureOrigine.getEntMentionExonerationTva());
+        figerEntreprise(doc);
         doc.setClientNom(factureOrigine.getClientNom());
         doc.setClientPrenom(factureOrigine.getClientPrenom());
         doc.setClientTelephone(factureOrigine.getClientTelephone());
         doc.setClientEmail(factureOrigine.getClientEmail());
         doc.setClientAdresse(factureOrigine.getClientAdresse());
-
         doc.setTauxTvaDefaut(BigDecimal.ZERO);
         doc.setPrixAfficheTTC(false);
         doc.setRemiseTotalePourcent(BigDecimal.ZERO);
 
-        // Retour partiel : le Samsung uniquement
-        doc.getLignes().add(ligne(doc, 1, "Climatiseur Samsung 12000 BTU AR12TXHQAS [AVOIR]",
-                "1", "235000", BigDecimal.ZERO, BigDecimal.ZERO));
-
+        // Retour : Samsung + congélateur
+        doc.getLignes().add(ligne(doc, 1, "Climatiseur Samsung 12000 BTU AR12TXHQAS [AVOIR]", "1", "235000"));
+        doc.getLignes().add(ligne(doc, 2, "Congélateur coffre Haier HCE301R 301 L [AVOIR]",   "1", "185000"));
         return doc;
     }
-
-    // ---- FABRIQUE BON DE LIVRAISON ----
 
     private DocumentFacturation creerBonLivraison() {
         DocumentFacturation doc = new DocumentFacturation();
@@ -225,56 +207,86 @@ class PdfExempleGenerateur {
         doc.setLivreurNom("Ibrahima Sow");
         doc.setLivreurTelephone("+221 76 987 65 43");
 
-        doc.setEntRaisonSociale("FROID CHEIKH ANTA MBACKE - BABACAR DIONE");
-        doc.setEntAdresseSiege("Ouest Foire Cité Aelmas Villa N°168 Rue 577 Yoff, Dakar, Sénégal");
-        doc.setEntNinea("0151340-2B1");
-        doc.setEntCouleurPrimaire("#000080");
-        doc.setEntMentionsPied("FROID CHEIKH ANTA MBACKE - BABACAR DIONE | CBAO N° 36017179-49 | NINEA : 0151340-2B1 | RC : 92-A-5673");
-
+        figerEntreprise(doc);
         doc.setClientNom("Diallo");
         doc.setClientPrenom("Mamadou");
         doc.setClientTelephone("+221 77 123 45 67");
         doc.setClientAdresse("Rue 10, Angle Rue 12, Médina, Dakar");
-
         doc.setTauxTvaDefaut(BigDecimal.ZERO);
         doc.setPrixAfficheTTC(false);
         doc.setRemiseTotalePourcent(BigDecimal.ZERO);
 
-        doc.getLignes().add(ligneBL(doc, 1, "Climatiseur Astech 9000 BTU AST-09RB41-MA", "1"));
-        doc.getLignes().add(ligneBL(doc, 2, "Climatiseur Samsung 12000 BTU AR12TXHQAS", "1"));
+        doc.getLignes().add(ligneBL(doc, 1, "Climatiseur Astech 9000 BTU AST-09RB41-MA",  "1"));
+        doc.getLignes().add(ligneBL(doc, 2, "Climatiseur Samsung 12000 BTU AR12TXHQAS",    "1"));
         doc.getLignes().add(ligneBL(doc, 3, "Kit installation (tuyaux + supports + câble 3m)", "1"));
-
         return doc;
     }
 
-    // ---- HELPERS ----
+    private DocumentFacturation creerDevis() {
+        DocumentFacturation doc = new DocumentFacturation();
+        doc.setTypeDocument(TypeDocument.DEVIS);
+        doc.setStatut(StatutDocument.EMIS);
+        doc.setNumero("DEV-2026-0001");
+        doc.setDateCreation(LocalDateTime.of(2026, 10, 15, 14, 0));
+        doc.setDateEmission(LocalDateTime.of(2026, 10, 15, 14, 0));
+        doc.setDateValidite(LocalDate.of(2026, 11, 15));
+
+        figerEntreprise(doc);
+        doc.setClientNom("Ndiaye");
+        doc.setClientPrenom("Oumar");
+        doc.setClientTelephone("+221 77 456 78 90");
+        doc.setClientEmail("oumar.ndiaye@example.com");
+        doc.setClientAdresse("Sicap Liberté 4, Dakar");
+        doc.setTauxTvaDefaut(BigDecimal.ZERO);
+        doc.setPrixAfficheTTC(false);
+        doc.setRemiseTotalePourcent(BigDecimal.ZERO);
+
+        doc.getLignes().add(ligne(doc, 1, "Climatiseur Inverter LG 18000 BTU S4-W18JA3WA", "2", "320000"));
+        doc.getLignes().add(ligne(doc, 2, "Kit installation (tuyaux cuivre + fixations)", "2", "28000"));
+        doc.getLignes().add(ligne(doc, 3, "Main-d'œuvre pose et mise en service",          "2", "15000"));
+        doc.getLignes().add(ligne(doc, 4, "Frais de livraison",                             "1", "5000"));
+        return doc;
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private void figerEntreprise(DocumentFacturation doc) {
+        doc.setEntRaisonSociale("FROID CHEIKH ANTA MBACKE - BABACAR DIONE");
+        doc.setEntAdresseSiege("Ouest Foire Cité Aelmas Villa N°168 Rue 577 Yoff, Dakar, Sénégal");
+        doc.setEntNinea("0151340-2B1");
+        doc.setEntRccm("92-A-5673");
+        doc.setEntCouleurPrimaire("#000080");
+        doc.setEntDevise("FCFA");
+    }
 
     private void calculerEtFiger(DocumentFacturation doc) {
         boolean ttc = Boolean.TRUE.equals(doc.getPrixAfficheTTC());
-        BigDecimal[] totaux = calculService.calculerTotaux(doc.getLignes(), doc.getRemiseTotalePourcent(), ttc);
+        BigDecimal[] totaux = calculService.calculerTotaux(
+                doc.getLignes(), doc.getRemiseTotalePourcent(), ttc);
         doc.setMontantHT(totaux[0]);
         doc.setMontantTva(totaux[1]);
         doc.setMontantTTC(totaux[2]);
         doc.setMontantEnLettres(lettresService.convertir(totaux[2]));
     }
 
-    private LigneDocument ligne(DocumentFacturation doc, int ordre, String designation,
-                                 String qte, String prix, BigDecimal taux, BigDecimal remise) {
+    private LigneDocument ligne(DocumentFacturation doc, int ordre,
+                                String designation, String qte, String prix) {
         LigneDocument l = new LigneDocument();
         l.setDocument(doc);
         l.setOrdre(ordre);
         l.setDesignation(designation);
         l.setQuantite(new BigDecimal(qte));
         l.setPrixUnitaireHT(new BigDecimal(prix));
-        l.setTauxTva(taux);
-        l.setRemisePourcent(remise);
+        l.setTauxTva(BigDecimal.ZERO);
+        l.setRemisePourcent(BigDecimal.ZERO);
         l.setMontantHT(BigDecimal.ZERO);
         l.setMontantTva(BigDecimal.ZERO);
         l.setMontantTTC(BigDecimal.ZERO);
         return l;
     }
 
-    private LigneDocument ligneBL(DocumentFacturation doc, int ordre, String designation, String qte) {
+    private LigneDocument ligneBL(DocumentFacturation doc, int ordre,
+                                  String designation, String qte) {
         LigneDocument l = new LigneDocument();
         l.setDocument(doc);
         l.setOrdre(ordre);
