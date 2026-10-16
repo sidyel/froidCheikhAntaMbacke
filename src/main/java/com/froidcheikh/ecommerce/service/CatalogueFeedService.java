@@ -248,7 +248,34 @@ public class CatalogueFeedService {
                 .replaceAll("^-+|-+$", "");
     }
 
+    // ── Rapport complet (admin) ────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public RapportFeedDTO getRapport() {
+        String siteUrl = loadSiteUrl();
+        List<Produit> all = produitRepository.findAllForCatalogue();
+        List<ExclusionDTO> exclusions = new ArrayList<>();
+        int totalFlux = 0;
+        for (Produit p : all) {
+            String raison = exclusionReason(p);
+            if (raison != null) {
+                exclusions.add(new ExclusionDTO(
+                        p.getIdProduit(),
+                        p.getNomProduit(),
+                        raison,
+                        siteUrl + "/admin/produits/" + p.getIdProduit() + "/edit"
+                ));
+            } else {
+                totalFlux++;
+            }
+        }
+        exclusions.sort(Comparator.comparing(ExclusionDTO::idProduit));
+        return new RapportFeedDTO(all.size(), totalFlux, exclusions);
+    }
+
     // ── DTO rapport exclusions ─────────────────────────────────────────────────
 
     public record ExclusionDTO(Long idProduit, String nomProduit, String raison, String lienAdmin) {}
+
+    public record RapportFeedDTO(int totalProduits, int totalFlux, List<ExclusionDTO> exclusions) {}
 }

@@ -31,4 +31,9 @@ public class CatalogueFeedController {
     public ResponseEntity<List<CatalogueFeedService.ExclusionDTO>> exclusions() {
         return ResponseEntity.ok(feedService.getExclusions());
     }
+
+    @GetMapping("/api/admin/catalogue/rapport")
+    public ResponseEntity<CatalogueFeedService.RapportFeedDTO> rapport() {
+        return ResponseEntity.ok(feedService.getRapport());
+    }
 }
