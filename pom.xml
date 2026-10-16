@@ -88,11 +88,18 @@
             <version>3.1.1</version>
         </dependency>
 
-        <!-- PDF generation (factures, avoirs, devis, bons de livraison) -->
+        <!-- Thymeleaf : moteur de templates pour les PDFs de facturation (core uniquement, sans auto-config web) -->
         <dependency>
-            <groupId>com.github.librepdf</groupId>
-            <artifactId>openpdf</artifactId>
-            <version>1.3.35</version>
+            <groupId>org.thymeleaf</groupId>
+            <artifactId>thymeleaf</artifactId>
+        </dependency>
+
+        <!-- PDF generation (factures, avoirs, devis, bons de livraison) -->
+        <!-- openhtmltopdf : rendu HTML/CSS → PDF via PDFBox (polices TTF classpath, sans fontconfig) -->
+        <dependency>
+            <groupId>io.github.openhtmltopdf</groupId>
+            <artifactId>openhtmltopdf-pdfbox</artifactId>
+            <version>1.1.85</version>
         </dependency>
 
         <!-- Lombok -->

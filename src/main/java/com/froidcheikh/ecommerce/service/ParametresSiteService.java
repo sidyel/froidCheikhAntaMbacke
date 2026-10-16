@@ -238,6 +238,26 @@ public class ParametresSiteService {
         });
     }
 
+    /**
+     * Migration ponctuelle idempotente (oct. 2026) : vide mentionExonerationTva si elle vaut
+     * exactement le défaut Java de l'entité. Sans effet si l'admin a saisi une valeur différente.
+     * conditionsPaiementDefaut : aucune migration (le texte n'existait que dans les anciennes
+     * données de test de PdfExempleGenerateur, jamais dans ParametresSite).
+     */
+    private static final String OLD_MENTION_EXONERATION_TVA = "TVA non applicable";
+
+    @org.springframework.transaction.annotation.Transactional
+    public void viderMentionsDefaut() {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            boolean modifie = false;
+            if (OLD_MENTION_EXONERATION_TVA.equals(p.getMentionExonerationTva())) {
+                p.setMentionExonerationTva(null);
+                modifie = true;
+            }
+            if (modifie) repository.save(p);
+        });
+    }
+
     public boolean exists() {
         return !repository.findAll().isEmpty();
     }
