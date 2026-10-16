@@ -196,7 +196,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 
 1. **Module zones de livraison** ✅ Résolu — mergé.
 2. **Enrichissement automatique des fiches produits** ✅ Résolu — EAN, modeleFabricant, CRUD AttributProduit, ModeleAttribut, score, export, migration images.
-3. **Module facturation** — génération de factures/avoirs/devis/BL en PDF à partir des paramètres du groupe `ENTREPRISE_FACTURATION` de `ParametresSite`.
+3. **Module facturation** ✅ Résolu — Mergé dans `develop` (oct. 2026). Voir tableau État d'avancement.
 4. **Image principale désignée** ✅ Résolu — ImageProduit.principale garanti par le service (si suppression de la principale, la suivante devient principale). Frontend public doit migrer de `listeImages[]` vers `images[]` puis retirer `listeImages`.
 5. **Stockage `public_id` Cloudinary** ✅ Résolu — ImageProduit.publicId stocké explicitement (FileService.UploadResult + uploadFileWithPublicId).
 6. **Migrations versionnées** — passer de `ddl-auto=update` à Flyway pour les environnements de production.
@@ -212,7 +212,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 | Zones de livraison (ZoneLivraison) | ✅ Mergé dans `develop` + `main` | — |
 | Promotions produits (PrixService, PromotionService, CRUD, fiche, catalogue, panier) | ✅ Mergé dans `develop` + `main` | — |
 | Enrichissement fiches produits (runners import/export/verif, ModeleAttribut, AttributProduit, ImageProduit, score — lots 1 + correction_dimensions écrits en base oct. 2026) | ✅ Mergé dans `develop` + `main` | — |
-| Module facturation (PDF) | ⏳ Planifié | — |
+| Module facturation (PDF) — DocumentFacturation, LigneDocument, ReglementDocument, ClientFacturation, CompteurDocument, JetonTelechargement ; PdfFacturationService (OpenPDF, en-tête composé/image, Oswald+LiberationSans), NumeroDocumentService, CalculDocumentService, MontantEnLettresService, JetonTelechargementService ; uploads cachet/en-tête/pied ; migrations ponctuelles idempotentes ; 91 tests ; frontend complet (liste, formulaire+aperçu brouillon, fiche document, paramètres, page publique jeton, droits GESTIONNAIRE) | ✅ Mergé dans `develop` (oct. 2026) | — |
 | Migrations Flyway | ⏳ Planifié | — |
 
 ---
@@ -363,3 +363,9 @@ Le test de contexte `FroidCheikhEcommerceApplicationTests` charge le contexte Sp
 ```sql
 UPDATE produits SET garantie = '1 an' WHERE garantie = '1 ans';
 ```
+
+### #10 — Facturation : valider le modèle PDF avant émission en production
+Avant d'émettre la première facture réelle, faire valider le PDF généré (avec données réelles) par le comptable ou le conseiller fiscal. Points : mentions obligatoires selon la réglementation sénégalaise (NINEA, RCCM, numérotation séquentielle, date d'émission, dénomination sociale), traitement TVA (assujetti ou non), libellés conditions de paiement. Voir checklist de mise en production §11.
+
+### #11 — Aperçu PDF brouillon : uniquement après première sauvegarde
+Dans le formulaire facturation, le bouton "Aperçu PDF" n'apparaît que si `idDocument` est défini (document déjà sauvegardé). Sur un nouveau document non encore sauvegardé, l'aperçu n'est pas disponible — comportement intentionnel.
