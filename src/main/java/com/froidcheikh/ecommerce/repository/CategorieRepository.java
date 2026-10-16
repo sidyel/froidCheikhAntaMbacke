@@ -25,8 +25,12 @@ public interface CategorieRepository extends JpaRepository<Categorie, Long> {
     @Query("SELECT c FROM Categorie c LEFT JOIN FETCH c.sousCategories WHERE c.parent IS NULL")
     List<Categorie> findRootCategoriesWithSubCategories();
 
-    @Query("SELECT c FROM Categorie c ORDER BY c.nomCategorie") // remplace c.nom par le bon nom de champ
-    List<Categorie> findAllOrderByName(); // nom de méthode libre
+    @Query("SELECT c FROM Categorie c ORDER BY c.nomCategorie")
+    List<Categorie> findAllOrderByName();
+
+    /** Charge toutes les catégories + leur parent en une seule requête SQL (évite le N+1 sur parent). */
+    @Query("SELECT DISTINCT c FROM Categorie c LEFT JOIN FETCH c.parent ORDER BY c.nomCategorie")
+    List<Categorie> findAllWithParentEager();
 
     @Query("SELECT c.idCategorie FROM Categorie c WHERE c.parent.idCategorie = :parentId")
     List<Long> findIdsByParentId(@Param("parentId") Long parentId);
