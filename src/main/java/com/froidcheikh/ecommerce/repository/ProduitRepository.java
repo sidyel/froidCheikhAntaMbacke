@@ -182,4 +182,12 @@ public interface ProduitRepository extends JpaRepository<Produit, Long> {
 
     @Query("SELECT p.idProduit FROM Produit p WHERE p.disponibilite = true AND p.marque.idMarque IN :marqueIds")
     List<Long> findIdsByMarqueIds(@Param("marqueIds") Collection<Long> marqueIds);
+
+    /** Charge tous les produits avec leurs images et leur catégorie pour le flux catalogue (évite le N+1). */
+    @Query("SELECT DISTINCT p FROM Produit p " +
+           "LEFT JOIN FETCH p.marque " +
+           "LEFT JOIN FETCH p.categorie cat " +
+           "LEFT JOIN FETCH cat.parent " +
+           "LEFT JOIN FETCH p.images")
+    List<Produit> findAllForCatalogue();
 }

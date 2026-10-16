@@ -88,6 +88,9 @@ public class SecurityConfig {
                         // SEO — sitemap et robots accessibles sans authentification
                         .requestMatchers(HttpMethod.GET, "/sitemap.xml", "/robots.txt").permitAll()
 
+                        // Catalogue publicitaire — flux Meta/Google accessibles sans authentification
+                        .requestMatchers(HttpMethod.GET, "/feeds/meta.xml", "/feeds/google.xml").permitAll()
+
                         // Endpoints de test (optionnel - à retirer en production)
                         .requestMatchers("/api/test/**").permitAll()
 
