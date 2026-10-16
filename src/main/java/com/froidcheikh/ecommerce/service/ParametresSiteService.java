@@ -87,6 +87,7 @@ public class ParametresSiteService {
         p.setEmailContact(emailContact);
         p.setAnneesExperience(anneesExperience);
         p.setCouleurDocuments("#000080");
+        p.setSiteUrl("http://localhost:4000");
         p.setTexteDescriptifActivites("Réparation et Vente de tous Appareils de Froid : Electricité, Plomberie, Climatisation Centrale, Chambre Froide, Split Système, Climatiseur et Frigos");
         p.setDevise("XOF");
         p.setLibelleDevise("FCFA");
@@ -303,6 +304,7 @@ public class ParametresSiteService {
         dto.setMetaTitle(p.getMetaTitle());
         dto.setMetaDescription(p.getMetaDescription());
         dto.setMetaKeywords(p.getMetaKeywords());
+        dto.setSiteUrl(p.getSiteUrl());
         dto.setMission(p.getMission());
         dto.setVision(p.getVision());
         dto.setAnneesExperience(p.getAnneesExperience());
@@ -365,6 +367,7 @@ public class ParametresSiteService {
         dto.setMetaTitle(p.getMetaTitle());
         dto.setMetaDescription(p.getMetaDescription());
         dto.setMetaKeywords(p.getMetaKeywords());
+        dto.setSiteUrl(p.getSiteUrl());
         dto.setDateModification(p.getDateModification());
         dto.setModifiePar(p.getModifiePar());
         dto.setMission(p.getMission());
@@ -443,6 +446,7 @@ public class ParametresSiteService {
         if (dto.getMetaTitle() != null) p.setMetaTitle(dto.getMetaTitle());
         if (dto.getMetaDescription() != null) p.setMetaDescription(dto.getMetaDescription());
         if (dto.getMetaKeywords() != null) p.setMetaKeywords(dto.getMetaKeywords());
+        if (dto.getSiteUrl() != null) p.setSiteUrl(dto.getSiteUrl());
         if (dto.getMission() != null) p.setMission(dto.getMission());
         if (dto.getVision() != null) p.setVision(dto.getVision());
         if (dto.getAnneesExperience() != null) p.setAnneesExperience(dto.getAnneesExperience());

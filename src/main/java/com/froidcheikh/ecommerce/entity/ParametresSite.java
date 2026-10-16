@@ -249,6 +249,10 @@ public class ParametresSite {
     @Column(name = "meta_keywords")
     private String metaKeywords;
 
+    /** URL publique du site (ex. https://www.froidcheikhantambacke.sn) — utilisée pour les URLs canoniques, le sitemap et les balises OG. */
+    @Column(name = "site_url")
+    private String siteUrl;
+
     // ---- SECTIONS VISIBILITE ----
     @Column(name = "afficher_hero_slider")
     private Boolean afficherHeroSlider = true;

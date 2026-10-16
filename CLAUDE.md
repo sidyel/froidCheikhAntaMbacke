@@ -214,6 +214,7 @@ Entité : `src/main/java/com/froidcheikh/ecommerce/entity/ParametresSite.java`
 | Promotions produits (PrixService, PromotionService, CRUD, fiche, catalogue, panier) | ✅ Mergé dans `develop` + `main` | — |
 | Enrichissement fiches produits (runners import/export/verif, ModeleAttribut, AttributProduit, ImageProduit, score — lots 1 + correction_dimensions écrits en base oct. 2026) | ✅ Mergé dans `develop` + `main` | — |
 | Module facturation (PDF) — DocumentFacturation, LigneDocument, ReglementDocument, ClientFacturation, CompteurDocument, JetonTelechargement ; PdfFacturationService (**openhtmltopdf + Thymeleaf** — templates dans `templates/pdf/`, en-tête composé/image, Oswald+LiberationSans, Alpine-safe), NumeroDocumentService, CalculDocumentService, MontantEnLettresService, JetonTelechargementService ; uploads cachet/en-tête/pied ; migrations ponctuelles idempotentes ; 91 tests ; frontend complet (liste, formulaire+aperçu brouillon, fiche document, paramètres, page publique jeton, droits GESTIONNAIRE) | ✅ Mergé dans `develop` (oct. 2026 — moteur Thymeleaf oct. 2026) | — |
+| SSR & SEO — backend : champ `siteUrl` ParametresSite, GET /sitemap.xml dynamique (produits + catégories), GET /robots.txt configurable (Disallow admin/panier/checkout/suivi-commande) ; frontend : @angular/ssr, SeoService (meta, OG c_pad/b_white, JSON-LD Product + BreadcrumbList + LocalBusiness, OutOfStock), slugs URL (produit/:slug, produits/categorie/:slug), isPlatformBrowser sur tous les accès DOM, routes client-only sans SSR, timeout Neon 4s avec fallback index.html, proxy sitemap+robots → backend | ⏳ En cours — `feature/ssr-seo` (oct. 2026) | `feature/ssr-seo` |
 | Migrations Flyway | ⏳ Planifié | — |
 
 ---
@@ -303,6 +304,31 @@ DELETE FROM clients WHERE email LIKE '%@test.local' OR email LIKE '%@test.com';
 - Vérifier la configuration du déploiement automatique (branche suivie, triggers).
 - **Régénérer les identifiants Railway exposés dans l'historique git** : le mot de passe PostgreSQL Railway (`svYhBmqtXnJkAaFEbairZjCtElvTESMe`) et l'URL interne (`postgres.railway.internal:5432/railway`) étaient committés en clair dans `application.properties` sur `origin/main`. Ces identifiants sont compromis — les réinitialiser depuis le dashboard Railway avant tout déploiement.
 
+### 12 — Hébergement cible envisagé : VPS Europe
+
+**Contexte** : le projet tourne actuellement sur Neon (us-east-2, région USA). La latence réseau vers Neon (~150–200 ms par requête SQL) et la mise en veille serverless (~4–5 s au réveil) pénalisent les temps de réponse SSR et l'expérience utilisateur. Un VPS en Europe supprime ces deux contraintes.
+
+**Architecture cible recommandée** :
+- **VPS en Europe** (ex. OVHcloud, Hetzner, Scaleway) — 4 vCore, 8 Go RAM minimum
+- PostgreSQL installé sur le même serveur (ou réseau local interne) pour éliminer la latence réseau vers la base
+- Backend Spring Boot + serveur SSR Angular sur le même VPS (Docker Compose recommandé)
+- Reverse proxy Nginx devant le port 8080 (Spring Boot) et le port 4000 (SSR Node.js)
+
+**Avantages** :
+- Latence SQL : de ~150–200 ms (Neon us-east-2) à **< 1 ms** (connexion locale)
+- Pas de mise en veille serverless — démarrage immédiat à chaque requête
+- Temps de réponse SSR attendu : **< 200 ms** pour les pages mises en cache Spring
+
+**Prérequis avant migration** :
+1. Export des données Neon (pg_dump) + import sur PostgreSQL local
+2. Mise à jour `DATABASE_URL` dans les variables d'environnement de l'hébergeur
+3. Configuration HTTPS (Certbot / Let's Encrypt) sur Nginx
+4. Pare-feu : n'exposer que les ports 80, 443 et 22 (SSH) ; PostgreSQL écoute uniquement en local (127.0.0.1)
+5. Sauvegardes automatiques de la base **hors du serveur** (objet S3, Cloudinary, ou Neon en lecture seule comme backup distant)
+6. Mettre à jour `siteUrl` dans `ParametresSite` avec le vrai domaine après migration (affecte sitemap, canonical, og:url)
+
+> **Note SSR** : depuis `feature/ssr-seo`, le frontend nécessite Node.js (pas d'hébergement statique seul). Variable `API_URL` requise côté Node.js (ex. `http://localhost:8080` si colocalisation). Voir point #12 dans *Points connus à corriger*.
+
 ### 10 — Migration des statuts de commande (module suivi-commandes)
 
 > ⚠️ **Critique** — sans cette étape, toute commande avec un ancien statut (`PAYEE`, `EN_PREPARATION`, `EXPEDIE`, `REMBOURSEE`) causera une `IllegalArgumentException` au démarrage de l'application et empêchera celle-ci de répondre.
@@ -380,3 +406,6 @@ Avant d'émettre la première facture réelle, faire valider le PDF généré (a
 
 ### #11 — Aperçu PDF brouillon : uniquement après première sauvegarde
 Dans le formulaire facturation, le bouton "Aperçu PDF" n'apparaît que si `idDocument` est défini (document déjà sauvegardé). Sur un nouveau document non encore sauvegardé, l'aperçu n'est pas disponible — comportement intentionnel.
+
+### #12 — SSR frontend : nécessite un serveur Node.js
+Depuis `feature/ssr-seo`, le frontend utilise Angular SSR (`@angular/ssr 17.3`). En production, le bundle est dans `dist/froid-cheikh-ecommerce-frontend/server/` — il faut exécuter `node server/server.mjs` (ou `npm run serve:ssr:froid-cheikh-ecommerce-frontend`). Un hébergement statique (Netlify, Vercel statique) ne suffit plus : il faut un hébergeur Node.js (Railway, Render, VPS). Variables d'environnement supplémentaires requises côté serveur Node.js : `API_URL` (URL absolue du backend Spring Boot, ex. `https://api.froidcheikhantambacke.sn`) pour que le SSR puisse appeler le backend depuis le serveur. `siteUrl` doit être configuré dans `ParametresSite` (admin → paramètres du site) avec le vrai domaine de production (ex. `https://www.froidcheikhantambacke.sn`) pour que le sitemap et les balises canonical soient corrects.

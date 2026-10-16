@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,10 +25,17 @@ public class CategorieService {
     private final CategorieRepository categorieRepository;
     private final ModelMapper modelMapper;
 
+    /**
+     * Liste publique des catégories — mise en cache.
+     * Utilise findAllWithParentEager (1 seule query SQL avec LEFT JOIN FETCH) pour éviter
+     * le problème N+1 qui était causé par l'accès lazy à parent et produits.
+     */
+    @Cacheable("categories")
+    @Transactional(readOnly = true)
     public List<CategorieDTO> getAllCategories() {
-        return categorieRepository.findAllOrderByName()
+        return categorieRepository.findAllWithParentEager()
                 .stream()
-                .map(this::convertToDTO)
+                .map(this::convertToDTONoLazy)
                 .collect(Collectors.toList());
     }
 
@@ -50,7 +59,10 @@ public class CategorieService {
                 .collect(Collectors.toList());
     }
 
-    @CacheEvict(value = "promotionsActives", allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(value = "promotionsActives", allEntries = true),
+        @CacheEvict(value = "categories", allEntries = true)
+    })
     public CategorieDTO createCategorie(CategorieDTO categorieDTO) {
         Categorie categorie = convertToEntity(categorieDTO);
         categorie = categorieRepository.save(categorie);
@@ -58,7 +70,10 @@ public class CategorieService {
         return convertToDTO(categorie);
     }
 
-    @CacheEvict(value = "promotionsActives", allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(value = "promotionsActives", allEntries = true),
+        @CacheEvict(value = "categories", allEntries = true)
+    })
     public CategorieDTO updateCategorie(Long id, CategorieDTO categorieDTO) {
         Categorie categorie = categorieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Catégorie non trouvée avec l'ID : " + id));
@@ -78,13 +93,33 @@ public class CategorieService {
         return convertToDTO(categorie);
     }
 
-    @CacheEvict(value = "promotionsActives", allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(value = "promotionsActives", allEntries = true),
+        @CacheEvict(value = "categories", allEntries = true)
+    })
     public void deleteCategorie(Long id) {
         if (!categorieRepository.existsById(id)) {
             throw new ResourceNotFoundException("Catégorie non trouvée avec l'ID : " + id);
         }
         categorieRepository.deleteById(id);
         log.info("Catégorie supprimée avec l'ID : {}", id);
+    }
+
+    /**
+     * Mapping pour la liste publique — n'accède PAS aux collections lazy (produits, sousCategories).
+     * Compatible avec findAllWithParentEager (parent déjà chargé via JOIN FETCH).
+     */
+    private CategorieDTO convertToDTONoLazy(Categorie categorie) {
+        CategorieDTO dto = new CategorieDTO();
+        dto.setIdCategorie(categorie.getIdCategorie());
+        dto.setNomCategorie(categorie.getNomCategorie());
+        dto.setDescriptionCategorie(categorie.getDescriptionCategorie());
+        dto.setImageCategorie(categorie.getImageCategorie());
+        if (categorie.getParent() != null) {
+            dto.setParentId(categorie.getParent().getIdCategorie());
+            dto.setNomParent(categorie.getParent().getNomCategorie());
+        }
+        return dto;
     }
 
     private CategorieDTO convertToDTO(Categorie categorie) {
