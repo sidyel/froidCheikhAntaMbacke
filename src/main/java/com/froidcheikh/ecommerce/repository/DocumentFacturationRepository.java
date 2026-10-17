@@ -17,9 +17,9 @@ public interface DocumentFacturationRepository extends JpaRepository<DocumentFac
     @Query("SELECT d FROM DocumentFacturation d WHERE " +
            "(:type IS NULL OR d.typeDocument = :type) AND " +
            "(:statut IS NULL OR d.statut = :statut) AND " +
-           "(:q IS NULL OR LOWER(d.clientNom) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
-           "LOWER(COALESCE(d.clientPrenom, '')) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
-           "LOWER(COALESCE(d.numero, '')) LIKE LOWER(CONCAT('%', :q, '%')))")
+           "(:q IS NULL OR LOWER(d.clientNom) LIKE LOWER(CONCAT('%', CAST(:q AS String), '%')) OR " +
+           "LOWER(COALESCE(d.clientPrenom, '')) LIKE LOWER(CONCAT('%', CAST(:q AS String), '%')) OR " +
+           "LOWER(COALESCE(d.numero, '')) LIKE LOWER(CONCAT('%', CAST(:q AS String), '%')))")
     Page<DocumentFacturation> rechercher(
             @Param("type") TypeDocument type,
             @Param("statut") StatutDocument statut,
