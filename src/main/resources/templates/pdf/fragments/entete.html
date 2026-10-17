@@ -9,17 +9,41 @@
     </div>
   </th:block>
 
-  <!-- Mode COMPOSÉ (ou fallback si image absente) -->
+  <!-- Mode COMPOSÉ (ou fallback si image absente) : logo + infos centrés -->
   <th:block th:unless="${isImageMode and imageEnTeteUri != null}">
-    <table width="100%"><tr>
-      <td width="18%" style="vertical-align:middle;padding-right:3mm;" th:if="${logoUri != null}">
-        <img th:src="${logoUri}" style="max-width:100%;max-height:22mm;display:block;"/>
-      </td>
-      <td style="vertical-align:middle;text-align:center;">
-        <div th:style="${nomFontStyle}" th:text="${raisonSociale}">Nom entreprise</div>
-        <div th:if="${texteDescriptif != null}" style="font-size:7pt;color:#555;margin-top:2pt;" th:text="${texteDescriptif}">Description</div>
-      </td>
-    </tr></table>
+    <table width="100%" style="margin-bottom:1mm;">
+      <tr>
+        <!-- Logo centré (si disponible) -->
+        <th:block th:if="${logoUri != null}">
+          <td style="text-align:center;padding-bottom:2mm;">
+            <img th:src="${logoUri}" style="max-height:25mm;max-width:55mm;display:inline-block;"/>
+          </td>
+        </th:block>
+      </tr>
+      <tr>
+        <!-- Raison sociale centrée -->
+        <td style="text-align:center;vertical-align:middle;">
+          <div th:style="${nomFontStyle}" th:text="${raisonSociale}">Nom entreprise</div>
+          <div th:if="${texteDescriptif != null}" style="font-size:7pt;color:#555;margin-top:2pt;" th:text="${texteDescriptif}">Description</div>
+          <!-- Informations légales centrées sous le nom -->
+          <th:block th:if="${piedAdresse != null or piedTelephone != null or piedNinea != null or piedRccm != null}">
+            <div style="font-size:7pt;color:#555;margin-top:2pt;">
+              <th:block th:if="${piedAdresse != null}"><span th:text="${piedAdresse}">Adresse</span></th:block>
+              <th:block th:if="${piedTelephone != null}">
+                <span th:if="${piedAdresse != null}"> | </span>
+                <span>Tél&#160;: </span><span th:text="${piedTelephone}">Tél</span>
+              </th:block>
+              <th:block th:if="${piedNinea != null}">
+                <span> | NINEA&#160;: </span><span th:text="${piedNinea}">NINEA</span>
+              </th:block>
+              <th:block th:if="${piedRccm != null}">
+                <span> | RC&#160;: </span><span th:text="${piedRccm}">RC</span>
+              </th:block>
+            </div>
+          </th:block>
+        </td>
+      </tr>
+    </table>
   </th:block>
 
 </th:block>
