@@ -41,9 +41,9 @@ color:rgba(200,0,0,0.13);transform:rotate(-30deg);z-index:-1}
 </tr></table>
 <div style="height:3mm;"></div>
 
-<!-- Bloc client -->
+<!-- Bloc client / émetteur -->
 <table width="100%"><tr>
-  <td width="48%" style="border:0.5pt solid #ddd;padding:4pt 6pt;vertical-align:top;">
+  <td width="48%" style="border:0.5pt solid #ddd;padding:4pt 6pt;vertical-align:top;font-size:8pt;">
     <div style="font-size:7pt;font-weight:bold;text-transform:uppercase;color:#999;margin-bottom:2pt;">Facturé à</div>
     <th:block th:if="${clientNom != null}"><strong th:text="${clientNom}">Nom</strong><br/></th:block>
     <th:block th:if="${clientAdresse != null}"><span th:text="${clientAdresse}">Adresse</span><br/></th:block>
@@ -52,7 +52,26 @@ color:rgba(200,0,0,0.13);transform:rotate(-30deg);z-index:-1}
     <th:block th:if="${clientNinea != null}"><span>NINEA&#160;: </span><span th:text="${clientNinea}">NINEA</span><br/></th:block>
     <th:block th:if="${clientRccm != null}"><span>RC&#160;: </span><span th:text="${clientRccm}">RC</span></th:block>
   </td>
-  <td></td>
+  <td width="4%"></td>
+  <!-- Bloc émetteur : identité de l'entreprise -->
+  <td width="48%" style="border:0.5pt solid #ddd;padding:4pt 6pt;vertical-align:top;font-size:8pt;text-align:right;"
+      th:if="${raisonSociale != null and raisonSociale != ''}">
+    <div style="font-size:7pt;font-weight:bold;text-transform:uppercase;color:#999;margin-bottom:2pt;">Émetteur</div>
+    <strong th:text="${raisonSociale}">Entreprise</strong><br/>
+    <th:block th:if="${piedAdresse != null}">
+      <span style="font-size:7.5pt;" th:text="${piedAdresse}">Adresse</span><br/>
+    </th:block>
+    <th:block th:if="${piedTelephone != null}">
+      <span style="font-size:7.5pt;">Tél&#160;: </span><span style="font-size:7.5pt;" th:text="${piedTelephone}">Tél</span><br/>
+    </th:block>
+    <th:block th:if="${piedNinea != null}">
+      <span style="font-size:7.5pt;">NINEA&#160;: </span><strong style="font-size:7.5pt;" th:text="${piedNinea}">NINEA</strong><br/>
+    </th:block>
+    <th:block th:if="${piedRccm != null}">
+      <span style="font-size:7.5pt;">RC&#160;: </span><span style="font-size:7.5pt;" th:text="${piedRccm}">RC</span>
+    </th:block>
+  </td>
+  <td th:unless="${raisonSociale != null and raisonSociale != ''}"></td>
 </tr></table>
 
 <div style="height:3mm;"></div>
@@ -160,7 +179,7 @@ color:rgba(200,0,0,0.13);transform:rotate(-30deg);z-index:-1}
 </th:block>
 <th:block th:if="${cachetUri != null}">
   <div style="margin-top:4mm;text-align:right;">
-    <img th:src="${cachetUri}" style="max-width:35mm;max-height:20mm;"/>
+    <img th:src="${cachetUri}" style="max-width:55mm;max-height:42mm;"/>
   </div>
 </th:block>
 

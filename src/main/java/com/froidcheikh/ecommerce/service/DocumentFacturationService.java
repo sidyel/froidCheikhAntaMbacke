@@ -213,15 +213,44 @@ public class DocumentFacturationService {
         calculerMontants(doc);
         ParametresSite params = chargerParams();
         EnTeteDocumentConfig enTete = buildEnTeteConfig(params);
-        // Aperçu fidèle : injecter les infos entreprise actuelles si non encore figées
-        if (doc.getEntCachetUrl() == null) {
-            doc.setEntCachetUrl(params.getUrlCachetSignature());
+        injecterParamsEntreprisePourApercu(doc, params);
+        return pdfService.generer(doc, enTete, true);
+    }
+
+    /** Régénère et sauvegarde le PDF d'un document émis avec les paramètres actuels. */
+    @Transactional
+    public DocumentFacturationDTO.DocumentResponse regenererPdf(Long id) {
+        DocumentFacturation doc = charger(id);
+        if (doc.getStatut() != StatutDocument.EMIS) {
+            throw new IllegalStateException("Seuls les documents émis peuvent être régénérés");
         }
+        calculerMontants(doc);
+        ParametresSite params = chargerParams();
+        figerEntreprise(doc, params);
+        EnTeteDocumentConfig enTete = buildEnTeteConfig(params);
+        byte[] pdfBytes = pdfService.generer(doc, enTete, false);
+        doc.setPdfBytes(pdfBytes);
+        doc.setPdfSha256(sha256Hex(pdfBytes));
+        return toResponse(documentRepo.save(doc));
+    }
+
+    private void injecterParamsEntreprisePourApercu(DocumentFacturation doc, ParametresSite params) {
+        if (doc.getEntCachetUrl() == null)
+            doc.setEntCachetUrl(params.getUrlCachetSignature());
         if (doc.getEntCouleurPrimaire() == null) {
             String c = params.getCouleurDocuments() != null ? params.getCouleurDocuments() : params.getCouleurPrimaire();
             doc.setEntCouleurPrimaire(c);
         }
-        return pdfService.generer(doc, enTete, true);
+        if (doc.getEntConditionsPaiement() == null)
+            doc.setEntConditionsPaiement(params.getConditionsPaiementDefaut());
+        if (doc.getEntMentionsPied() == null)
+            doc.setEntMentionsPied(params.getMentionsPiedDocument());
+        if (doc.getEntMentionExonerationTva() == null)
+            doc.setEntMentionExonerationTva(params.getMentionExonerationTva());
+        if (doc.getEntDevise() == null) {
+            String d = params.getLibelleDevise();
+            doc.setEntDevise(d != null && !d.isBlank() ? d : "FCFA");
+        }
     }
 
     // ---- AVOIR ----

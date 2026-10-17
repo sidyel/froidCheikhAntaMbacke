@@ -176,6 +176,13 @@ public class DocumentFacturationController {
         return ResponseEntity.noContent().build();
     }
 
+    /** Régénère le PDF d'un document émis avec les paramètres actuels (logo, cachet, couleur). */
+    @PostMapping("/{id}/regenerer-pdf")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public DocumentFacturationDTO.DocumentResponse regenererPdf(@PathVariable Long id) {
+        return documentService.regenererPdf(id);
+    }
+
     /** Aperçu PDF de l'en-tête/pied de page avec les paramètres actuels. Aucun document persisté. */
     @GetMapping("/apercu-entete")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
