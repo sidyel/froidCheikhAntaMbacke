@@ -210,9 +210,17 @@ public class DocumentFacturationService {
 
     public byte[] previsualiserBrouillon(Long id) {
         DocumentFacturation doc = charger(id);
-        calculerMontants(doc); // recalculer sans persister
+        calculerMontants(doc);
         ParametresSite params = chargerParams();
         EnTeteDocumentConfig enTete = buildEnTeteConfig(params);
+        // Aperçu fidèle : injecter les infos entreprise actuelles si non encore figées
+        if (doc.getEntCachetUrl() == null) {
+            doc.setEntCachetUrl(params.getUrlCachetSignature());
+        }
+        if (doc.getEntCouleurPrimaire() == null) {
+            String c = params.getCouleurDocuments() != null ? params.getCouleurDocuments() : params.getCouleurPrimaire();
+            doc.setEntCouleurPrimaire(c);
+        }
         return pdfService.generer(doc, enTete, true);
     }
 

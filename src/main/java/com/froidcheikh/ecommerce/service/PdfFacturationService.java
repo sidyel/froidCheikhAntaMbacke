@@ -107,8 +107,9 @@ public class PdfFacturationService {
         boolean isDevis = doc.getTypeDocument() == TypeDocument.DEVIS;
         boolean hasTva  = doc.getTauxTvaDefaut() != null
                 && doc.getTauxTvaDefaut().compareTo(BigDecimal.ZERO) > 0;
-        boolean isImageMode = cfg.mode() == ModeEnTeteDocuments.IMAGE && hasValue(cfg.urlImageEnTete());
-        boolean isImagePied = cfg.mode() == ModeEnTeteDocuments.IMAGE && hasValue(cfg.urlImagePied());
+        ModeEnTeteDocuments mode = cfg.mode() != null ? cfg.mode() : ModeEnTeteDocuments.COMPOSE;
+        boolean isImageMode = mode == ModeEnTeteDocuments.IMAGE && hasValue(cfg.urlImageEnTete());
+        boolean isImagePied = mode == ModeEnTeteDocuments.IMAGE && hasValue(cfg.urlImagePied());
 
         // ── CSS / apparence ──────────────────────────────────────────────────
         ctx.setVariable("couleur",        couleur);
