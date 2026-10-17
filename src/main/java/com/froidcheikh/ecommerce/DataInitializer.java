@@ -68,6 +68,8 @@ public class DataInitializer implements CommandLineRunner {
             parametresSiteService.migrerTelephones();
             // PDF template (oct. 2026) : ces champs vides → mentions absentes du PDF
             parametresSiteService.viderMentionsDefaut();
+            // Textes légaux (oct. 2026) : CGV, mentions légales, politique de confidentialité
+            parametresSiteService.initTextsLegauxSiAbsents();
         }
 
         if (imageHeroRepository.count() == 0) {

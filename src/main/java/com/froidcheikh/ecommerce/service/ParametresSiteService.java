@@ -259,6 +259,222 @@ public class ParametresSiteService {
         });
     }
 
+    @org.springframework.transaction.annotation.Transactional
+    public void initTextsLegauxSiAbsents() {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            boolean modifie = false;
+
+            if (p.getCgv() == null || p.getCgv().isBlank()) {
+                p.setCgv(CGV_DEFAULT);
+                modifie = true;
+            }
+            if (p.getMentionsLegales() == null || p.getMentionsLegales().isBlank()) {
+                p.setMentionsLegales(MENTIONS_LEGALES_DEFAULT);
+                modifie = true;
+            }
+            if (p.getPolitiqueConfidentialite() == null || p.getPolitiqueConfidentialite().isBlank()) {
+                p.setPolitiqueConfidentialite(POLITIQUE_CONF_DEFAULT);
+                modifie = true;
+            }
+            if (modifie) {
+                repository.save(p);
+            }
+        });
+    }
+
+    private static final String CGV_DEFAULT = """
+# Conditions Générales de Vente
+
+---
+
+## Article 1 — Objet et champ d'application
+
+Les présentes Conditions Générales de Vente (CGV) régissent les relations contractuelles entre Froid Cheikh Anta Mbacké (ci-après « le Vendeur ») et tout acheteur particulier ou professionnel (ci-après « le Client ») passant commande sur le site froidcheikhantambacke.sn ou en boutique.
+
+Toute commande implique l'acceptation pleine et entière des présentes CGV, qui prévalent sur tout autre document.
+
+---
+
+## Article 2 — Produits
+
+Les produits proposés sont des équipements de climatisation, réfrigération et électroménager. Les caractéristiques essentielles de chaque produit sont présentées sur la fiche produit correspondante. Les photographies sont fournies à titre illustratif et ne sont pas contractuelles.
+
+---
+
+## Article 3 — Prix
+
+Les prix sont indiqués en Francs CFA (XOF), toutes taxes comprises. Le Vendeur se réserve le droit de modifier ses prix à tout moment ; les commandes sont facturées au tarif en vigueur au moment de la validation.
+
+---
+
+## Article 4 — Commande et paiement
+
+La commande est ferme et définitive après confirmation par le Client. Le paiement s'effectue à la livraison (espèces ou mobile money) ou selon les modalités convenues avec le Vendeur. Aucune commande n'est traitée sans confirmation de paiement ou accord préalable.
+
+---
+
+## Article 5 — Livraison
+
+Les délais de livraison sont indiqués à titre indicatif lors de la commande. Les frais de livraison sont calculés selon la zone géographique et communiqués avant validation. Tout retard de livraison dû à un cas de force majeure ne saurait engager la responsabilité du Vendeur.
+
+---
+
+## Article 6 — Garantie
+
+Les appareils vendus bénéficient d'une garantie constructeur (généralement 1 an pièces et main-d'œuvre), dont les conditions sont précisées sur le bon de garantie remis à la livraison. La garantie ne couvre pas les dommages résultant d'une mauvaise utilisation, d'une installation non conforme ou d'une intervention non autorisée.
+
+---
+
+## Article 7 — Retours et réclamations
+
+Toute réclamation doit être formulée dans les 48 heures suivant la livraison. Un produit ne peut être retourné qu'après accord préalable du Vendeur. Les frais de retour sont à la charge du Client, sauf en cas de défaut avéré ou d'erreur de livraison.
+
+---
+
+## Article 8 — Responsabilité
+
+Le Vendeur ne saurait être tenu responsable des dommages indirects résultant de l'utilisation des produits. Sa responsabilité est limitée au montant de la commande concernée.
+
+---
+
+## Article 9 — Droit applicable et litiges
+
+Les présentes CGV sont soumises au droit sénégalais. En cas de litige, les parties rechercheront une solution amiable. À défaut, les tribunaux compétents de Dakar seront saisis.
+
+---
+
+## Article 10 — Contact
+
+Pour toute question relative à une commande, contactez-nous à l'adresse email ou par téléphone indiqués sur le site.
+""";
+
+    private static final String MENTIONS_LEGALES_DEFAULT = """
+# Mentions Légales
+
+---
+
+## Éditeur du site
+
+Dénomination sociale : Froid Cheikh Anta Mbacké
+Activité : Vente, installation et maintenance d'équipements de climatisation et réfrigération
+Adresse : Dakar, Sénégal
+Email : froidcheikhantambacke.dione65@gmail.com
+NINEA : (renseigner dans les paramètres du site)
+RCCM : (renseigner dans les paramètres du site)
+
+---
+
+## Responsable de publication
+
+Le responsable de la publication est le gérant de Froid Cheikh Anta Mbacké.
+
+---
+
+## Hébergement
+
+Le site est hébergé par un prestataire tiers. Les coordonnées de l'hébergeur sont disponibles sur demande.
+
+---
+
+## Propriété intellectuelle
+
+L'ensemble du contenu de ce site (textes, images, logos, structure) est la propriété exclusive de Froid Cheikh Anta Mbacké ou de ses partenaires. Toute reproduction, même partielle, est strictement interdite sans autorisation écrite préalable.
+
+---
+
+## Données personnelles
+
+Le traitement des données personnelles collectées sur ce site est déclaré auprès de la Commission de Protection des Données Personnelles (CDP) conformément à la loi n° 2008-12 du 25 janvier 2008 sur la protection des données à caractère personnel au Sénégal.
+
+Pour exercer vos droits, consultez notre Politique de Confidentialité.
+
+---
+
+## Cookies
+
+Ce site utilise des cookies à des fins fonctionnelles et statistiques. Vous pouvez gérer vos préférences en cliquant sur « Gérer mes cookies » en bas de page.
+
+---
+
+## Limitation de responsabilité
+
+Froid Cheikh Anta Mbacké s'efforce d'assurer l'exactitude des informations diffusées sur ce site. Cependant, il ne peut garantir leur exhaustivité et décline toute responsabilité pour les interruptions ou erreurs qui pourraient y apparaître.
+
+---
+
+## Droit applicable
+
+Les présentes mentions légales sont soumises au droit sénégalais. Tout litige relève de la compétence exclusive des tribunaux de Dakar.
+""";
+
+    private static final String POLITIQUE_CONF_DEFAULT = """
+# Politique de Confidentialité
+
+---
+
+## 1. Responsable du traitement
+
+Froid Cheikh Anta Mbacké, entreprise sénégalaise dont le siège social est à Dakar, est responsable du traitement de vos données personnelles collectées via le site froidcheikhantambacke.sn.
+
+Ce traitement est déclaré auprès de la Commission de Protection des Données Personnelles (CDP) conformément à la loi n° 2008-12 du 25 janvier 2008 sur la protection des données à caractère personnel en République du Sénégal.
+
+---
+
+## 2. Données collectées
+
+Nous collectons uniquement les données nécessaires au traitement de vos commandes et à l'amélioration de nos services :
+
+Données d'identification : nom, prénom, adresse email, numéro de téléphone.
+Données de livraison : adresse de livraison, zone géographique.
+Données de navigation : adresse IP, pages visitées, cookies (avec votre consentement).
+
+---
+
+## 3. Finalités du traitement
+
+Vos données sont utilisées pour : traiter et suivre vos commandes, vous contacter concernant votre commande, améliorer notre site et nos services, respecter nos obligations légales et comptables.
+
+Nous n'utilisons jamais vos données à des fins de démarchage non consenti.
+
+---
+
+## 4. Partage des données
+
+Vos données ne sont jamais vendues à des tiers. Elles peuvent être transmises à nos partenaires logistiques uniquement dans le cadre de la livraison de votre commande, dans le strict respect de la confidentialité.
+
+---
+
+## 5. Conservation des données
+
+Vos données de commande sont conservées pendant 5 ans conformément aux obligations comptables et fiscales sénégalaises. Les données de compte sont conservées tant que votre compte est actif.
+
+---
+
+## 6. Vos droits (loi CDP)
+
+Conformément à la loi n° 2008-12 du 25 janvier 2008, vous disposez des droits suivants : droit d'accès, de rectification, de suppression et d'opposition à l'utilisation de vos données personnelles.
+
+Pour exercer ces droits, contactez-nous à l'adresse email indiquée sur le site en précisant votre demande. Nous répondrons dans un délai de 30 jours.
+
+---
+
+## 7. Cookies
+
+Notre site utilise des cookies fonctionnels (nécessaires au bon fonctionnement du site) et des cookies analytiques (avec votre consentement). Vous pouvez gérer vos préférences à tout moment via le bouton « Gérer mes cookies » en bas de page.
+
+---
+
+## 8. Sécurité
+
+Nous mettons en œuvre les mesures techniques et organisationnelles appropriées pour protéger vos données contre tout accès non autorisé, perte ou altération.
+
+---
+
+## 9. Contact
+
+Pour toute question relative à cette politique ou pour exercer vos droits, contactez-nous via le formulaire de contact ou à l'adresse email du site.
+""";
+
     public boolean exists() {
         return !repository.findAll().isEmpty();
     }
