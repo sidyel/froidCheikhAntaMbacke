@@ -7,47 +7,48 @@
     <img th:src="${imagePiedUri}" style="width:100%;display:block;"/>
   </th:block>
 
-  <!-- Mode COMPOSÉ texte -->
+  <!-- Mode COMPOSÉ : 3 lignes centrées, gras, noir, 8,5 pt -->
   <th:block th:unless="${isImagePied and imagePiedUri != null}">
-    <div style="border-top:0.5pt solid #bbb;padding-top:2pt;font-size:7pt;color:#555;">
+    <div style="border-top:0.5pt solid #000;padding-top:3pt;font-family:'LiberationSans';font-weight:bold;font-size:8.5pt;color:#000;text-align:center;line-height:1.45;">
 
-      <!-- Ligne 1 : adresse — BP -->
-      <th:block th:if="${piedAdresse != null}">
-        <span th:text="${piedAdresse}">Adresse</span>
-        <th:block th:if="${piedBoitePostale != null}">
-          <span> — </span><span th:text="${piedBoitePostale}">BP</span>
-        </th:block>
-        <br/>
-      </th:block>
-
-      <!-- Ligne 2 : Tél | RC | NINEA -->
-      <th:block th:if="${piedTelephone != null or piedRccm != null or piedNinea != null}">
-        <th:block th:if="${piedTelephone != null}">
-          <span>Tél&#160;: </span><span th:text="${piedTelephone}">Tél</span>
-        </th:block>
-        <th:block th:if="${piedRccm != null}">
-          <th:block th:if="${piedTelephone != null}"><span> | </span></th:block>
-          <span>RC&#160;: </span><span th:text="${piedRccm}">RC</span>
-        </th:block>
-        <th:block th:if="${piedNinea != null}">
-          <th:block th:if="${piedTelephone != null or piedRccm != null}"><span> | </span></th:block>
-          <span>NINEA&#160;: </span><span th:text="${piedNinea}">NINEA</span>
-        </th:block>
-        <br/>
-      </th:block>
-
-      <!-- Ligne 3 : Banque | email -->
-      <th:block th:if="${piedBanque != null or piedEmail != null}">
-        <th:block th:if="${piedBanque != null}">
-          <span>Banque&#160;: </span><span th:text="${piedBanque}">Banque</span>
-          <th:block th:if="${piedCompte != null}">
-            <span> N°&#160;</span><span th:text="${piedCompte}">Compte</span>
+      <!-- Ligne 1 : Adresse — Tél — BP -->
+      <th:block th:if="${piedAdresse != null or piedTelephone != null or piedBoitePostale != null}">
+        <div>
+          <th:block th:if="${piedAdresse != null}"><span th:text="${piedAdresse}">Adresse</span></th:block>
+          <th:block th:if="${piedTelephone != null}">
+            <span th:if="${piedAdresse != null}">&#160;&#8212;&#160;</span>
+            <span>Tél&#160;: </span><span th:text="${piedTelephone}">Tél</span>
           </th:block>
-        </th:block>
-        <th:block th:if="${piedEmail != null}">
-          <th:block th:if="${piedBanque != null}"><span> | </span></th:block>
-          <span th:text="${piedEmail}">email</span>
-        </th:block>
+          <th:block th:if="${piedBoitePostale != null}">
+            <span th:if="${piedAdresse != null or piedTelephone != null}">&#160;&#8212;&#160;</span>
+            <span th:text="${piedBoitePostale}">BP</span>
+          </th:block>
+        </div>
+      </th:block>
+
+      <!-- Ligne 2 : R.C — NINEA — Compte Bancaire -->
+      <th:block th:if="${piedRccm != null or piedNinea != null or piedBanque != null}">
+        <div>
+          <th:block th:if="${piedRccm != null}">
+            <span>R.C&#160;: </span><span th:text="${piedRccm}">RC</span>
+          </th:block>
+          <th:block th:if="${piedNinea != null}">
+            <span th:if="${piedRccm != null}">&#160;&#8211;&#160;</span>
+            <span>NINEA&#160;: </span><span th:text="${piedNinea}">NINEA</span>
+          </th:block>
+          <th:block th:if="${piedBanque != null}">
+            <span th:if="${piedRccm != null or piedNinea != null}">&#160;&#8211;&#160;</span>
+            <span>Compte Bancaire&#160;: </span><span th:text="${piedBanque}">Banque</span>
+            <th:block th:if="${piedCompte != null}">
+              <span>&#160;N°&#160;</span><span th:text="${piedCompte}">Compte</span>
+            </th:block>
+          </th:block>
+        </div>
+      </th:block>
+
+      <!-- Ligne 3 : Email -->
+      <th:block th:if="${piedEmail != null}">
+        <div><span>Email&#160;: </span><span th:text="${piedEmail}">email</span></div>
       </th:block>
 
     </div>

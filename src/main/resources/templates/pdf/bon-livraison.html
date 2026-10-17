@@ -8,60 +8,34 @@
 <!-- Pied répété sur chaque page -->
 <th:block th:insert="~{fragments/pied :: pied}"/>
 
-<!-- En-tête -->
+<!-- En-tête (inclut le double trait en mode composé) -->
 <th:block th:insert="~{fragments/entete :: entete}"/>
 
-<!-- Double trait épais + fin -->
-<div th:style="'border-top:3pt solid '+${couleur}+';border-bottom:1pt solid '+${couleur}+';height:0;padding:2pt 0;margin:2.5mm 0 4mm 0;'"></div>
-
-<!-- Titre + date -->
-<table width="100%"><tr>
-  <td style="vertical-align:top;">
-    <span th:style="${titreFontStyle}" th:text="${typeLabel + ' N° ' + numero}">BON DE LIVRAISON N°</span>
-  </td>
-  <td style="text-align:right;vertical-align:top;font-size:8pt;">
-    <th:block th:if="${dateStr != null}">
-      <span th:text="${dateLabelStr}">Émis le :</span>
-      <strong th:text="${dateStr}">date</strong>
-    </th:block>
-  </td>
-</tr></table>
-<div style="height:3mm;"></div>
-
-<!-- Bloc destinataire / émetteur -->
-<table width="100%"><tr>
-  <td width="48%" style="border:0.5pt solid #ddd;padding:4pt 6pt;vertical-align:top;font-size:8pt;">
-    <div style="font-size:7pt;font-weight:bold;text-transform:uppercase;color:#999;margin-bottom:2pt;">Destinataire</div>
+<!-- Bloc Destinataire (gauche) + Référence / date (droite) -->
+<table width="100%" cellpadding="0" cellspacing="0"><tr>
+  <td width="48%" style="border:0.5pt solid #ddd;padding:4pt 6pt;vertical-align:top;font-size:10pt;">
+    <div style="font-size:8pt;font-weight:bold;text-transform:uppercase;color:#999;margin-bottom:2pt;">Destinataire</div>
     <th:block th:if="${clientNom != null}"><strong th:text="${clientNom}">Nom</strong><br/></th:block>
     <th:block th:if="${clientAdresse != null}"><span th:text="${clientAdresse}">Adresse</span><br/></th:block>
     <th:block th:if="${clientTelephone != null}"><span>Tél&#160;: </span><span th:text="${clientTelephone}">Tél</span></th:block>
   </td>
   <td width="4%"></td>
-  <td width="48%" style="border:0.5pt solid #ddd;padding:4pt 6pt;vertical-align:top;font-size:8pt;text-align:right;"
-      th:if="${raisonSociale != null and raisonSociale != ''}">
-    <div style="font-size:7pt;font-weight:bold;text-transform:uppercase;color:#999;margin-bottom:2pt;">Émetteur</div>
-    <strong th:text="${raisonSociale}">Entreprise</strong><br/>
-    <th:block th:if="${piedAdresse != null}">
-      <span style="font-size:7.5pt;" th:text="${piedAdresse}">Adresse</span><br/>
-    </th:block>
-    <th:block th:if="${piedTelephone != null}">
-      <span style="font-size:7.5pt;">Tél&#160;: </span><span style="font-size:7.5pt;" th:text="${piedTelephone}">Tél</span><br/>
-    </th:block>
-    <th:block th:if="${piedNinea != null}">
-      <span style="font-size:7.5pt;">NINEA&#160;: </span><strong style="font-size:7.5pt;" th:text="${piedNinea}">NINEA</strong><br/>
-    </th:block>
-    <th:block th:if="${piedRccm != null}">
-      <span style="font-size:7.5pt;">RC&#160;: </span><span style="font-size:7.5pt;" th:text="${piedRccm}">RC</span>
+  <td width="48%" style="border:0.5pt solid #ddd;padding:6pt 8pt;vertical-align:middle;text-align:right;">
+    <div style="font-size:8pt;font-weight:bold;text-transform:uppercase;color:#999;margin-bottom:4pt;">Référence</div>
+    <div th:style="${titreFontStyle}" th:text="${typeLabel + ' N° ' + numero}">BON DE LIVRAISON N°</div>
+    <th:block th:if="${dateStr != null}">
+      <div style="font-size:10pt;margin-top:2mm;">
+        <span th:text="${dateLabelStr}">Émis le :</span>&#160;<strong th:text="${dateStr}">date</strong>
+      </div>
     </th:block>
   </td>
-  <td th:unless="${raisonSociale != null and raisonSociale != ''}"></td>
 </tr></table>
 
-<div style="height:3mm;"></div>
+<div style="height:4mm;"></div>
 
 <!-- Infos livreur -->
 <th:block th:if="${livreurNom != null or livreurTelephone != null}">
-  <div style="font-size:8.5pt;margin-bottom:3mm;">
+  <div style="font-size:10pt;margin-bottom:3mm;">
     <strong>Livreur&#160;: </strong>
     <span th:if="${livreurNom != null}" th:text="${livreurNom}">Livreur</span>
     <th:block th:if="${livreurTelephone != null}">
@@ -90,12 +64,18 @@
 </th:block>
 
 <!-- Zone signatures -->
-<div style="height:10mm;"></div>
-<table width="100%"><tr>
-  <td width="45%" style="border-top:0.5pt solid #aaa;padding-top:2pt;font-size:8pt;">Signature émetteur</td>
+<div style="height:12mm;"></div>
+<table width="100%" cellpadding="0" cellspacing="0"><tr>
+  <td width="45%" style="border-top:0.5pt solid #aaa;padding-top:2pt;font-size:9pt;">Signature émetteur</td>
   <td width="10%"></td>
-  <td width="45%" style="border-top:0.5pt solid #aaa;padding-top:2pt;font-size:8pt;">Signature destinataire (Bon pour accord)</td>
+  <td width="45%" style="border-top:0.5pt solid #aaa;padding-top:2pt;font-size:9pt;">Signature destinataire (Bon pour accord)</td>
 </tr></table>
+
+<th:block th:if="${cachetUri != null}">
+  <div style="margin-top:4mm;text-align:right;">
+    <img th:src="${cachetUri}" style="max-width:55mm;max-height:42mm;"/>
+  </div>
+</th:block>
 
 </body>
 </html>

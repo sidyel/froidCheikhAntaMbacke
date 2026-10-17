@@ -115,10 +115,10 @@ public class PdfFacturationService {
         ctx.setVariable("couleur",        couleur);
         ctx.setVariable("brouillon",      brouillon);
         ctx.setVariable("titreFontStyle",
-                "font-family:'Oswald';font-weight:bold;font-size:13pt;color:" + couleur + ";white-space:nowrap;");
+                "font-family:'Oswald';font-weight:bold;font-size:16pt;color:" + couleur + ";white-space:nowrap;");
         ctx.setVariable("nomFontStyle",
                 "font-family:'Oswald';font-weight:bold;font-size:" + nomFontPt(cfg.raisonSociale())
-                        + "pt;color:" + couleur + ";white-space:nowrap;overflow:hidden;");
+                        + "pt;text-transform:uppercase;color:" + couleur + ";white-space:nowrap;");
 
         // ── Mode en-tête / pied ──────────────────────────────────────────────
         ctx.setVariable("isImageMode",    isImageMode);
@@ -376,11 +376,13 @@ public class PdfFacturationService {
      * Adapte automatiquement à la longueur de la chaîne.
      */
     private static int nomFontPt(String nom) {
-        if (nom == null) return 18;
+        if (nom == null) return 24;
         int len = nom.length();
-        if (len <= 25) return 20;
-        if (len <= 35) return 17;
-        if (len <= 45) return 15;
+        if (len <= 18) return 28;
+        if (len <= 25) return 24;
+        if (len <= 34) return 20;
+        if (len <= 44) return 17;
+        if (len <= 55) return 14;
         return 12;
     }
 

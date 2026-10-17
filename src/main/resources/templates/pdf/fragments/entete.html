@@ -4,46 +4,37 @@
 
   <!-- Mode IMAGE avec image disponible -->
   <th:block th:if="${isImageMode and imageEnTeteUri != null}">
-    <div style="text-align:center;">
-      <img th:src="${imageEnTeteUri}" style="display:block;width:100%;max-height:48mm;"/>
+    <div style="text-align:center;margin-bottom:4mm;">
+      <img th:src="${imageEnTeteUri}" style="display:block;width:100%;max-height:50mm;"/>
     </div>
   </th:block>
 
-  <!-- Mode COMPOSÉ (ou fallback si image absente) : logo + infos centrés -->
+  <!-- Mode COMPOSÉ (ou fallback si image absente) -->
   <th:block th:unless="${isImageMode and imageEnTeteUri != null}">
-    <table width="100%" style="margin-bottom:1mm;">
+
+    <!-- Ligne 1 : logo GAUCHE + nom entreprise à DROITE sur une seule ligne -->
+    <table width="100%" style="margin-bottom:2mm;" cellpadding="0" cellspacing="0">
       <tr>
-        <!-- Logo centré (si disponible) -->
         <th:block th:if="${logoUri != null}">
-          <td style="text-align:center;padding-bottom:2mm;">
-            <img th:src="${logoUri}" style="max-height:25mm;max-width:55mm;display:inline-block;"/>
+          <td style="width:40mm;vertical-align:middle;padding-right:5mm;">
+            <img th:src="${logoUri}" style="max-height:22mm;max-width:38mm;display:block;"/>
           </td>
         </th:block>
-      </tr>
-      <tr>
-        <!-- Raison sociale centrée -->
-        <td style="text-align:center;vertical-align:middle;">
-          <div th:style="${nomFontStyle}" th:text="${raisonSociale}">Nom entreprise</div>
-          <div th:if="${texteDescriptif != null}" style="font-size:7pt;color:#555;margin-top:2pt;" th:text="${texteDescriptif}">Description</div>
-          <!-- Informations légales centrées sous le nom -->
-          <th:block th:if="${piedAdresse != null or piedTelephone != null or piedNinea != null or piedRccm != null}">
-            <div style="font-size:7pt;color:#555;margin-top:2pt;">
-              <th:block th:if="${piedAdresse != null}"><span th:text="${piedAdresse}">Adresse</span></th:block>
-              <th:block th:if="${piedTelephone != null}">
-                <span th:if="${piedAdresse != null}"> | </span>
-                <span>Tél&#160;: </span><span th:text="${piedTelephone}">Tél</span>
-              </th:block>
-              <th:block th:if="${piedNinea != null}">
-                <span> | NINEA&#160;: </span><span th:text="${piedNinea}">NINEA</span>
-              </th:block>
-              <th:block th:if="${piedRccm != null}">
-                <span> | RC&#160;: </span><span th:text="${piedRccm}">RC</span>
-              </th:block>
-            </div>
-          </th:block>
+        <td style="vertical-align:middle;">
+          <div th:style="${nomFontStyle}" th:text="${raisonSociale}">NOM ENTREPRISE</div>
         </td>
       </tr>
     </table>
+
+    <!-- Ligne 2 : texte descriptif des activités, centré, gras, noir, 10 pt -->
+    <th:block th:if="${texteDescriptif != null}">
+      <div style="font-family:'LiberationSans';font-weight:bold;font-size:10pt;color:#000;text-align:center;margin-bottom:3mm;"
+           th:text="${texteDescriptif}">Description des activités</div>
+    </th:block>
+
+    <!-- Double trait épais + fin dans la couleur des documents -->
+    <div th:style="'border-top:3pt solid '+${couleur}+';border-bottom:1pt solid '+${couleur}+';height:0;padding:2pt 0;margin:0 0 4mm 0;'"></div>
+
   </th:block>
 
 </th:block>
