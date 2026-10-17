@@ -709,10 +709,15 @@ public class DocumentFacturationService {
         String couleur = p.getCouleurDocuments() != null ? p.getCouleurDocuments()
                 : (p.getCouleurPrimaire() != null ? p.getCouleurPrimaire() : "#000080");
         String devise = p.getLibelleDevise() != null && !p.getLibelleDevise().isBlank() ? p.getLibelleDevise() : "FCFA";
+        String raisonSociale = (p.getRaisonSociale() != null && !p.getRaisonSociale().isBlank())
+                ? p.getRaisonSociale() : p.getNomSite();
+        String texteDescriptif = (p.getTexteDescriptifActivites() != null && !p.getTexteDescriptifActivites().isBlank())
+                ? p.getTexteDescriptifActivites()
+                : ((p.getDescriptionSite() != null && !p.getDescriptionSite().isBlank()) ? p.getDescriptionSite() : null);
         return new EnTeteDocumentConfig(
-                p.getRaisonSociale(),
+                raisonSociale,
                 p.getLogoUrl(),
-                p.getTexteDescriptifActivites(),
+                texteDescriptif,
                 p.getAdresseComplete(),
                 telephone,
                 p.getBoitePostale(),

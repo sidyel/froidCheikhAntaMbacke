@@ -118,7 +118,7 @@ public class PdfFacturationService {
                 "font-family:'Oswald';font-weight:bold;font-size:16pt;color:" + couleur + ";white-space:nowrap;");
         ctx.setVariable("nomFontStyle",
                 "font-family:'Oswald';font-weight:bold;font-size:" + nomFontPt(cfg.raisonSociale())
-                        + "pt;text-transform:uppercase;color:" + couleur + ";white-space:nowrap;");
+                        + "pt;text-transform:uppercase;color:" + couleur + ";");
 
         // ── Mode en-tête / pied ──────────────────────────────────────────────
         ctx.setVariable("isImageMode",    isImageMode);
