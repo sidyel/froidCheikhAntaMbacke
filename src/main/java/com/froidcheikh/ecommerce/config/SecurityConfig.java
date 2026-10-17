@@ -97,6 +97,9 @@ public class SecurityConfig {
                         // Gestionnaire d'administrateurs protégé par token URL (ADMIN_MANAGER_TOKEN)
                         .requestMatchers("/manage/**").permitAll()
 
+                        // Page d'erreur Spring Boot (nécessaire pour les redirections internes)
+                        .requestMatchers("/error").permitAll()
+
                         // ✅ ENDPOINTS CLIENTS AUTHENTIFIÉS
                         .requestMatchers("/api/clients/profil/**").hasRole("CLIENT")
                         .requestMatchers("/api/clients/commandes/**").hasRole("CLIENT")
