@@ -13,11 +13,16 @@
   <th:block th:unless="${isImageMode and imageEnTeteUri != null}">
 
     <!-- Ligne 1 : logo GAUCHE + nom entreprise à DROITE sur une seule ligne -->
-    <table width="100%" style="margin-bottom:2mm;" cellpadding="0" cellspacing="0">
+    <!-- table-layout:fixed bloque strictement la largeur de chaque colonne -->
+    <table width="100%" style="table-layout:fixed;margin-bottom:2mm;" cellpadding="0" cellspacing="0">
+      <th:block th:if="${logoUri != null}">
+        <col style="width:32mm;"/>
+        <col/>
+      </th:block>
       <tr>
         <th:block th:if="${logoUri != null}">
-          <td style="width:30mm;vertical-align:middle;padding-right:4mm;">
-            <img th:src="${logoUri}" style="max-height:16mm;max-width:28mm;display:inline-block;"/>
+          <td style="vertical-align:middle;padding-right:4mm;overflow:hidden;">
+            <img th:src="${logoUri}" style="height:14mm;width:auto;max-width:27mm;display:inline-block;"/>
           </td>
         </th:block>
         <td style="vertical-align:middle;">
