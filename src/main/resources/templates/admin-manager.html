@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gestion Administrateurs</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+header{background:#1e293b;border-bottom:1px solid #334155;padding:16px 32px;display:flex;align-items:center;gap:12px}
+header h1{font-size:18px;font-weight:700;color:#f8fafc}
+header span{background:#3b82f6;color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px}
+main{padding:32px;max-width:1100px;margin:0 auto}
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:1px solid #334155;display:flex;align-items:center;justify-content:space-between}
+.card-header h2{font-size:15px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{background:#0f172a;color:#94a3b8;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:10px 16px;text-align:left}
+td{padding:12px 16px;border-top:1px solid #1e293b;font-size:14px;vertical-align:middle}
+tr:hover td{background:#1a2840}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.badge-super{background:#7c3aed22;color:#a78bfa;border:1px solid #7c3aed55}
+.badge-admin{background:#0369a122;color:#38bdf8;border:1px solid #0369a155}
+.badge-gest{background:#05966922;color:#34d399;border:1px solid #05966955}
+.badge-on{background:#05966922;color:#34d399}
+.badge-off{background:#9f121222;color:#f87171}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:.15s}
+.btn-primary{background:#3b82f6;color:#fff}.btn-primary:hover{background:#2563eb}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-edit{background:#1e3a5f;color:#93c5fd;border:1px solid #1d4ed8}.btn-edit:hover{background:#1d4ed8;color:#fff}
+.btn-del{background:#3b0f0f;color:#f87171;border:1px solid #7f1d1d}.btn-del:hover{background:#7f1d1d;color:#fff}
+.btn-tog{background:#1a2840;color:#94a3b8;border:1px solid #334155}.btn-tog:hover{background:#334155}
+.modal-overlay{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:99;opacity:0;pointer-events:none;transition:.2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:28px;width:100%;max-width:440px;transform:translateY(20px);transition:.2s}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.field{margin-bottom:14px}
+label{display:block;font-size:12px;color:#94a3b8;margin-bottom:5px;font-weight:500}
+input,select{width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:7px;padding:9px 12px;font-size:14px;outline:none}
+input:focus,select:focus{border-color:#3b82f6}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.btn-cancel{background:#1a2840;color:#94a3b8;border:1px solid #334155}.btn-cancel:hover{background:#334155}
+#toast{position:fixed;bottom:24px;right:24px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:12px 20px;border-radius:10px;font-size:14px;opacity:0;transition:.3s;z-index:200;max-width:300px}
+#toast.show{opacity:1}
+#toast.ok{border-color:#059669;color:#34d399}
+#toast.err{border-color:#dc2626;color:#f87171}
+.empty{padding:40px;text-align:center;color:#475569;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <svg width="22" height="22" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87m-4-12a4 4 0 0 1 0 7.75"/></svg>
+  <h1>Gestion des Administrateurs</h1>
+  <span id="count">…</span>
+</header>
+<main>
+  <div class="card">
+    <div class="card-header">
+      <h2>Comptes administrateurs</h2>
+      <button class="btn btn-primary btn-sm" onclick="ouvrirCreer()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nouvel admin
+      </button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Créé le</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="tbody"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal créer/modifier -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">Nouvel administrateur</h3>
+    <div class="row2">
+      <div class="field"><label>Nom</label><input id="f-nom" placeholder="Dione"/></div>
+      <div class="field"><label>Prénom</label><input id="f-prenom" placeholder="Sidy"/></div>
+    </div>
+    <div class="field"><label>Email</label><input id="f-email" type="email" placeholder="admin@example.com"/></div>
+    <div class="field">
+      <label id="pwd-label">Mot de passe</label>
+      <input id="f-pwd" type="password" placeholder="Minimum 6 caractères"/>
+    </div>
+    <div class="field">
+      <label>Rôle</label>
+      <select id="f-role">
+        <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+        <option value="ADMIN" selected>ADMIN</option>
+        <option value="GESTIONNAIRE">GESTIONNAIRE</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="fermerModal()">Annuler</button>
+      <button class="btn btn-primary" id="btn-save" onclick="sauvegarder()">Créer</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
+let editId = null;
+
+async function api(method, path, body) {
+  const url = '/manage/api' + path + '?token=' + encodeURIComponent(TOKEN);
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if (r.status === 204) return null;
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.erreur || 'Erreur ' + r.status);
+  return data;
+}
+
+function roleBadge(r) {
+  if (r === 'SUPER_ADMIN') return '<span class="badge badge-super">SUPER_ADMIN</span>';
+  if (r === 'GESTIONNAIRE') return '<span class="badge badge-gest">GESTIONNAIRE</span>';
+  return '<span class="badge badge-admin">ADMIN</span>';
+}
+
+function renderRow(a) {
+  return `<tr id="row-${a.id}">
+    <td><strong>${esc(a.prenom)} ${esc(a.nom)}</strong></td>
+    <td style="color:#94a3b8">${esc(a.email)}</td>
+    <td>${roleBadge(a.role)}</td>
+    <td><span class="badge ${a.actif ? 'badge-on' : 'badge-off'}">${a.actif ? 'Actif' : 'Désactivé'}</span></td>
+    <td style="color:#64748b;font-size:12px">${a.dateCreation || '—'}</td>
+    <td>
+      <button class="btn btn-sm btn-edit" onclick="ouvrirModifier(${a.id})">Modifier</button>
+      <button class="btn btn-sm btn-tog" onclick="toggleActif(${a.id},${!a.actif})" style="margin:0 4px">${a.actif ? 'Désactiver' : 'Activer'}</button>
+      <button class="btn btn-sm btn-del" onclick="supprimer(${a.id})">Supprimer</button>
+    </td>
+  </tr>`;
+}
+
+function esc(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+let admins = [];
+
+async function charger() {
+  try {
+    admins = await api('GET', '/admins');
+    document.getElementById('count').textContent = admins.length;
+    const tbody = document.getElementById('tbody');
+    if (admins.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">Aucun administrateur</td></tr>';
+    } else {
+      tbody.innerHTML = admins.map(renderRow).join('');
+    }
+  } catch (e) {
+    toast('Erreur de chargement : ' + e.message, 'err');
+  }
+}
+
+function ouvrirCreer() {
+  editId = null;
+  document.getElementById('modal-title').textContent = 'Nouvel administrateur';
+  document.getElementById('btn-save').textContent = 'Créer';
+  document.getElementById('pwd-label').textContent = 'Mot de passe';
+  ['f-nom','f-prenom','f-email','f-pwd'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-role').value = 'ADMIN';
+  document.getElementById('modal').classList.add('open');
+}
+
+function ouvrirModifier(id) {
+  const a = admins.find(x => x.id === id);
+  if (!a) return;
+  editId = id;
+  document.getElementById('modal-title').textContent = 'Modifier l\'administrateur';
+  document.getElementById('btn-save').textContent = 'Enregistrer';
+  document.getElementById('pwd-label').textContent = 'Nouveau mot de passe (laisser vide pour ne pas changer)';
+  document.getElementById('f-nom').value = a.nom;
+  document.getElementById('f-prenom').value = a.prenom;
+  document.getElementById('f-email').value = a.email;
+  document.getElementById('f-pwd').value = '';
+  document.getElementById('f-role').value = a.role;
+  document.getElementById('modal').classList.add('open');
+}
+
+function fermerModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+async function sauvegarder() {
+  const nom = document.getElementById('f-nom').value.trim();
+  const prenom = document.getElementById('f-prenom').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const pwd = document.getElementById('f-pwd').value;
+  const role = document.getElementById('f-role').value;
+  try {
+    if (editId) {
+      const body = { nom, prenom, email, role };
+      if (pwd) body.motDePasse = pwd;
+      await api('PUT', '/admins/' + editId, body);
+      toast('Administrateur mis à jour', 'ok');
+    } else {
+      await api('POST', '/admins', { nom, prenom, email, motDePasse: pwd, role });
+      toast('Administrateur créé', 'ok');
+    }
+    fermerModal();
+    charger();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function toggleActif(id, actif) {
+  try {
+    await api('PUT', '/admins/' + id, { actif });
+    toast(actif ? 'Compte activé' : 'Compte désactivé', 'ok');
+    charger();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function supprimer(id) {
+  const a = admins.find(x => x.id === id);
+  if (!confirm(`Supprimer définitivement ${a?.prenom} ${a?.nom} (${a?.email}) ?`)) return;
+  try {
+    await api('DELETE', '/admins/' + id);
+    toast('Administrateur supprimé', 'ok');
+    charger();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+let toastTimer;
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + (type||'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 3500);
+}
+
+document.getElementById('modal').addEventListener('click', e => { if (e.target === e.currentTarget) fermerModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerModal(); });
+
+charger();
+</script>
+</body>
+</html>

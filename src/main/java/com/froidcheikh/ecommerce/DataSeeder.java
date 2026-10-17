@@ -64,8 +64,7 @@ public class DataSeeder implements ApplicationRunner {
         admin.setNom("Admin");
         admin.setPrenom("Super");
         admin.setEmail(adminEmail);
-        // Mot de passe hashé fourni dans ton script SQL (BCrypt)
-        admin.setMotDePasse("$2a$10$N.zmdr9k7uH7NOARlXihU.4Y8Snt6Z9Q8UQ6C2LK6Vt2Ux8GU.KeS");
+        admin.setMotDePasse("$2a$10$FYUMaMmhqRo/1sAnvCzyHedNvzE7SOHkxojFcW4BXLXQZ3RoDX1uu");
         admin.setRole(Administrateur.RoleAdmin.SUPER_ADMIN);
         admin.setActif(true);
 

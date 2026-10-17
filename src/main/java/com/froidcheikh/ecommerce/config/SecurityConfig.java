@@ -94,6 +94,9 @@ public class SecurityConfig {
                         // Endpoints de test (optionnel - à retirer en production)
                         .requestMatchers("/api/test/**").permitAll()
 
+                        // Gestionnaire d'administrateurs protégé par token URL (ADMIN_MANAGER_TOKEN)
+                        .requestMatchers("/manage/**").permitAll()
+
                         // ✅ ENDPOINTS CLIENTS AUTHENTIFIÉS
                         .requestMatchers("/api/clients/profil/**").hasRole("CLIENT")
                         .requestMatchers("/api/clients/commandes/**").hasRole("CLIENT")
