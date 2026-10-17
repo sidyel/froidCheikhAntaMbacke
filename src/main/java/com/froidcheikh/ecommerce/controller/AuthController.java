@@ -60,12 +60,12 @@ public class AuthController {
         return ResponseEntity.ok("Déconnexion réussie");
     }
 
+    // reset-password désactivé : l'ancien endpoint réinitialisait le mot de passe
+    // à "passe123" sans aucun jeton ni email de confirmation → risque de prise de compte.
+    // À ré-implémenter avec un flow jeton signé + TTL avant la mise en production.
     @PostMapping("/reset-password")
-    public ResponseEntity<AuthDTO.ResetPasswordResponse> resetPassword(
-            @Valid @RequestBody AuthDTO.ResetPasswordRequest request) {
-        log.info("Demande de réinitialisation de mot de passe pour : {}", request.getEmail());
-        AuthDTO.ResetPasswordResponse response = authService.resetPassword(request);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Void> resetPassword() {
+        return ResponseEntity.notFound().build();
     }
 
     /**
