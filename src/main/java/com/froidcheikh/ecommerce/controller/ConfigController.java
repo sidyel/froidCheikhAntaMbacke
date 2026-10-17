@@ -64,4 +64,25 @@ public class ConfigController {
         parametresSiteService.updateImagePiedUrl(url);
         return ResponseEntity.ok(Map.of("url", url));
     }
+
+    @DeleteMapping("/api/admin/config/cachet")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Void> supprimerCachet() {
+        parametresSiteService.updateCachetUrl(null);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/api/admin/config/entete-image")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Void> supprimerImageEnTete() {
+        parametresSiteService.updateImageEnTeteUrl(null);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/api/admin/config/pied-image")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Void> supprimerImagePied() {
+        parametresSiteService.updateImagePiedUrl(null);
+        return ResponseEntity.noContent().build();
+    }
 }
