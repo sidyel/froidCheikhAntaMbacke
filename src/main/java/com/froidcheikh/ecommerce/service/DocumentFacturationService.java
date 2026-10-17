@@ -305,6 +305,20 @@ public class DocumentFacturationService {
         return emettre(avoir.getId(), login, false);
     }
 
+    @Transactional
+    public DocumentFacturationDTO.DocumentResponse creerAvoirTotal(Long factureId, String login) {
+        DocumentFacturation facture = charger(factureId);
+        DocumentFacturationDTO.AvoirRequest req = new DocumentFacturationDTO.AvoirRequest();
+        req.setFactureOriginId(factureId);
+        req.setLignes(facture.getLignes().stream().map(l -> {
+            DocumentFacturationDTO.LigneAvoirRequest la = new DocumentFacturationDTO.LigneAvoirRequest();
+            la.setLigneOriginId(l.getId());
+            la.setQuantiteAvoir(l.getQuantite());
+            return la;
+        }).toList());
+        return creerAvoir(req, login);
+    }
+
     // ---- CONVERSION DEVIS → FACTURE ----
 
     @Transactional

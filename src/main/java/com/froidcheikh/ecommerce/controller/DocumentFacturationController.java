@@ -118,6 +118,15 @@ public class DocumentFacturationController {
         return documentService.creerAvoir(req, user.getUsername());
     }
 
+    /** Avoir total sur toutes les lignes de la facture (appelé depuis la fiche document). */
+    @PostMapping("/{id}/avoir")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public DocumentFacturationDTO.DocumentResponse creerAvoirTotal(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails user) {
+        return documentService.creerAvoirTotal(id, user.getUsername());
+    }
+
     // ---- CONVERSION DEVIS ----
 
     @PostMapping("/{id}/convertir")
