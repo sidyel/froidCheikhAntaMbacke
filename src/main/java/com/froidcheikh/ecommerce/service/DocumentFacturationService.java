@@ -422,6 +422,50 @@ public class DocumentFacturationService {
         return toResponse(charger(id));
     }
 
+    // ---- CRÉATION DEPUIS COMMANDE ----
+
+    @Transactional
+    public DocumentFacturationDTO.DocumentResponse creerDepuisCommande(
+            Long commandeId, TypeDocument type, String login) {
+
+        Commande cmd = commandeRepo.findById(commandeId)
+                .orElseThrow(() -> new IllegalArgumentException("Commande introuvable : " + commandeId));
+
+        DocumentFacturationDTO.CreateRequest req = new DocumentFacturationDTO.CreateRequest();
+        req.setTypeDocument(type);
+        req.setCommandeId(commandeId);
+
+        // Client : compte site ou invité
+        if (cmd.getClient() != null) {
+            req.setClientSiteId(cmd.getClient().getIdClient());
+        } else {
+            ClientFacturationDTO.CreateRequest nc = new ClientFacturationDTO.CreateRequest();
+            nc.setNom(cmd.getNomInvite() != null ? cmd.getNomInvite() : "Client");
+            nc.setPrenom(cmd.getPrenomInvite());
+            nc.setEmail(cmd.getEmailInvite());
+            nc.setTelephone(cmd.getTelephoneInvite());
+            req.setNouveauClient(nc);
+        }
+
+        // Lignes depuis la commande
+        if (cmd.getLignesCommande() != null) {
+            req.setLignes(cmd.getLignesCommande().stream().map(lc -> {
+                DocumentFacturationDTO.LigneRequest lr = new DocumentFacturationDTO.LigneRequest();
+                lr.setDesignation(lc.getNomProduitCommande() != null
+                        ? lc.getNomProduitCommande()
+                        : (lc.getProduit() != null ? lc.getProduit().getNomProduit() : "Produit"));
+                if (lc.getProduit() != null) {
+                    lr.setProduitId(lc.getProduit().getIdProduit());
+                }
+                lr.setQuantite(BigDecimal.valueOf(lc.getQuantite()));
+                lr.setPrixUnitaireHT(lc.getPrixUnitaire() != null ? lc.getPrixUnitaire() : BigDecimal.ZERO);
+                return lr;
+            }).toList());
+        }
+
+        return creerBrouillon(req, login);
+    }
+
     // ---- JETON WHATSAPP ----
 
     @Transactional
