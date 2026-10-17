@@ -545,6 +545,10 @@ Pour toute question relative à cette politique ou pour exercer vos droits, cont
         // Publicité et suivi
         dto.setMetaPixelId(p.getMetaPixelId());
         dto.setGoogleAnalyticsId(p.getGoogleAnalyticsId());
+        // Textes légaux
+        dto.setCgv(p.getCgv());
+        dto.setMentionsLegales(p.getMentionsLegales());
+        dto.setPolitiqueConfidentialite(p.getPolitiqueConfidentialite());
         return dto;
     }
 

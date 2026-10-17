@@ -100,6 +100,11 @@ public final class ParametresSiteDTO {
         // PUBLICITE ET SUIVI
         private String metaPixelId;
         private String googleAnalyticsId;
+
+        // TEXTES LEGAUX
+        private String cgv;
+        private String mentionsLegales;
+        private String politiqueConfidentialite;
     }
 
     /**
