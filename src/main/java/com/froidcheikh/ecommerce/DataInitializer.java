@@ -74,6 +74,8 @@ public class DataInitializer implements CommandLineRunner {
             parametresSiteService.initTextsLegauxSiAbsents();
             // Correction faute garantie (oct. 2026) : "1 ans" → "1 an" sur 15 produits Astech
             migrerGarantieFaute();
+            // Templates WhatsApp (oct. 2026) : ajout variable {lienSuivi}
+            parametresSiteService.migrerTemplatesWhatsAppLienSuivi();
         }
 
         if (imageHeroRepository.count() == 0) {

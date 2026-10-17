@@ -740,6 +740,37 @@ Pour toute question relative à cette politique ou pour exercer vos droits, cont
         }).collect(Collectors.toList());
     }
 
+    /** Ajoute {lienSuivi} aux templates WhatsApp s'ils correspondent encore à l'ancien défaut. */
+    @Transactional
+    public void migrerTemplatesWhatsAppLienSuivi() {
+        repository.findAll().stream().findFirst().ifPresent(p -> {
+            boolean modifie = false;
+
+            final String ancienMsgNouvelle = "Bonjour ! Je viens de passer la commande {numeroCommande}.\n"
+                    + "Articles : {articles}\nTotal : {total} {devise}\n"
+                    + "Zone : {zoneNom} — {modeLivraison}";
+            final String nouveauMsgNouvelle = ancienMsgNouvelle
+                    + "\nSuivi : {lienSuivi}";
+
+            final String ancienMsgConfirmee = "Bonjour {nomClient}, votre commande {numeroCommande} est confirmée. "
+                    + "Montant : {total} {devise}. Merci de votre confiance !";
+            final String nouveauMsgConfirmee = ancienMsgConfirmee
+                    + " Suivez votre commande : {lienSuivi}";
+
+            if (ancienMsgNouvelle.equals(p.getWhatsappMsgNouvelleCommande())) {
+                p.setWhatsappMsgNouvelleCommande(nouveauMsgNouvelle);
+                modifie = true;
+            }
+            if (ancienMsgConfirmee.equals(p.getWhatsappMsgConfirmee())) {
+                p.setWhatsappMsgConfirmee(nouveauMsgConfirmee);
+                modifie = true;
+            }
+            if (modifie) {
+                repository.save(p);
+            }
+        });
+    }
+
     private ParametresSiteDTO.PublicDTO defaultPublicDTO() {
         ParametresSiteDTO.PublicDTO dto = new ParametresSiteDTO.PublicDTO();
         dto.setCouleurPrimaire("#2563eb");
