@@ -542,6 +542,10 @@ Pour toute question relative à cette politique ou pour exercer vos droits, cont
                 .filter(t -> Boolean.TRUE.equals(t.getWhatsapp()))
                 .findFirst()
                 .ifPresent(t -> dto.setTelephoneWhatsappBoutique(t.getNumero()));
+        // Entreprise (champs publics utiles pour le footer)
+        dto.setNinea(p.getNinea());
+        dto.setRccm(p.getRccm());
+        dto.setRaisonSociale(p.getRaisonSociale());
         // Publicité et suivi
         dto.setMetaPixelId(p.getMetaPixelId());
         dto.setGoogleAnalyticsId(p.getGoogleAnalyticsId());
