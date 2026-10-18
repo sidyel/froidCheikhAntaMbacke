@@ -9,6 +9,7 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
 
 // Champs prixPromo, pourcentageReduction, dateFinPromo, nomPromotion sont null si aucune promo active.
 
@@ -50,6 +51,7 @@ public class ProduitDTO {
     private List<String> listeImages;
     private List<ImageProduitDTO> images;
     private List<String> videosOptionnelles;
+    private List<VideoProduitDTO> videos;
     private Boolean disponibilite;
     private LocalDateTime dateAjout;
 

@@ -33,6 +33,10 @@ public class FileService {
             "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
     );
 
+    private static final List<String> ALLOWED_VIDEO_TYPES = Arrays.asList(
+            "video/mp4", "video/quicktime", "video/webm"
+    );
+
     public record UploadResult(String url, String publicId) {}
 
     /**
@@ -99,9 +103,30 @@ public class FileService {
         }
     }
 
+    /**
+     * Supprime une vidéo de Cloudinary via son publicId (resource_type video).
+     * deleteFile() ne fonctionne que pour les images ; cette méthode est nécessaire pour les vidéos.
+     */
+    public boolean deleteVideoByPublicId(String publicId) {
+        try {
+            cloudinary.uploader().destroy(publicId,
+                    ObjectUtils.asMap("resource_type", "video"));
+            log.info("✅ Vidéo supprimée de Cloudinary: {}", publicId);
+            return true;
+        } catch (IOException e) {
+            log.error("❌ Erreur suppression vidéo Cloudinary", e);
+            return false;
+        }
+    }
+
     public boolean isValidImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) return false;
         return ALLOWED_IMAGE_TYPES.contains(file.getContentType());
+    }
+
+    public boolean isValidVideoFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) return false;
+        return ALLOWED_VIDEO_TYPES.contains(file.getContentType());
     }
 
     public boolean isValidPdfFile(MultipartFile file) {
