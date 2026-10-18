@@ -97,6 +97,11 @@ public final class ParametresSiteDTO {
         private String whatsappMsgLivree;
         private String whatsappMsgAnnulee;
 
+        // ENTREPRISE (champs publics — footer, mentions légales)
+        private String ninea;
+        private String rccm;
+        private String raisonSociale;
+
         // PUBLICITE ET SUIVI
         private String metaPixelId;
         private String googleAnalyticsId;

@@ -7,6 +7,7 @@ import com.froidcheikh.ecommerce.entity.TypeAttribut;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -21,6 +22,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final AdministrateurRepository administrateurRepository;
     private final ParametresSiteService parametresSiteService;
+    private final JdbcTemplate jdbcTemplate;
     private final ImageHeroRepository imageHeroRepository;
     private final PartenaireRepository partenaireRepository;
     private final PrestationRepository prestationRepository;
@@ -70,6 +72,10 @@ public class DataInitializer implements CommandLineRunner {
             parametresSiteService.viderMentionsDefaut();
             // Textes légaux (oct. 2026) : CGV, mentions légales, politique de confidentialité
             parametresSiteService.initTextsLegauxSiAbsents();
+            // Correction faute garantie (oct. 2026) : "1 ans" → "1 an" sur 15 produits Astech
+            migrerGarantieFaute();
+            // Templates WhatsApp (oct. 2026) : ajout variable {lienSuivi}
+            parametresSiteService.migrerTemplatesWhatsAppLienSuivi();
         }
 
         if (imageHeroRepository.count() == 0) {
@@ -454,6 +460,14 @@ public class DataInitializer implements CommandLineRunner {
         seedModele("Capacité", TypeAttribut.NUMBER,
                 null, "m³", false, 3,
                 "Chambres froides");
+    }
+
+    private void migrerGarantieFaute() {
+        int updated = jdbcTemplate.update(
+                "UPDATE produits SET garantie = '1 an' WHERE garantie = '1 ans'");
+        if (updated > 0) {
+            log.info("Migration garantie : {} produit(s) corrigé(s) ('1 ans' → '1 an')", updated);
+        }
     }
 
     private void seedModele(String nom, TypeAttribut type, String valeursAutorisees,

@@ -278,12 +278,12 @@ public class ParametresSite {
     /** Message client affiché sur la page de confirmation (bouton → numéro boutique). */
     @Column(name = "whatsapp_msg_nouvelle_commande", columnDefinition = "TEXT")
     private String whatsappMsgNouvelleCommande =
-            "Bonjour ! Je viens de passer la commande {numeroCommande}.\nArticles : {articles}\nTotal : {total} {devise}\nZone : {zoneNom} — {modeLivraison}";
+            "Bonjour ! Je viens de passer la commande {numeroCommande}.\nArticles : {articles}\nTotal : {total} {devise}\nZone : {zoneNom} — {modeLivraison}\nSuivi : {lienSuivi}";
 
     /** Message admin → client : commande confirmée. */
     @Column(name = "whatsapp_msg_confirmee", columnDefinition = "TEXT")
     private String whatsappMsgConfirmee =
-            "Bonjour {nomClient}, votre commande {numeroCommande} est confirmée. Montant : {total} {devise}. Merci de votre confiance !";
+            "Bonjour {nomClient}, votre commande {numeroCommande} est confirmée. Montant : {total} {devise}. Merci de votre confiance ! Suivez votre commande : {lienSuivi}";
 
     /** Message admin → client : commande livrée. */
     @Column(name = "whatsapp_msg_livree", columnDefinition = "TEXT")
