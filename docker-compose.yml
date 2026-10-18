@@ -1,8 +1,7 @@
 services:
   postgres-local:
-    # Version alignée sur Neon — sera confirmée par scripts/neon-version.ps1
-    # Neon tourne sur PostgreSQL 16 (vérifiable via SELECT version())
-    image: postgres:16
+    # Version alignée sur Neon — confirmé par scripts/neon-version.ps1 : PostgreSQL 18.6
+    image: postgres:18
     container_name: froidcheikh-postgres-local
     restart: unless-stopped
     ports:
@@ -14,7 +13,7 @@ services:
     secrets:
       - postgres_password
     volumes:
-      - froidcheikh-pgdata:/var/lib/postgresql/data
+      - froidcheikh-pgdata:/var/lib/postgresql   # PG18+ : mount parent, pas /data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U froidcheikh_user -d froidcheikh_local"]
       interval: 5s

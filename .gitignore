@@ -40,3 +40,6 @@ application-local.yml
 
 # Fichiers d'import de nouveaux produits (données sensibles, générés à la demande)
 import_*.json
+
+# Dossiers d'images locales pour import (photos téléchargées manuellement, non versionnées)
+images-import/
