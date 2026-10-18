@@ -37,3 +37,6 @@ produits_a_enrichir.json
 enrichissement_lot_*.json
 enrichissement_correction_*.json
 application-local.yml
+
+# Fichiers d'import de nouveaux produits (données sensibles, générés à la demande)
+import_*.json
