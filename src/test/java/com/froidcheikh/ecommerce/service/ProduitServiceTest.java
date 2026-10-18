@@ -7,6 +7,7 @@ import com.froidcheikh.ecommerce.repository.CategorieRepository;
 import com.froidcheikh.ecommerce.repository.MarqueRepository;
 import com.froidcheikh.ecommerce.repository.ProduitRepository;
 import com.froidcheikh.ecommerce.repository.ImageProduitRepository;
+import com.froidcheikh.ecommerce.repository.VideoProduitRepository;
 import com.froidcheikh.ecommerce.service.FileService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +36,8 @@ class ProduitServiceTest {
     @Mock private ImageProduitRepository imageProduitRepository;
     @Mock private FileService fileService;
     @Mock private CatalogueFeedService catalogueFeedService;
+    @Mock private VideoProduitRepository videoProduitRepository;
+    @Mock private VideoProduitService videoProduitService;
 
     @InjectMocks private ProduitService service;
 
