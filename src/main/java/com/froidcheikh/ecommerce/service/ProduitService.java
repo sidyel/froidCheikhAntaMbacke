@@ -1,12 +1,14 @@
 package com.froidcheikh.ecommerce.service;
 
 import com.froidcheikh.ecommerce.dto.ProduitDTO;
+import com.froidcheikh.ecommerce.dto.VideoProduitDTO;
 import com.froidcheikh.ecommerce.entity.AttributProduit;
 import com.froidcheikh.ecommerce.entity.ImageProduit;
 import com.froidcheikh.ecommerce.entity.Produit;
 import com.froidcheikh.ecommerce.exception.ResourceNotFoundException;
 import com.froidcheikh.ecommerce.repository.ImageProduitRepository;
 import com.froidcheikh.ecommerce.repository.ProduitRepository;
+import com.froidcheikh.ecommerce.repository.VideoProduitRepository;
 import com.froidcheikh.ecommerce.repository.CategorieRepository;
 import com.froidcheikh.ecommerce.repository.MarqueRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +43,8 @@ public class ProduitService {
     private final ImageProduitRepository imageProduitRepository;
     private final FileService fileService;
     private final CatalogueFeedService catalogueFeedService;
+    private final VideoProduitRepository videoProduitRepository;
+    private final VideoProduitService videoProduitService;
 
     public Page<ProduitDTO> getAllProduits(Pageable pageable) {
         return produitRepository.findByDisponibiliteTrue(pageable)
@@ -380,6 +384,14 @@ public class ProduitService {
         }
 
         dto.setScoreCompletude(calculerScore(produit));
+
+        // Vidéos actives (chargées depuis la table video_produit)
+        if (produit.getIdProduit() != null) {
+            List<VideoProduitDTO> videos = videoProduitRepository
+                    .findByProduitIdProduitAndActiveOrderByOrdreAsc(produit.getIdProduit(), true)
+                    .stream().map(videoProduitService::toDto).collect(Collectors.toList());
+            dto.setVideos(videos);
+        }
 
         if (produit.getAttributs() != null) {
             dto.setAttributs(produit.getAttributs().stream().map(attr -> {
