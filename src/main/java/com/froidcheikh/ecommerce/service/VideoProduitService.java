@@ -100,9 +100,8 @@ public class VideoProduitService {
             Map<String, Object> params = new HashMap<>();
             params.put("timestamp", timestamp);
             params.put("folder", folder);
-            // Limite les formats et la taille côté Cloudinary
+            // max_file_size n'est pas signable pour un upload direct : validation dans confirmerUpload
             params.put("allowed_formats", String.join(",", ALLOWED_FORMATS));
-            params.put("max_file_size", (long) maxSizeMb * 1024 * 1024);
 
             String signature = cloudinary.apiSignRequest(params,
                     (String) cloudinary.config.apiSecret);
