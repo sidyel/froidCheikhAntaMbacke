@@ -63,6 +63,13 @@ public class NouveauProduitImport {
      */
     private List<String> urlsImages;
 
+    /**
+     * Si {@code true}, le runner écrase les champs déjà remplis en base au lieu de les ignorer.
+     * Utile pour corriger un import précédemment confirmé.
+     * N'a aucun effet pour les nouveaux produits (créés de toute façon).
+     */
+    private boolean ecraser = false;
+
     /** Remarques internes (non affichées sur le site, conservées dans les logs). */
     private String remarques;
 }

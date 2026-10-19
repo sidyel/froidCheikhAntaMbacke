@@ -102,6 +102,9 @@ public class ImportProduitsRunner implements CommandLineRunner {
     private final Cloudinary                cloudinary;
     private final ObjectMapper              objectMapper;
 
+    /** Positionné à {@code true} pour la durée de {@code traiterProduit()} si {@code entry.isEcraser()}. */
+    private boolean currentEcraser = false;
+
     // ── Rapport ───────────────────────────────────────────────────────────────
     private int nbCrees             = 0;
     private int nbMisAJour          = 0;
@@ -167,6 +170,7 @@ public class ImportProduitsRunner implements CommandLineRunner {
         Optional<Produit> existant = trouverProduitExistant(marque, entry.getModeleFabricant());
         boolean estNouveau = existant.isEmpty();
 
+        this.currentEcraser = entry.isEcraser();
         Produit produit = existant.orElseGet(Produit::new);
 
         if (estNouveau) {
@@ -185,7 +189,7 @@ public class ImportProduitsRunner implements CommandLineRunner {
 
         // ── Nom
         if (!estVide(entry.getNomProduit())) {
-            if (estNouveau || estVide(produit.getNomProduit())) {
+            if (estNouveau || estVide(produit.getNomProduit()) || currentEcraser) {
                 logChamp("nomProduit", produit.getNomProduit(), entry.getNomProduit());
                 if (confirmer) produit.setNomProduit(entry.getNomProduit());
                 champsModifies++;
@@ -198,7 +202,7 @@ public class ImportProduitsRunner implements CommandLineRunner {
 
         // ── Description
         if (!estVide(entry.getDescription())) {
-            if (estVide(produit.getDescriptionProduit())) {
+            if (estVide(produit.getDescriptionProduit()) || currentEcraser) {
                 if (entry.getDescription().length() < 150) {
                     log.warn("    ⚠  description courte ({} caractères — min. 150)", entry.getDescription().length());
                 }
@@ -217,7 +221,7 @@ public class ImportProduitsRunner implements CommandLineRunner {
             log.info("    ~ Prix de référence appliqué : {} XOF (à vérifier)", prix);
             entry.setPrixIndicatif(true);
         }
-        if (estNouveau || produit.getPrix() == null) {
+        if (estNouveau || produit.getPrix() == null || currentEcraser) {
             logChamp("prix", null, prix.toPlainString() + " XOF");
             if (confirmer) produit.setPrix(prix);
             champsModifies++;
@@ -227,7 +231,7 @@ public class ImportProduitsRunner implements CommandLineRunner {
         }
 
         // ── Garantie
-        if (!estVide(entry.getGarantie()) && estVide(produit.getGarantie())) {
+        if (!estVide(entry.getGarantie()) && (estVide(produit.getGarantie()) || currentEcraser)) {
             logChamp("garantie", null, entry.getGarantie());
             if (confirmer) produit.setGarantie(entry.getGarantie());
             champsModifies++;
@@ -354,7 +358,7 @@ public class ImportProduitsRunner implements CommandLineRunner {
 
     private int appliquerPuissanceBTU(Produit p, com.froidcheikh.ecommerce.dto.enrichissement.EnrichissementValeur v) {
         if (!VALIDE.equalsIgnoreCase(v.getConfiance())) return 0;
-        if (p.getPuissanceBTU() != null) { log.info("    SKIP puissanceBTU (déjà rempli)"); return 0; }
+        if (p.getPuissanceBTU() != null && !currentEcraser) { log.info("    SKIP puissanceBTU (déjà rempli)"); return 0; }
         logChamp("puissanceBTU", null, v.getValeur());
         if (confirmer) {
             try { p.setPuissanceBTU(Integer.valueOf(v.getValeur().replaceAll("[^0-9]", ""))); }
@@ -365,7 +369,7 @@ public class ImportProduitsRunner implements CommandLineRunner {
 
     private int appliquerLabelEnergie(Produit p, com.froidcheikh.ecommerce.dto.enrichissement.EnrichissementValeur v) {
         if (!VALIDE.equalsIgnoreCase(v.getConfiance())) return 0;
-        if (p.getLabelEnergie() != null) { log.info("    SKIP labelEnergie (déjà rempli)"); return 0; }
+        if (p.getLabelEnergie() != null && !currentEcraser) { log.info("    SKIP labelEnergie (déjà rempli)"); return 0; }
         Produit.LabelEnergie label = parseLabelEnergie(v.getValeur());
         if (label == null) { log.warn("    labelEnergie invalide : '{}'", v.getValeur()); return 0; }
         logChamp("labelEnergie", null, label.name());
@@ -375,7 +379,7 @@ public class ImportProduitsRunner implements CommandLineRunner {
 
     private int appliquerConsommationWatt(Produit p, com.froidcheikh.ecommerce.dto.enrichissement.EnrichissementValeur v) {
         if (!VALIDE.equalsIgnoreCase(v.getConfiance())) return 0;
-        if (p.getConsommationWatt() != null) { log.info("    SKIP consommationWatt (déjà rempli)"); return 0; }
+        if (p.getConsommationWatt() != null && !currentEcraser) { log.info("    SKIP consommationWatt (déjà rempli)"); return 0; }
         logChamp("consommationWatt", null, v.getValeur());
         if (confirmer) {
             try { p.setConsommationWatt(Integer.valueOf(v.getValeur().replaceAll("[^0-9]", ""))); }
@@ -386,7 +390,7 @@ public class ImportProduitsRunner implements CommandLineRunner {
 
     private int appliquerDimensions(Produit p, com.froidcheikh.ecommerce.dto.enrichissement.EnrichissementValeur v) {
         if (!VALIDE.equalsIgnoreCase(v.getConfiance())) return 0;
-        if (!estVide(p.getDimensions())) { log.info("    SKIP dimensions (déjà rempli)"); return 0; }
+        if (!estVide(p.getDimensions()) && !currentEcraser) { log.info("    SKIP dimensions (déjà rempli)"); return 0; }
         logChamp("dimensions", null, v.getValeur());
         if (confirmer) p.setDimensions(v.getValeur());
         return 1;
@@ -394,7 +398,7 @@ public class ImportProduitsRunner implements CommandLineRunner {
 
     private int appliquerPoids(Produit p, com.froidcheikh.ecommerce.dto.enrichissement.EnrichissementValeur v) {
         if (!VALIDE.equalsIgnoreCase(v.getConfiance())) return 0;
-        if (p.getPoids() != null) { log.info("    SKIP poids (déjà rempli)"); return 0; }
+        if (p.getPoids() != null && !currentEcraser) { log.info("    SKIP poids (déjà rempli)"); return 0; }
         logChamp("poids", null, v.getValeur());
         if (confirmer) {
             try { p.setPoids(Double.parseDouble(v.getValeur().replaceAll("[^0-9.,]", "").replace(",", "."))); }
@@ -405,7 +409,7 @@ public class ImportProduitsRunner implements CommandLineRunner {
 
     private int appliquerGarantieCt(Produit p, com.froidcheikh.ecommerce.dto.enrichissement.EnrichissementValeur v) {
         if (!VALIDE.equalsIgnoreCase(v.getConfiance())) return 0;
-        if (!estVide(p.getGarantie())) { log.info("    SKIP garantie (déjà rempli)"); return 0; }
+        if (!estVide(p.getGarantie()) && !currentEcraser) { log.info("    SKIP garantie (déjà rempli)"); return 0; }
         logChamp("garantie (ct)", null, v.getValeur());
         if (confirmer) p.setGarantie(v.getValeur());
         return 1;
@@ -426,8 +430,20 @@ public class ImportProduitsRunner implements CommandLineRunner {
                 log.info("    REDIRECT attribut '{}' → colonne '{}'", ea.getNom(), colonne);
                 continue;
             }
-            if (existants.stream().anyMatch(a -> a.getNomAttribut().equalsIgnoreCase(ea.getNom()))) {
-                log.info("    SKIP attribut '{}' (déjà présent)", ea.getNom());
+            Optional<AttributProduit> existantAttr = existants.stream()
+                    .filter(a -> a.getNomAttribut().equalsIgnoreCase(ea.getNom()))
+                    .findFirst();
+            if (existantAttr.isPresent()) {
+                if (!currentEcraser) {
+                    log.info("    SKIP attribut '{}' (déjà présent)", ea.getNom());
+                    continue;
+                }
+                logChamp("attribut " + ea.getNom(), existantAttr.get().getValeurAttribut(), ea.getValeur());
+                if (confirmer) {
+                    existantAttr.get().setValeurAttribut(ea.getValeur());
+                    attributProduitRepository.save(existantAttr.get());
+                }
+                ok++;
                 continue;
             }
             Optional<ModeleAttribut> modele = modeleAttributRepository.findByNomAttributIgnoreCase(ea.getNom());
