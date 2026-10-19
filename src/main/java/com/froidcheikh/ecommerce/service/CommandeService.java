@@ -125,6 +125,7 @@ public class CommandeService {
                         LivraisonDTO.EstimationRequest.LigneEstimation le = new LivraisonDTO.EstimationRequest.LigneEstimation();
                         le.setProduitId(l.getProduitId());
                         le.setQuantite(l.getQuantite());
+                        le.setAvecInstallation(l.isAvecInstallation());
                         return le;
                     }).toList();
 
@@ -168,13 +169,21 @@ public class CommandeService {
                 ligne.setQuantite(ligneDTO.getQuantite());
                 ligne.setPrixUnitaireOrigine(produit.getPrix());
                 ligne.setPrixUnitaire(prixApplique);
-                ligne.setSousTotal(prixApplique.multiply(BigDecimal.valueOf(ligneDTO.getQuantite())));
                 ligne.setNomProduitCommande(produit.getNomProduit());
                 ligne.setRefProduitCommande(produit.getRefProduit());
                 if (prixResultat.hasPromo()) {
                     ligne.setPromotionId(prixResultat.promotionId());
                     ligne.setPromotionNom(prixResultat.nomPromotion());
                 }
+
+                // Installation optionnelle — prix figé au moment de la commande
+                BigDecimal prixInstall = BigDecimal.ZERO;
+                if (ligneDTO.isAvecInstallation() && produit.getPrixInstallation() != null) {
+                    ligne.setAvecInstallation(true);
+                    ligne.setPrixInstallationApplique(produit.getPrixInstallation());
+                    prixInstall = produit.getPrixInstallation();
+                }
+                ligne.setSousTotal(prixApplique.multiply(BigDecimal.valueOf(ligneDTO.getQuantite())).add(prixInstall));
 
                 lignesCommande.add(ligne);
 

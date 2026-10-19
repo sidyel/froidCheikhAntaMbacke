@@ -42,6 +42,7 @@ public class LivraisonController {
         response.setSupplementExpress(r.supplementExpress());
         response.setSupplementGabarit(r.supplementGabarit());
         response.setFraisLivraisonTotal(r.fraisLivraisonTotal());
+        response.setMontantInstallation(r.montantInstallation());
         response.setMontantTotal(r.montantTotal());
         response.setLivraisonGratuite(r.livraisonGratuite());
         response.setDelaiEstime(r.delaiEstime());

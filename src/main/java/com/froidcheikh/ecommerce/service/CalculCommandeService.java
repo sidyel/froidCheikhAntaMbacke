@@ -38,6 +38,7 @@ public class CalculCommandeService {
             BigDecimal supplementExpress,
             BigDecimal supplementGabarit,
             BigDecimal fraisLivraisonTotal,
+            BigDecimal montantInstallation,
             BigDecimal montantTotal,
             boolean livraisonGratuite,
             Long zoneId,
@@ -58,8 +59,9 @@ public class CalculCommandeService {
                                    Commande.ModeLivraison modeLivraison,
                                    List<LivraisonDTO.EstimationRequest.LigneEstimation> lignes) {
 
-        // ─── Montant articles ───────────────────────────────────────────────
+        // ─── Montant articles + installation ───────────────────────────────
         BigDecimal montantArticles = BigDecimal.ZERO;
+        BigDecimal montantInstallation = BigDecimal.ZERO;
         boolean hasGabaritLourd = false;
 
         for (LivraisonDTO.EstimationRequest.LigneEstimation ligne : lignes) {
@@ -70,6 +72,10 @@ public class CalculCommandeService {
             montantArticles = montantArticles.add(
                     prixService.calculerPrix(produit).prixEffectif().multiply(BigDecimal.valueOf(ligne.getQuantite())));
 
+            if (ligne.isAvecInstallation() && produit.getPrixInstallation() != null) {
+                montantInstallation = montantInstallation.add(produit.getPrixInstallation());
+            }
+
             if (produit.getCategorie() != null
                     && Boolean.TRUE.equals(produit.getCategorie().getGabaritLourd())) {
                 hasGabaritLourd = true;
@@ -78,9 +84,9 @@ public class CalculCommandeService {
 
         // ─── RETRAIT MAGASIN ────────────────────────────────────────────────
         if (modeLivraison == Commande.ModeLivraison.RETRAIT_MAGASIN) {
-            BigDecimal total = montantArticles;
+            BigDecimal total = montantArticles.add(montantInstallation);
             return new CalculResultat(montantArticles, BigDecimal.ZERO, BigDecimal.ZERO,
-                    BigDecimal.ZERO, BigDecimal.ZERO, total, false,
+                    BigDecimal.ZERO, BigDecimal.ZERO, montantInstallation, total, false,
                     null, null, BigDecimal.ZERO, "RETRAIT_MAGASIN", null);
         }
 
@@ -134,13 +140,13 @@ public class CalculCommandeService {
         BigDecimal suppGabarit = hasGabaritLourd ? supplementGabaritConfig : BigDecimal.ZERO;
 
         BigDecimal fraisTotal = fraisBase.add(suppExpress).add(suppGabarit);
-        BigDecimal montantTotal = montantArticles.add(fraisTotal);
+        BigDecimal montantTotal = montantArticles.add(fraisTotal).add(montantInstallation);
 
         String zoneNom = zone.getQuartierLabel() + " — " + zone.getVilleLabel();
         BigDecimal zonePrixApplique = fraisBase.add(suppExpress);
 
         return new CalculResultat(montantArticles, fraisBase, suppExpress, suppGabarit,
-                fraisTotal, montantTotal, gratuit,
+                fraisTotal, montantInstallation, montantTotal, gratuit,
                 zone.getId(), zoneNom, zonePrixApplique,
                 modeLivraison.name(), zone.getDelaiEstime());
     }
