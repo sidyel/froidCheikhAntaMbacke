@@ -70,6 +70,15 @@ public class NouveauProduitImport {
      */
     private boolean ecraser = false;
 
+    /**
+     * Rendre le produit disponible dès l'import (défaut : false — nécessite activation manuelle après photos).
+     * Mettre à {@code true} uniquement si le produit est prêt à la vente.
+     */
+    private boolean disponibilite = false;
+
+    /** Stock initial. Défaut : 0. */
+    private int stockDisponible = 0;
+
     /** Remarques internes (non affichées sur le site, conservées dans les logs). */
     private String remarques;
 }

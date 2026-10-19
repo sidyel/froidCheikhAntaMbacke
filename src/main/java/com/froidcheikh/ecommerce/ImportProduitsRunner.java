@@ -178,9 +178,10 @@ public class ImportProduitsRunner implements CommandLineRunner {
             produit.setModeleFabricant(entry.getModeleFabricant());
             produit.setMarque(marque);
             produit.setCategorie(categorie);
-            produit.setDisponibilite(false);
-            produit.setStockDisponible(0);
+            produit.setDisponibilite(entry.isDisponibilite());
+            produit.setStockDisponible(entry.getStockDisponible());
             produit.setExcluCatalogue(false);
+            if (entry.isDisponibilite()) log.info("    → disponibilite=true, stock={}", entry.getStockDisponible());
         } else {
             log.info("    ~ Produit existant (id={}) — mise à jour des champs vides", produit.getIdProduit());
         }
