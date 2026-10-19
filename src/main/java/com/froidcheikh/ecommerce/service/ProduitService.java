@@ -240,6 +240,7 @@ public class ProduitService {
         produit.setModeleFabricant(produitDTO.getModeleFabricant());
         produit.setEan(produitDTO.getEan());
         if (produitDTO.getExcluCatalogue() != null) produit.setExcluCatalogue(produitDTO.getExcluCatalogue());
+        produit.setPrixInstallation(produitDTO.getPrixInstallation());
 
         // IMPORTANT: Mise à jour de la fiche technique
         if (produitDTO.getFicheTechniquePDF() != null) {

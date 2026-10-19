@@ -106,6 +106,10 @@ public class CommandeDTO {
         private BigDecimal prixUnitaireOrigine;
         private Long promotionId;
         private String promotionNom;
+
+        // Installation optionnelle
+        private boolean avecInstallation = false;
+        private BigDecimal prixInstallationApplique;
     }
 
     @Data

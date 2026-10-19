@@ -67,6 +67,7 @@ public class ProduitDTO {
     private CategorieDTO categorie;
     private MarqueDTO marque;
     private Boolean excluCatalogue;
+    private BigDecimal prixInstallation;
     private List<AttributProduitDTO> attributs;
 
     @Data

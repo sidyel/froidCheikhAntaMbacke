@@ -35,6 +35,7 @@ public final class LivraisonDTO {
             @NotNull
             @Min(1)
             private Integer quantite;
+            private boolean avecInstallation = false;
         }
     }
 
@@ -46,6 +47,7 @@ public final class LivraisonDTO {
         private BigDecimal supplementExpress;
         private BigDecimal supplementGabarit;
         private BigDecimal fraisLivraisonTotal;
+        private BigDecimal montantInstallation;
         private BigDecimal montantTotal;
         private boolean livraisonGratuite;
         private String delaiEstime;

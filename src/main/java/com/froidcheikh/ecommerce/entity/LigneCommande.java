@@ -59,4 +59,12 @@ public class LigneCommande {
 
     @Column(name = "promotion_nom", length = 150)
     private String promotionNom;
+
+    // ---- INSTALLATION ----
+    @Column(name = "avec_installation", nullable = false)
+    private boolean avecInstallation = false;
+
+    /** Prix figé au moment de la commande (null si pas d'installation). */
+    @Column(name = "prix_installation_applique", precision = 10, scale = 2)
+    private BigDecimal prixInstallationApplique;
 }

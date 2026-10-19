@@ -112,6 +112,11 @@ public class Produit {
     @Column(name = "exclu_catalogue", nullable = false, columnDefinition = "boolean default false")
     private Boolean excluCatalogue = false;
 
+    // ---- INSTALLATION ----
+    /** Null = pas d'installation proposée. Sinon : prix affiché au client comme option. */
+    @Column(name = "prix_installation", precision = 10, scale = 2)
+    private BigDecimal prixInstallation;
+
     public enum LabelEnergie {
         A_PLUS_PLUS_PLUS, A_PLUS_PLUS, A_PLUS, A, B, C, D, E, F, G
     }
