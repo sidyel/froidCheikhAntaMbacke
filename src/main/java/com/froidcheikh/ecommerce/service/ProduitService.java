@@ -259,13 +259,15 @@ public class ProduitService {
         if (produitDTO.getAttributs() != null) {
             final Produit ref = produit;
             ref.getAttributs().clear();
-            produitDTO.getAttributs().forEach(attrDTO -> {
-                AttributProduit attr = new AttributProduit();
-                attr.setNomAttribut(attrDTO.getNomAttribut());
-                attr.setValeurAttribut(attrDTO.getValeurAttribut());
-                attr.setProduit(ref);
-                ref.getAttributs().add(attr);
-            });
+            produitDTO.getAttributs().stream()
+                .filter(attrDTO -> attrDTO.getNomAttribut() != null && !attrDTO.getNomAttribut().isBlank())
+                .forEach(attrDTO -> {
+                    AttributProduit attr = new AttributProduit();
+                    attr.setNomAttribut(attrDTO.getNomAttribut().trim());
+                    attr.setValeurAttribut(attrDTO.getValeurAttribut());
+                    attr.setProduit(ref);
+                    ref.getAttributs().add(attr);
+                });
         }
 
         // Sauvegarde
