@@ -85,4 +85,19 @@ public class ConfigController {
         parametresSiteService.updateImagePiedUrl(null);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/api/admin/config/logo-documents")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Map<String, String>> uploadLogoDocuments(@RequestParam("file") MultipartFile file) {
+        String url = fileService.uploadFile(file, "site/logos-documents");
+        parametresSiteService.updateLogoDocumentsUrl(url);
+        return ResponseEntity.ok(Map.of("url", url));
+    }
+
+    @DeleteMapping("/api/admin/config/logo-documents")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Void> supprimerLogoDocuments() {
+        parametresSiteService.updateLogoDocumentsUrl(null);
+        return ResponseEntity.noContent().build();
+    }
 }

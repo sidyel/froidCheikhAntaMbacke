@@ -200,6 +200,7 @@ public final class ParametresSiteDTO {
         private com.froidcheikh.ecommerce.entity.ModeEnTeteDocuments modeEnTeteDocuments;
         private String urlImageEnTete;
         private String urlImagePied;
+        private String urlLogoDocuments;
 
         // LIVRAISON
         private String devise;

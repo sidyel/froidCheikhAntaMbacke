@@ -716,7 +716,8 @@ public class DocumentFacturationService {
                 : ((p.getDescriptionSite() != null && !p.getDescriptionSite().isBlank()) ? p.getDescriptionSite() : null);
         return new EnTeteDocumentConfig(
                 raisonSociale,
-                p.getLogoUrl(),
+                p.getUrlLogoDocuments() != null && !p.getUrlLogoDocuments().isBlank()
+                        ? p.getUrlLogoDocuments() : p.getLogoUrl(),
                 texteDescriptif,
                 p.getAdresseComplete(),
                 telephone,

@@ -78,6 +78,15 @@ public class ParametresSiteService {
 
     @Transactional
     @CacheEvict(value = "siteConfig", allEntries = true)
+    public String updateLogoDocumentsUrl(String url) {
+        ParametresSite entity = repository.findAll().stream().findFirst().orElseThrow();
+        entity.setUrlLogoDocuments(url);
+        repository.save(entity);
+        return url;
+    }
+
+    @Transactional
+    @CacheEvict(value = "siteConfig", allEntries = true)
     public void initDefault(String nomSite, String sloganSite, String emailContact, Integer anneesExperience) {
         if (!repository.findAll().isEmpty()) return;
 

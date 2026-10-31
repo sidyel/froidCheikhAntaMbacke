@@ -214,6 +214,14 @@ public class ParametresSite {
     @Column(name = "url_image_pied")
     private String urlImagePied;
 
+    /**
+     * Logo dédié aux en-têtes PDF de facturation (dossier Cloudinary site/logos-documents).
+     * Si null, le logo du site (urlLogo) est utilisé à la place.
+     * Permet de mettre un logo sans texte (ex : le flocon seul) distinct du logo du site.
+     */
+    @Column(name = "url_logo_documents")
+    private String urlLogoDocuments;
+
     // ---- LOCALISATION ----
     @Column(name = "fuseau_horaire", length = 50)
     private String fuseauHoraire = "Africa/Dakar";

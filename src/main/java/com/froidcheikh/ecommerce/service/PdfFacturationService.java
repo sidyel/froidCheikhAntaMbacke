@@ -122,6 +122,9 @@ public class PdfFacturationService {
         ModeEnTeteDocuments mode = cfg.mode() != null ? cfg.mode() : ModeEnTeteDocuments.COMPOSE;
         boolean isImageMode = mode == ModeEnTeteDocuments.IMAGE && hasValue(cfg.urlImageEnTete());
         boolean isImagePied = mode == ModeEnTeteDocuments.IMAGE && hasValue(cfg.urlImagePied());
+        // hasLogo : URL renseignée → taille de police réduite (largeur disponible moindre)
+        // Le chargement réel de l'image se fait plus bas
+        boolean hasLogo = hasValue(cfg.logoUrl());
 
         // ── CSS / apparence ──────────────────────────────────────────────────
         ctx.setVariable("couleur",        couleur);
@@ -129,8 +132,8 @@ public class PdfFacturationService {
         ctx.setVariable("titreFontStyle",
                 "font-family:'Oswald';font-weight:bold;font-size:16pt;color:" + couleur + ";white-space:nowrap;");
         ctx.setVariable("nomFontStyle",
-                "font-family:'Oswald';font-weight:bold;font-size:" + nomFontPt(cfg.raisonSociale())
-                        + "pt;text-transform:uppercase;color:" + couleur + ";white-space:nowrap;");
+                "font-family:'Oswald';font-weight:bold;font-size:" + nomFontPt(cfg.raisonSociale(), hasLogo)
+                        + "pt;text-transform:uppercase;color:" + couleur + ";word-break:break-word;");
 
         // ── Mode en-tête / pied ──────────────────────────────────────────────
         ctx.setVariable("isImageMode",    isImageMode);
@@ -139,7 +142,8 @@ public class PdfFacturationService {
         ctx.setVariable("isDevis",        isDevis);
 
         // ── Images (base64 data URI) ─────────────────────────────────────────
-        ctx.setVariable("logoUri",        loadImageDataUri(cfg.logoUrl()));
+        String logoDataUri = loadImageDataUri(cfg.logoUrl());
+        ctx.setVariable("logoUri",        logoDataUri);
         ctx.setVariable("imageEnTeteUri", isImageMode ? loadImageDataUri(cfg.urlImageEnTete()) : null);
         ctx.setVariable("imagePiedUri",   isImagePied ? loadImageDataUri(cfg.urlImagePied()) : null);
 
@@ -400,15 +404,29 @@ public class PdfFacturationService {
      * Taille de police (en pt) pour le nom d'entreprise sur une seule ligne.
      * Adapte automatiquement à la longueur de la chaîne.
      */
-    private static int nomFontPt(String nom) {
+    /**
+     * Taille de police (pt) pour le nom d'entreprise.
+     * hasLogo : largeur disponible réduite à ~127mm (vs ~174mm sans logo).
+     * Sans white-space:nowrap, le texte peut passer sur 2 lignes si nécessaire.
+     */
+    private static int nomFontPt(String nom, boolean hasLogo) {
         if (nom == null) return 24;
         int len = nom.length();
-        if (len <= 18) return 28;
-        if (len <= 25) return 24;
-        if (len <= 34) return 20;
-        if (len <= 44) return 17;
-        if (len <= 55) return 14;
-        return 12;
+        if (hasLogo) {
+            if (len <= 14) return 28;
+            if (len <= 20) return 22;
+            if (len <= 28) return 18;
+            if (len <= 36) return 15;
+            if (len <= 48) return 12;
+            return 10;
+        } else {
+            if (len <= 18) return 28;
+            if (len <= 25) return 24;
+            if (len <= 34) return 20;
+            if (len <= 44) return 17;
+            if (len <= 55) return 14;
+            return 12;
+        }
     }
 
     private static String safe(String s, String def) {
