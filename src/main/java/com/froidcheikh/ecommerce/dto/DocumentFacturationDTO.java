@@ -36,7 +36,7 @@ public final class DocumentFacturationDTO {
 
     @Data @NoArgsConstructor
     public static class CreateRequest {
-        @NotNull
+        @NotNull(message = "Le type de document est obligatoire")
         private TypeDocument typeDocument;
         private Long commandeId;          // facture depuis commande
         private Long clientSiteId;        // client du site
