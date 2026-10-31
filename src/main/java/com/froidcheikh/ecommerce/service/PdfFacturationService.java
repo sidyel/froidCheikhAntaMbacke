@@ -25,7 +25,9 @@ import java.net.URLConnection;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Génère les PDFs de facturation avec openhtmltopdf (moteur PDFBox).
@@ -66,6 +68,12 @@ public class PdfFacturationService {
         String montant;
     }
 
+    @Value
+    public static class TvaLigneVM {
+        String taux;
+        String montant;
+    }
+
     // ── API publique (signatures inchangées) ──────────────────────────────────
 
     /** Sans config : construit un contexte minimal depuis les champs figés du document. */
@@ -90,7 +98,7 @@ public class PdfFacturationService {
 
     // ── Construction HTML via Thymeleaf ───────────────────────────────────────
 
-    private String buildHtml(DocumentFacturation doc, EnTeteDocumentConfig cfg, boolean brouillon) {
+    String buildHtml(DocumentFacturation doc, EnTeteDocumentConfig cfg, boolean brouillon) {
         boolean isBL = doc.getTypeDocument() == TypeDocument.BON_LIVRAISON;
         String templateName = isBL ? "bon-livraison" : "facturation";
         Context ctx = buildContext(doc, cfg, brouillon);
@@ -105,8 +113,12 @@ public class PdfFacturationService {
         String devise  = safe(doc.getEntDevise(), safe(cfg.devise(), "FCFA"));
         boolean isAvoir = doc.getTypeDocument() == TypeDocument.AVOIR;
         boolean isDevis = doc.getTypeDocument() == TypeDocument.DEVIS;
-        boolean hasTva  = doc.getTauxTvaDefaut() != null
-                && doc.getTauxTvaDefaut().compareTo(BigDecimal.ZERO) > 0;
+        // hasTva : vrai si TVA calculée > 0, OU si au moins une ligne a un taux TVA > 0
+        BigDecimal tva = safe0(doc.getMontantTva());
+        boolean hasTva = tva.compareTo(BigDecimal.ZERO) > 0
+                || (doc.getLignes() != null && doc.getLignes().stream()
+                        .anyMatch(l -> l.getTauxTva() != null
+                                && l.getTauxTva().compareTo(BigDecimal.ZERO) > 0));
         ModeEnTeteDocuments mode = cfg.mode() != null ? cfg.mode() : ModeEnTeteDocuments.COMPOSE;
         boolean isImageMode = mode == ModeEnTeteDocuments.IMAGE && hasValue(cfg.urlImageEnTete());
         boolean isImagePied = mode == ModeEnTeteDocuments.IMAGE && hasValue(cfg.urlImagePied());
@@ -118,7 +130,7 @@ public class PdfFacturationService {
                 "font-family:'Oswald';font-weight:bold;font-size:16pt;color:" + couleur + ";white-space:nowrap;");
         ctx.setVariable("nomFontStyle",
                 "font-family:'Oswald';font-weight:bold;font-size:" + nomFontPt(cfg.raisonSociale())
-                        + "pt;text-transform:uppercase;color:" + couleur + ";");
+                        + "pt;text-transform:uppercase;color:" + couleur + ";white-space:nowrap;");
 
         // ── Mode en-tête / pied ──────────────────────────────────────────────
         ctx.setVariable("isImageMode",    isImageMode);
@@ -177,7 +189,6 @@ public class PdfFacturationService {
 
         // ── Récapitulatif financier ──────────────────────────────────────────
         BigDecimal ht  = safe0(doc.getMontantHT());
-        BigDecimal tva = safe0(doc.getMontantTva());
         BigDecimal ttc = safe0(doc.getMontantTTC());
         List<ReglementDocument> regsList  = reglementsActifs(doc);
         BigDecimal dejaRegle = regsList.stream().map(ReglementDocument::getMontant)
@@ -185,10 +196,9 @@ public class PdfFacturationService {
         boolean hasReglements = dejaRegle.compareTo(BigDecimal.ZERO) > 0;
         BigDecimal reste = ttc.subtract(dejaRegle).max(BigDecimal.ZERO);
 
-        ctx.setVariable("montantHT",       formatMontant(ht));
-        ctx.setVariable("montantTva",      tva.compareTo(BigDecimal.ZERO) > 0 ? formatMontant(tva) : null);
-        ctx.setVariable("tauxTva",         doc.getTauxTvaDefaut() != null ? formatPourcent(doc.getTauxTvaDefaut()) : null);
-        ctx.setVariable("montantTTC",      formatMontant(ttc));
+        ctx.setVariable("montantHT",   formatMontant(ht));
+        ctx.setVariable("montantTTC",  formatMontant(ttc));
+        ctx.setVariable("tvaLignes",   buildTvaLignes(doc.getLignes()));
         ctx.setVariable("dejaRegle",       formatMontant(dejaRegle));
         ctx.setVariable("resteAPayer",     formatMontant(reste));
         ctx.setVariable("hasReglements",   hasReglements);
@@ -238,7 +248,8 @@ public class PdfFacturationService {
         if (lignes == null) return List.of();
         List<LigneVM> result = new ArrayList<>(lignes.size());
         for (LigneDocument l : lignes) {
-            BigDecimal total = hasTva ? l.getMontantTTC() : l.getMontantHT();
+            // Toujours afficher le montant HT par ligne ; le TTC est dans le récapitulatif
+            BigDecimal total = l.getMontantHT();
             result.add(new LigneVM(
                     safe(l.getDesignation(), ""),
                     formatQuantite(l.getQuantite()),
@@ -249,6 +260,20 @@ public class PdfFacturationService {
             ));
         }
         return result;
+    }
+
+    private List<TvaLigneVM> buildTvaLignes(List<LigneDocument> lignes) {
+        if (lignes == null || lignes.isEmpty()) return List.of();
+        Map<BigDecimal, BigDecimal> byRate = new LinkedHashMap<>();
+        for (LigneDocument l : lignes) {
+            BigDecimal rate = l.getTauxTva() != null ? l.getTauxTva().stripTrailingZeros() : BigDecimal.ZERO;
+            if (rate.compareTo(BigDecimal.ZERO) == 0) continue;
+            BigDecimal tvaLigne = l.getMontantTva() != null ? l.getMontantTva() : BigDecimal.ZERO;
+            byRate.merge(rate, tvaLigne, BigDecimal::add);
+        }
+        return byRate.entrySet().stream()
+                .map(e -> new TvaLigneVM(formatPourcent(e.getKey()), formatMontant(e.getValue())))
+                .toList();
     }
 
     private List<ReglementVM> buildReglementVMs(List<ReglementDocument> regs, String devise) {

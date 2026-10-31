@@ -62,7 +62,7 @@ color:rgba(200,0,0,0.13);transform:rotate(-30deg);z-index:-1}
       <td class="th c" style="width:8%" th:if="${hasTva}">TVA</td>
       <td class="th c" style="width:9%">Remise</td>
       <td class="th r" th:style="'width:' + (hasTva ? '14' : '20') + '%;text-align:right'"
-          th:text="${hasTva ? 'Total TTC' : ('Montant (' + devise + ')')}">Montant</td>
+          th:text="${hasTva ? 'Montant HT' : ('Montant (' + devise + ')')}">Montant</td>
     </tr>
     <tr th:each="ligne,ls : ${lignes}" th:class="${ls.odd ? 'alt' : ''}">
       <td th:text="${ligne.designation}">Désignation</td>
@@ -86,11 +86,11 @@ color:rgba(200,0,0,0.13);transform:rotate(-30deg);z-index:-1}
         <td style="padding:2pt 5pt;text-align:right;white-space:nowrap;font-size:10.5pt;"
             th:text="${montantHT + ' ' + devise}">0 FCFA</td>
       </tr>
-      <tr th:if="${hasTva and montantTva != null}">
+      <tr th:each="tvaL : ${tvaLignes}">
         <td style="padding:2pt 5pt;text-align:right;font-size:10.5pt;"
-            th:text="${'TVA (' + tauxTva + ')'}">TVA</td>
+            th:text="${'TVA (' + tvaL.taux + ')'}">TVA</td>
         <td style="padding:2pt 5pt;text-align:right;white-space:nowrap;font-size:10.5pt;"
-            th:text="${montantTva + ' ' + devise}">0 FCFA</td>
+            th:text="${tvaL.montant + ' ' + devise}">0 FCFA</td>
       </tr>
       <tr>
         <td style="padding:3pt 5pt;text-align:right;font-size:11pt;font-weight:bold;"
@@ -118,8 +118,7 @@ color:rgba(200,0,0,0.13);transform:rotate(-30deg);z-index:-1}
 <!-- Montant en lettres — pleine largeur, sous le récapitulatif -->
 <th:block th:if="${montantEnLettres != null}">
   <div style="margin-top:4mm;border:0.5pt solid #aaa;padding:5pt 10pt;">
-    <span style="font-size:10pt;color:#555;">Arrêtée la présente facture à la somme de&#160;: </span>
-    <strong style="font-size:12pt;color:#000;" th:text="${montantEnLettres}">MONTANT EN LETTRES</strong>
+    <strong style="font-size:10pt;color:#000;" th:text="${montantEnLettres}">MONTANT EN LETTRES</strong>
   </div>
 </th:block>
 
