@@ -13,14 +13,22 @@
   <th:block th:unless="${isImageMode and imageEnTeteUri != null}">
 
     <!-- Ligne 1 : logo GAUCHE + nom entreprise à DROITE -->
-    <!-- th:if directement sur <td> — jamais de th:block à l'intérieur d'un <tr> -->
-    <table width="100%" style="table-layout:fixed;margin-bottom:2mm;" cellpadding="0" cellspacing="0">
+    <!--
+      Stratégie openhtmltopdf :
+      - Pas de table-layout:fixed (auto répartit mieux l'espace résiduel)
+      - Cellule logo : width:44mm, overflow:hidden — le wrapper div fixe la zone de 40×20mm
+        et coupe tout débordement (image large → pas d'écrasement de la cellule nom)
+      - Cellule nom : pas de width explicite, prend l'espace restant
+      - Retrait de min-width/white-space:nowrap → le nom peut passer à la ligne si nécessaire
+    -->
+    <table width="100%" style="border-collapse:collapse;margin-bottom:2mm;" cellpadding="0" cellspacing="0">
       <tr>
-        <td th:if="${logoUri != null}" style="width:44mm;min-width:44mm;vertical-align:middle;padding-right:3mm;">
-          <!-- height:20mm explicite : openhtmltopdf respecte les longueurs mm sur les images -->
-          <img th:src="${logoUri}" style="height:20mm;width:auto;display:block;"/>
+        <td th:if="${logoUri != null}" style="width:44mm;vertical-align:middle;padding-right:3mm;overflow:hidden;">
+          <div style="width:40mm;height:20mm;overflow:hidden;line-height:0;font-size:0;">
+            <img th:src="${logoUri}" style="height:20mm;width:auto;display:block;max-width:none;"/>
+          </div>
         </td>
-        <td style="vertical-align:middle;min-width:0;overflow:visible;">
+        <td style="vertical-align:middle;">
           <div th:style="${nomFontStyle}" th:text="${raisonSociale}">NOM ENTREPRISE</div>
         </td>
       </tr>

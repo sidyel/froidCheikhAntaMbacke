@@ -366,6 +366,7 @@ public class PdfFacturationService {
 
     private String loadImageDataUri(String url) {
         if (!hasValue(url)) return null;
+        if (url.startsWith("data:")) return url; // déjà une data URI (test ou logo inline)
         try {
             URLConnection conn = new URL(url).openConnection();
             conn.setConnectTimeout(6000);
