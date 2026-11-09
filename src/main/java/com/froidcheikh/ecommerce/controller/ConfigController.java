@@ -41,6 +41,36 @@ public class ConfigController {
         return ResponseEntity.ok(parametresSiteService.update(dto, modifiePar));
     }
 
+    @PostMapping("/api/admin/config/logo")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Map<String, String>> uploadLogo(@RequestParam("file") MultipartFile file) {
+        String url = fileService.uploadFile(file, "site/logos");
+        parametresSiteService.updateLogoUrl(url);
+        return ResponseEntity.ok(Map.of("url", url));
+    }
+
+    @DeleteMapping("/api/admin/config/logo")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Void> supprimerLogo() {
+        parametresSiteService.updateLogoUrl(null);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/api/admin/config/favicon")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Map<String, String>> uploadFavicon(@RequestParam("file") MultipartFile file) {
+        String url = fileService.uploadFile(file, "site/favicons");
+        parametresSiteService.updateFaviconUrl(url);
+        return ResponseEntity.ok(Map.of("url", url));
+    }
+
+    @DeleteMapping("/api/admin/config/favicon")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Void> supprimerFavicon() {
+        parametresSiteService.updateFaviconUrl(null);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/api/admin/config/cachet")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
     public ResponseEntity<Map<String, String>> uploadCachet(@RequestParam("file") MultipartFile file) {

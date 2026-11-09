@@ -87,6 +87,24 @@ public class ParametresSiteService {
 
     @Transactional
     @CacheEvict(value = "siteConfig", allEntries = true)
+    public String updateLogoUrl(String url) {
+        ParametresSite entity = repository.findAll().stream().findFirst().orElseThrow();
+        entity.setLogoUrl(url);
+        repository.save(entity);
+        return url;
+    }
+
+    @Transactional
+    @CacheEvict(value = "siteConfig", allEntries = true)
+    public String updateFaviconUrl(String url) {
+        ParametresSite entity = repository.findAll().stream().findFirst().orElseThrow();
+        entity.setFaviconUrl(url);
+        repository.save(entity);
+        return url;
+    }
+
+    @Transactional
+    @CacheEvict(value = "siteConfig", allEntries = true)
     public void initDefault(String nomSite, String sloganSite, String emailContact, Integer anneesExperience) {
         if (!repository.findAll().isEmpty()) return;
 
